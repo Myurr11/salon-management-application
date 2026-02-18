@@ -27,11 +27,12 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
     quantity: '',
     minThreshold: '',
     price: '',
+    costPrice: '',
   });
 
   const openAddModal = () => {
     setEditingItem(null);
-    setFormData({ name: '', quantity: '', minThreshold: '', price: '' });
+    setFormData({ name: '', quantity: '', minThreshold: '', price: '', costPrice: '' });
     setModalVisible(true);
   };
 
@@ -42,6 +43,7 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
       quantity: String(item.quantity),
       minThreshold: String(item.minThreshold),
       price: String(item.price),
+      costPrice: item.costPrice != null ? String(item.costPrice) : '',
     });
     setModalVisible(true);
   };
@@ -54,6 +56,7 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
     const quantity = parseInt(formData.quantity, 10);
     const minThreshold = parseInt(formData.minThreshold, 10);
     const price = parseFloat(formData.price);
+    const costPrice = formData.costPrice.trim() ? parseFloat(formData.costPrice) : undefined;
 
     if (isNaN(quantity) || quantity < 0) {
       Alert.alert('Error', 'Please enter a valid quantity.');
@@ -64,7 +67,11 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
       return;
     }
     if (isNaN(price) || price < 0) {
-      Alert.alert('Error', 'Please enter a valid price.');
+      Alert.alert('Error', 'Please enter a valid selling price.');
+      return;
+    }
+    if (costPrice !== undefined && (isNaN(costPrice) || costPrice < 0)) {
+      Alert.alert('Error', 'Please enter a valid cost price.');
       return;
     }
 
@@ -75,6 +82,7 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
           quantity,
           minThreshold,
           price,
+          costPrice: costPrice ?? undefined,
         });
         Alert.alert('Success', 'Item updated successfully.');
       } else {
@@ -83,6 +91,7 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
           quantity,
           minThreshold,
           price,
+          costPrice: costPrice ?? undefined,
         });
         Alert.alert('Success', 'Item added successfully.');
       }
@@ -200,11 +209,20 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
 
             <TextInput
               style={styles.input}
-              placeholder="Price"
+              placeholder="Selling Price (₹)"
               placeholderTextColor="#6b7280"
               keyboardType="numeric"
               value={formData.price}
               onChangeText={text => setFormData({ ...formData, price: text })}
+            />
+
+            <TextInput
+              style={styles.input}
+              placeholder="Cost Price (₹, optional)"
+              placeholderTextColor="#6b7280"
+              keyboardType="numeric"
+              value={formData.costPrice}
+              onChangeText={text => setFormData({ ...formData, costPrice: text })}
             />
 
             <TextInput

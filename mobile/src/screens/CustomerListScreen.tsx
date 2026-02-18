@@ -8,8 +8,24 @@ interface Props {
 }
 
 export const CustomerListScreen: React.FC<Props> = ({ navigation }) => {
-  const { customers } = useData();
+  const { customers, visits } = useData();
   const [searchQuery, setSearchQuery] = useState('');
+
+  const customerStats = useMemo(() => {
+    const map: Record<string, { totalSpend: number; lastVisitDate: string | null }> = {};
+    customers.forEach(c => {
+      map[c.id] = { totalSpend: 0, lastVisitDate: null };
+    });
+    visits.forEach(v => {
+      if (map[v.customerId]) {
+        map[v.customerId].totalSpend += v.total;
+        if (!map[v.customerId].lastVisitDate || v.date > map[v.customerId].lastVisitDate!) {
+          map[v.customerId].lastVisitDate = v.date;
+        }
+      }
+    });
+    return map;
+  }, [customers, visits]);
 
   const filteredCustomers = useMemo(() => {
     if (!searchQuery.trim()) return customers;
@@ -18,11 +34,13 @@ export const CustomerListScreen: React.FC<Props> = ({ navigation }) => {
       c =>
         c.name.toLowerCase().includes(query) ||
         c.phone?.toLowerCase().includes(query) ||
-        c.dob?.includes(query),
+        c.dob?.includes(query) ||
+        c.email?.toLowerCase().includes(query) ||
+        c.address?.toLowerCase().includes(query),
     );
   }, [customers, searchQuery]);
 
-  const formatDate = (dateString?: string) => {
+  const formatDate = (dateString?: string | null) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
     return date.toLocaleDateString('en-IN', {
@@ -32,15 +50,27 @@ export const CustomerListScreen: React.FC<Props> = ({ navigation }) => {
     });
   };
 
-  const renderCustomer = ({ item }: { item: Customer }) => (
-    <TouchableOpacity style={styles.customerCard}>
-      <View style={styles.customerInfo}>
-        <Text style={styles.customerName}>{item.name}</Text>
-        {item.phone && <Text style={styles.customerDetail}>📞 {item.phone}</Text>}
-        {item.dob && <Text style={styles.customerDetail}>🎂 {formatDate(item.dob)}</Text>}
-      </View>
-    </TouchableOpacity>
-  );
+  const renderCustomer = ({ item }: { item: Customer }) => {
+    const stats = customerStats[item.id];
+    return (
+      <TouchableOpacity
+        style={styles.customerCard}
+        onPress={() => navigation.navigate('CustomerDetail', { customerId: item.id })}
+      >
+        <View style={styles.customerInfo}>
+          <Text style={styles.customerName}>{item.name}</Text>
+          {item.phone && <Text style={styles.customerDetail}>📞 {item.phone}</Text>}
+          {item.dob && <Text style={styles.customerDetail}>🎂 {formatDate(item.dob)}</Text>}
+          {item.gender && <Text style={styles.customerDetail}>{item.gender}</Text>}
+          {stats && (
+            <Text style={styles.customerDetail}>
+              Total spend: ₹{stats.totalSpend.toFixed(0)} • Last visit: {formatDate(stats.lastVisitDate)}
+            </Text>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>

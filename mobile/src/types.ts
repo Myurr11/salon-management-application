@@ -1,8 +1,17 @@
 export type UserRole = 'admin' | 'staff';
 
+export type PaymentMode = 'cash' | 'upi' | 'card' | 'udhaar';
+
+export interface Branch {
+  id: string;
+  name: string;
+}
+
 export interface StaffMember {
   id: string;
   name: string;
+  branchId?: string | null;
+  branchName?: string | null;
 }
 
 export interface Service {
@@ -11,11 +20,16 @@ export interface Service {
   price: number;
 }
 
+export type Gender = 'male' | 'female' | 'other';
+
 export interface Customer {
   id: string;
   name: string;
   dob?: string;
   phone?: string;
+  email?: string;
+  address?: string;
+  gender?: Gender | null;
 }
 
 export interface VisitServiceLine {
@@ -41,11 +55,19 @@ export interface Visit {
   staffName: string;
   customerId: string;
   customerName: string;
+  branchId?: string | null;
+  branchName?: string | null;
   date: string;
   createdAt: string;
   services: VisitServiceLine[];
   products: VisitProductLine[];
   total: number;
+  paymentMode?: PaymentMode;
+  discountAmount?: number;
+  discountPercent?: number;
+  amountOverride?: number | null;
+  overrideReason?: string | null;
+  billNumber?: string | null;
 }
 
 export interface InventoryItem {
@@ -54,6 +76,9 @@ export interface InventoryItem {
   quantity: number;
   minThreshold: number;
   price: number;
+  costPrice?: number | null;
+  branchId?: string | null;
+  branchName?: string | null;
 }
 
 export interface ProductSale {
@@ -97,5 +122,32 @@ export interface Attendance {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  branchId?: string | null;
+  branchName?: string | null;
+}
+
+// Udhaar (credit) management
+export interface UdhaarBalance {
+  id: string;
+  customerId: string;
+  customerName?: string;
+  branchId: string;
+  branchName?: string;
+  outstandingAmount: number;
+  dueDate?: string | null;
+  reminderSentAt?: string | null;
+  updatedAt: string;
+}
+
+export interface UdhaarTransaction {
+  id: string;
+  customerId: string;
+  branchId: string;
+  type: 'sale' | 'payment';
+  amount: number;
+  visitId?: string | null;
+  paymentDate?: string | null;
+  notes?: string | null;
+  createdAt: string;
 }
 

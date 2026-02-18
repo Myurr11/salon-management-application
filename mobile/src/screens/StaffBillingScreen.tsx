@@ -9,10 +9,11 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
-import type { InventoryItem, Service, VisitProductLine, VisitServiceLine } from '../types';
+import type { InventoryItem, PaymentMode, Service, VisitProductLine, VisitServiceLine } from '../types';
 
 interface Props {
   navigation: any;
@@ -29,9 +30,17 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
   const [customerName, setCustomerName] = useState('');
   const [customerDob, setCustomerDob] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
+  const [customerGender, setCustomerGender] = useState<'male' | 'female' | 'other' | ''>('');
+  const [customerAddress, setCustomerAddress] = useState('');
 
   const [selectedLines, setSelectedLines] = useState<VisitServiceLine[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<VisitProductLine[]>([]);
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>('cash');
+  const [discountPercent, setDiscountPercent] = useState<string>('');
+  const [discountAmount, setDiscountAmount] = useState<string>('');
+  const [amountOverride, setAmountOverride] = useState<string>('');
+  const [overrideReason, setOverrideReason] = useState<string>('');
 
   const toggleService = (service: Service) => {
     const existing = selectedLines.find(l => l.serviceId === service.id);
@@ -126,12 +135,23 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
     );
   };
 
-  const total = useMemo(
+  const subtotal = useMemo(
     () =>
       selectedLines.reduce((sum, l) => sum + (Number.isFinite(l.finalPrice) ? l.finalPrice : 0), 0) +
       selectedProducts.reduce((sum, p) => sum + p.totalPrice, 0),
     [selectedLines, selectedProducts],
   );
+
+  const total = useMemo(() => {
+    let t = subtotal;
+    const pct = Number(discountPercent.replace(/[^0-9.]/g, ''));
+    const amt = Number(discountAmount.replace(/[^0-9.]/g, ''));
+    if (Number.isFinite(pct) && pct > 0) t = t * (1 - pct / 100);
+    if (Number.isFinite(amt) && amt > 0) t = Math.max(0, t - amt);
+    const override = Number(amountOverride.replace(/[^0-9.]/g, ''));
+    if (Number.isFinite(override) && override >= 0) t = override;
+    return t;
+  }, [subtotal, discountPercent, discountAmount, amountOverride]);
 
   const handleSubmit = async () => {
     if (!user || user.role !== 'staff') {
@@ -169,6 +189,9 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
           name: customerName.trim(),
           dob: customerDob.trim() || undefined,
           phone: customerPhone.trim() || undefined,
+          email: customerEmail.trim() || undefined,
+          gender: customerGender || undefined,
+          address: customerAddress.trim() || undefined,
         });
         customerId = created.id;
         name = created.name;
@@ -177,15 +200,29 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
       const today = new Date();
       const dateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
 
+      const discountPctNum = Number(discountPercent.replace(/[^0-9.]/g, ''));
+      const discountAmtNum = Number(discountAmount.replace(/[^0-9.]/g, ''));
+      const overrideNum = amountOverride.trim() ? Number(amountOverride.replace(/[^0-9.]/g, '')) : undefined;
+      if (overrideNum !== undefined && !overrideReason.trim()) {
+        Alert.alert('Reason required', 'Please enter a reason for overriding the amount.');
+        return;
+      }
+
       const visitId = await recordVisit({
         staffId: user.id,
         staffName: user.name,
         customerId,
         customerName: name,
+        branchId: user.branchId || undefined,
         date: dateOnly,
         services: selectedLines,
         products: selectedProducts,
         total,
+        paymentMode,
+        discountPercent: Number.isFinite(discountPctNum) ? discountPctNum : 0,
+        discountAmount: Number.isFinite(discountAmtNum) ? discountAmtNum : 0,
+        amountOverride: overrideNum,
+        overrideReason: overrideReason.trim() || undefined,
       });
 
       Alert.alert('Saved', 'Visit saved successfully.', [
@@ -244,8 +281,14 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={80}
     >
-      <View style={styles.container}>
-        <Text style={styles.title}>New Customer Visit</Text>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.container}>
+          <Text style={styles.title}>New Customer Visit</Text>
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Customer details</Text>
@@ -322,6 +365,34 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
                 value={customerPhone}
                 onChangeText={setCustomerPhone}
               />
+              <TextInput
+                placeholder="Email (optional)"
+                placeholderTextColor="#6b7280"
+                style={styles.input}
+                keyboardType="email-address"
+                value={customerEmail}
+                onChangeText={setCustomerEmail}
+              />
+              <View style={styles.modeRow}>
+                {(['male', 'female', 'other'] as const).map(g => (
+                  <TouchableOpacity
+                    key={g}
+                    style={[styles.modePill, customerGender === g ? styles.modePillActive : null]}
+                    onPress={() => setCustomerGender(customerGender === g ? '' : g)}
+                  >
+                    <Text style={[styles.modePillText, customerGender === g ? styles.modePillTextActive : null]}>
+                      {g.charAt(0).toUpperCase() + g.slice(1)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TextInput
+                placeholder="Address (optional)"
+                placeholderTextColor="#6b7280"
+                style={styles.input}
+                value={customerAddress}
+                onChangeText={setCustomerAddress}
+              />
             </View>
           )}
         </View>
@@ -397,6 +468,58 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
           )}
         </View>
 
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Payment</Text>
+          <View style={styles.modeRow}>
+            {(['cash', 'upi', 'card', 'udhaar'] as PaymentMode[]).map(mode => (
+              <TouchableOpacity
+                key={mode}
+                style={[styles.modePill, paymentMode === mode ? styles.modePillActive : null]}
+                onPress={() => setPaymentMode(mode)}
+              >
+                <Text style={[styles.modePillText, paymentMode === mode ? styles.modePillTextActive : null]}>
+                  {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={{ flexDirection: 'row', gap: 12, marginTop: 10 }}>
+            <TextInput
+              placeholder="Discount %"
+              placeholderTextColor="#6b7280"
+              style={[styles.input, { flex: 1 }]}
+              keyboardType="numeric"
+              value={discountPercent}
+              onChangeText={setDiscountPercent}
+            />
+            <TextInput
+              placeholder="Discount ₹"
+              placeholderTextColor="#6b7280"
+              style={[styles.input, { flex: 1 }]}
+              keyboardType="numeric"
+              value={discountAmount}
+              onChangeText={setDiscountAmount}
+            />
+          </View>
+          <TextInput
+            placeholder="Override final amount (₹) - reason required"
+            placeholderTextColor="#6b7280"
+            style={[styles.input, { marginTop: 8 }]}
+            keyboardType="numeric"
+            value={amountOverride}
+            onChangeText={setAmountOverride}
+          />
+          {amountOverride.trim() ? (
+            <TextInput
+              placeholder="Reason for override (required)"
+              placeholderTextColor="#6b7280"
+              style={[styles.input, { marginTop: 6 }]}
+              value={overrideReason}
+              onChangeText={setOverrideReason}
+            />
+          ) : null}
+        </View>
+
         <View style={styles.footer}>
           <View>
             <Text style={styles.totalLabel}>Total</Text>
@@ -406,7 +529,8 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.saveButtonText}>Save Visit</Text>
           </TouchableOpacity>
         </View>
-      </View>
+        </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 };
@@ -416,8 +540,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#020617',
   },
-  container: {
+  scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 32,
+  },
+  container: {
     paddingTop: 56,
     paddingHorizontal: 20,
   },

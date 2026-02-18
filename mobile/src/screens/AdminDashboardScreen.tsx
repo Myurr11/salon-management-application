@@ -83,6 +83,44 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       </View>
 
+      {revenueSummary.byBranch && revenueSummary.byBranch.length > 0 ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Revenue by Branch</Text>
+          {revenueSummary.byBranch.map(b => (
+            <View key={b.branchId} style={styles.staffRevenueRow}>
+              <Text style={styles.staffName}>{b.branchName}</Text>
+              <Text style={styles.staffAmount}>₹{b.todayTotal.toFixed(0)} today</Text>
+            </View>
+          ))}
+          <View style={[styles.staffRevenueRow, { borderTopWidth: 1, borderTopColor: '#1f2937', marginTop: 8, paddingTop: 8 }]}>
+            <Text style={[styles.staffName, { fontWeight: '700' }]}>Combined</Text>
+            <Text style={styles.staffAmount}>₹{revenueSummary.todayTotal.toFixed(0)}</Text>
+          </View>
+        </View>
+      ) : null}
+
+      {revenueSummary.paymentBreakdown ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Today&apos;s Payment Breakdown</Text>
+          <View style={styles.staffRevenueRow}>
+            <Text style={styles.staffName}>Cash</Text>
+            <Text style={styles.staffAmount}>₹{(revenueSummary.paymentBreakdown.cash || 0).toFixed(0)}</Text>
+          </View>
+          <View style={styles.staffRevenueRow}>
+            <Text style={styles.staffName}>UPI</Text>
+            <Text style={styles.staffAmount}>₹{(revenueSummary.paymentBreakdown.upi || 0).toFixed(0)}</Text>
+          </View>
+          <View style={styles.staffRevenueRow}>
+            <Text style={styles.staffName}>Card</Text>
+            <Text style={styles.staffAmount}>₹{(revenueSummary.paymentBreakdown.card || 0).toFixed(0)}</Text>
+          </View>
+          <View style={styles.staffRevenueRow}>
+            <Text style={styles.staffName}>Udhaar</Text>
+            <Text style={styles.staffAmount}>₹{(revenueSummary.paymentBreakdown.udhaar || 0).toFixed(0)}</Text>
+          </View>
+        </View>
+      ) : null}
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Today&apos;s Revenue by Staff</Text>
         {revenueSummary.byStaffToday.map(staff => (
@@ -146,6 +184,18 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
           onPress={() => navigation.navigate('AdminAttendance')}
         >
           <Text style={styles.actionButtonText}>View Attendance</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('AdminUdhaar')}
+        >
+          <Text style={styles.actionButtonText}>Udhaar (Credit)</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('AdminStaffPerformance')}
+        >
+          <Text style={styles.actionButtonText}>Staff Performance</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>

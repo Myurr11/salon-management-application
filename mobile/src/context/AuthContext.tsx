@@ -6,6 +6,7 @@ interface AuthUser {
   id: string;
   name: string;
   role: UserRole;
+  branchId?: string | null;
 }
 
 interface AuthContextValue {

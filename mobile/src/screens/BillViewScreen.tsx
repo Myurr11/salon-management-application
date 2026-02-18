@@ -9,8 +9,9 @@ interface Props {
 }
 
 export const BillViewScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { visits } = useData();
+  const { visits, branches } = useData();
   const visit = visits.find(v => v.id === route.params.visitId);
+  const branchName = visit?.branchId ? branches.find(b => b.id === visit.branchId)?.name : undefined;
 
   if (!visit) {
     return (
@@ -54,8 +55,14 @@ export const BillViewScreen: React.FC<Props> = ({ navigation, route }) => {
 
         <View style={styles.section}>
           <Text style={styles.label}>Bill No:</Text>
-          <Text style={styles.value}>{visit.id}</Text>
+          <Text style={styles.value}>{visit.billNumber || visit.id}</Text>
         </View>
+        {(branchName || visit.branchName) ? (
+          <View style={styles.section}>
+            <Text style={styles.label}>Branch:</Text>
+            <Text style={styles.value}>{branchName || visit.branchName}</Text>
+          </View>
+        ) : null}
         <View style={styles.section}>
           <Text style={styles.label}>Date:</Text>
           <Text style={styles.value}>{formatDate(visit.date)}</Text>
@@ -115,6 +122,27 @@ export const BillViewScreen: React.FC<Props> = ({ navigation, route }) => {
         )}
 
         <View style={styles.divider} />
+
+        {(visit.discountAmount && visit.discountAmount > 0) || (visit.discountPercent && visit.discountPercent > 0) ? (
+          <View style={styles.section}>
+            <Text style={styles.label}>Discount:</Text>
+            <Text style={styles.value}>
+              {visit.discountPercent ? `${visit.discountPercent}%` : ''}
+              {visit.discountPercent && visit.discountAmount ? ' + ' : ''}
+              {visit.discountAmount ? `₹${visit.discountAmount}` : ''}
+            </Text>
+          </View>
+        ) : null}
+        {visit.overrideReason ? (
+          <View style={styles.section}>
+            <Text style={styles.label}>Override reason:</Text>
+            <Text style={styles.value}>{visit.overrideReason}</Text>
+          </View>
+        ) : null}
+        <View style={styles.section}>
+          <Text style={styles.label}>Payment:</Text>
+          <Text style={styles.value}>{(visit.paymentMode || 'cash').toUpperCase()}</Text>
+        </View>
 
         <View style={styles.totalRow}>
           <Text style={styles.totalLabel}>Total Amount:</Text>

@@ -7,7 +7,18 @@ import React, {
   useEffect,
   ReactNode,
 } from 'react';
-import { Appointment, Attendance, Customer, InventoryItem, ProductSale, Service, Visit } from '../types';
+import type {
+  Appointment,
+  Attendance,
+  Branch,
+  Customer,
+  InventoryItem,
+  ProductSale,
+  Service,
+  UdhaarBalance,
+  UdhaarTransaction,
+  Visit,
+} from '../types';
 import { useAuth } from './AuthContext';
 import * as supabaseService from '../services/supabaseService';
 
@@ -18,6 +29,7 @@ interface DataContextValue {
   inventory: InventoryItem[];
   appointments: Appointment[];
   productSales: ProductSale[];
+  branches: Branch[];
   loading: boolean;
   error: string | null;
   refreshData: () => Promise<void>;
@@ -26,19 +38,26 @@ interface DataContextValue {
   updateInventoryItem: (itemId: string, updates: Partial<InventoryItem>) => Promise<void>;
   addInventoryItem: (item: Omit<InventoryItem, 'id'>) => Promise<void>;
   deleteInventoryItem: (itemId: string) => Promise<void>;
-  getStaffTodayStats: (staffId: string) => { totalRevenue: number; customerCount: number; visits: Visit[] };
+  getStaffTodayStats: (staffId: string, branchId?: string | null) => { totalRevenue: number; customerCount: number; visits: Visit[] };
   getAdminRevenueSummary: () => {
     todayTotal: number;
     monthlyTotal: number;
     yearlyTotal: number;
     byStaffToday: { staffId: string; staffName: string; total: number }[];
+    byBranch: { branchId: string; branchName: string; todayTotal: number; monthlyTotal: number; yearlyTotal: number }[];
+    paymentBreakdown: { cash: number; upi: number; card: number; udhaar: number };
   };
-  getProductSales: (filters?: { staffId?: string; startDate?: string; endDate?: string }) => ProductSale[];
+  getProductSales: (filters?: { staffId?: string; branchId?: string; startDate?: string; endDate?: string }) => Promise<ProductSale[]>;
   attendance: Attendance[];
-  getAttendance: (filters?: { staffId?: string; startDate?: string; endDate?: string; date?: string }) => Promise<Attendance[]>;
+  getAttendance: (filters?: { staffId?: string; branchId?: string; startDate?: string; endDate?: string; date?: string }) => Promise<Attendance[]>;
   checkIn: (staffId: string, date?: string) => Promise<Attendance>;
   checkOut: (staffId: string, date?: string) => Promise<Attendance>;
   getTodayAttendance: (staffId: string) => Promise<Attendance | null>;
+  getBranches: () => Promise<Branch[]>;
+  getNextBillNumber: (branchId: string, dateStr?: string) => Promise<string>;
+  getUdhaarBalances: (filters?: { branchId?: string; customerId?: string }) => Promise<UdhaarBalance[]>;
+  getUdhaarTransactions: (filters: { customerId: string; branchId?: string }) => Promise<UdhaarTransaction[]>;
+  addUdhaarPayment: (customerId: string, branchId: string, amount: number, notes?: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextValue | undefined>(undefined);
@@ -59,6 +78,7 @@ export const DataProvider = ({ children }: DataProviderProps) => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [productSales, setProductSales] = useState<ProductSale[]>([]);
   const [attendance, setAttendance] = useState<Attendance[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,15 +87,23 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       setLoading(true);
       setError(null);
 
-      const [servicesData, customersData, visitsData, inventoryData, productSalesData, attendanceData] =
-        await Promise.all([
-          supabaseService.getServices(),
-          supabaseService.getCustomers(),
-          supabaseService.getVisits(),
-          supabaseService.getInventoryItems(),
-          supabaseService.getProductSales(),
-          supabaseService.getAttendance(),
-        ]);
+      const [
+        servicesData,
+        customersData,
+        visitsData,
+        inventoryData,
+        productSalesData,
+        attendanceData,
+        branchesData,
+      ] = await Promise.all([
+        supabaseService.getServices(),
+        supabaseService.getCustomers(),
+        supabaseService.getVisits(),
+        supabaseService.getInventoryItems(),
+        supabaseService.getProductSales(),
+        supabaseService.getAttendance(),
+        supabaseService.getBranches().catch(() => []),
+      ]);
 
       setServices(servicesData);
       setCustomers(customersData);
@@ -83,10 +111,10 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       setInventory(inventoryData);
       setProductSales(productSalesData);
       setAttendance(attendanceData);
+      setBranches(branchesData);
     } catch (err: any) {
       console.error('Error loading data:', err);
       setError(err.message || 'Failed to load data');
-      // Fallback to empty arrays on error
       setServices([]);
       setCustomers([]);
       setVisits([]);
@@ -190,7 +218,12 @@ export const DataProvider = ({ children }: DataProviderProps) => {
   );
 
   const getProductSales = useCallback(
-    async (filters?: { staffId?: string; startDate?: string; endDate?: string }) => {
+    async (filters?: {
+      staffId?: string;
+      branchId?: string;
+      startDate?: string;
+      endDate?: string;
+    }) => {
       try {
         return await supabaseService.getProductSales(filters);
       } catch (err: any) {
@@ -199,6 +232,52 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       }
     },
     [],
+  );
+
+  const getBranches = useCallback(async () => {
+    try {
+      return await supabaseService.getBranches();
+    } catch (err: any) {
+      console.error('Error fetching branches:', err);
+      return [];
+    }
+  }, []);
+
+  const getNextBillNumber = useCallback(
+    (branchId: string, dateStr?: string) => supabaseService.getNextBillNumber(branchId, dateStr),
+    [],
+  );
+
+  const getUdhaarBalances = useCallback(
+    async (filters?: { branchId?: string; customerId?: string }) => {
+      try {
+        return await supabaseService.getUdhaarBalances(filters);
+      } catch (err: any) {
+        console.error('Error fetching udhaar balances:', err);
+        return [];
+      }
+    },
+    [],
+  );
+
+  const getUdhaarTransactions = useCallback(
+    async (filters: { customerId: string; branchId?: string }) => {
+      try {
+        return await supabaseService.getUdhaarTransactions(filters);
+      } catch (err: any) {
+        console.error('Error fetching udhaar transactions:', err);
+        return [];
+      }
+    },
+    [],
+  );
+
+  const addUdhaarPayment = useCallback(
+    async (customerId: string, branchId: string, amount: number, notes?: string) => {
+      await supabaseService.addUdhaarPayment(customerId, branchId, amount, notes);
+      await refreshData();
+    },
+    [refreshData],
   );
 
   const getAttendance = useCallback(
@@ -258,12 +337,16 @@ export const DataProvider = ({ children }: DataProviderProps) => {
   );
 
   const getStaffTodayStats = useCallback(
-    (staffId: string) => {
+    (staffId: string, branchId?: string | null) => {
       const today = startOfDay(new Date());
       const todayStr = today.toISOString().split('T')[0];
       const todayVisits = visits.filter(v => {
         const visitDate = v.date.split('T')[0];
-        return v.staffId === staffId && visitDate === todayStr;
+        const matchStaff = v.staffId === staffId && visitDate === todayStr;
+        if (branchId) {
+          return matchStaff && (v.branchId === branchId || !v.branchId);
+        }
+        return matchStaff;
       });
       const totalRevenue = todayVisits.reduce((sum, v) => sum + v.total, 0);
       const customerCount = todayVisits.length;
@@ -282,12 +365,17 @@ export const DataProvider = ({ children }: DataProviderProps) => {
     let todayTotal = 0;
     let monthlyTotal = 0;
     let yearlyTotal = 0;
-
     const todayByStaff: Record<string, number> = {};
+    const byBranchMap: Record<
+      string,
+      { todayTotal: number; monthlyTotal: number; yearlyTotal: number }
+    > = {};
+    const paymentBreakdown = { cash: 0, upi: 0, card: 0, udhaar: 0 };
 
     visits.forEach(v => {
       const visitDate = new Date(v.date);
       const visitDateStr = v.date.split('T')[0];
+      const mode = v.paymentMode || 'cash';
 
       if (visitDate.getFullYear() === year) {
         yearlyTotal += v.total;
@@ -297,7 +385,17 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       }
       if (visitDateStr === todayStr) {
         todayTotal += v.total;
+        paymentBreakdown[mode] = (paymentBreakdown[mode] || 0) + v.total;
         todayByStaff[v.staffId] = (todayByStaff[v.staffId] || 0) + v.total;
+        const bid = v.branchId || 'default';
+        if (!byBranchMap[bid]) byBranchMap[bid] = { todayTotal: 0, monthlyTotal: 0, yearlyTotal: 0 };
+        byBranchMap[bid].todayTotal += v.total;
+      }
+      const bid = v.branchId || 'default';
+      if (!byBranchMap[bid]) byBranchMap[bid] = { todayTotal: 0, monthlyTotal: 0, yearlyTotal: 0 };
+      if (visitDate.getFullYear() === year) {
+        byBranchMap[bid].yearlyTotal += v.total;
+        if (visitDate.getMonth() === month) byBranchMap[bid].monthlyTotal += v.total;
       }
     });
 
@@ -307,8 +405,25 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       total: todayByStaff[s.id] || 0,
     }));
 
-    return { todayTotal, monthlyTotal, yearlyTotal, byStaffToday };
-  }, [visits, staffMembers]);
+    const branchIdToName: Record<string, string> = {};
+    branches.forEach(b => {
+      branchIdToName[b.id] = b.name;
+    });
+    const byBranch = Object.entries(byBranchMap).map(([branchId, totals]) => ({
+      branchId,
+      branchName: branchIdToName[branchId] || (branchId === 'default' ? 'All / Unassigned' : branchId),
+      ...totals,
+    }));
+
+    return {
+      todayTotal,
+      monthlyTotal,
+      yearlyTotal,
+      byStaffToday,
+      byBranch,
+      paymentBreakdown,
+    };
+  }, [visits, staffMembers, branches]);
 
   const value: DataContextValue = useMemo(
     () => ({
@@ -318,6 +433,7 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       inventory,
       appointments,
       productSales,
+      branches,
       attendance,
       loading,
       error,
@@ -334,6 +450,11 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       checkIn,
       checkOut,
       getTodayAttendance,
+      getBranches,
+      getNextBillNumber,
+      getUdhaarBalances,
+      getUdhaarTransactions,
+      addUdhaarPayment,
     }),
     [
       services,
@@ -342,6 +463,7 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       inventory,
       appointments,
       productSales,
+      branches,
       attendance,
       loading,
       error,
@@ -358,6 +480,11 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       checkIn,
       checkOut,
       getTodayAttendance,
+      getBranches,
+      getNextBillNumber,
+      getUdhaarBalances,
+      getUdhaarTransactions,
+      addUdhaarPayment,
     ],
   );
 

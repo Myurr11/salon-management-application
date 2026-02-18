@@ -10,7 +10,47 @@ interface Props {
 
 export const StaffDashboardScreen: React.FC<Props> = ({ navigation }) => {
   const { user, logout } = useAuth();
-  const { getStaffTodayStats } = useData();
+  const { getStaffTodayStats, getTodayAttendance, checkIn, checkOut, refreshData } = useData();
+  const [todayAttendance, setTodayAttendance] = useState<Attendance | null>(null);
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
+
+  useEffect(() => {
+    if (user?.id && user?.role === 'staff') {
+      getTodayAttendance(user.id).then(setTodayAttendance);
+    } else {
+      setTodayAttendance(null);
+    }
+  }, [user?.id, user?.role, getTodayAttendance]);
+
+  const handleCheckIn = async () => {
+    if (!user?.id) return;
+    setAttendanceLoading(true);
+    try {
+      await checkIn(user.id);
+      await refreshData();
+      const next = await getTodayAttendance(user.id);
+      setTodayAttendance(next);
+    } catch (_e) {
+      // Loading cleared in finally
+    } finally {
+      setAttendanceLoading(false);
+    }
+  };
+
+  const handleCheckOut = async () => {
+    if (!user?.id) return;
+    setAttendanceLoading(true);
+    try {
+      await checkOut(user.id);
+      await refreshData();
+      const next = await getTodayAttendance(user.id);
+      setTodayAttendance(next);
+    } catch (_e) {
+      // Loading cleared in finally
+    } finally {
+      setAttendanceLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -32,6 +72,14 @@ export const StaffDashboardScreen: React.FC<Props> = ({ navigation }) => {
     if (!user?.id) return { totalRevenue: 0, customerCount: 0, visits: [] };
     return getStaffTodayStats(user.id);
   }, [getStaffTodayStats, user?.id]);
+
+  const formatTime = (timeString?: string) => {
+    if (!timeString) return '--';
+    return new Date(timeString).toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   const renderVisit = ({ item }: { item: Visit }) => (
     <TouchableOpacity

@@ -9,11 +9,14 @@ import { StaffDashboardScreen } from './src/screens/StaffDashboardScreen';
 import { StaffBillingScreen } from './src/screens/StaffBillingScreen';
 import { BillViewScreen } from './src/screens/BillViewScreen';
 import { CustomerListScreen } from './src/screens/CustomerListScreen';
+import { CustomerDetailScreen } from './src/screens/CustomerDetailScreen';
 import { InventoryViewScreen } from './src/screens/InventoryViewScreen';
 import { AdminDashboardScreen } from './src/screens/AdminDashboardScreen';
 import { AdminInventoryScreen } from './src/screens/AdminInventoryScreen';
 import { AdminProductSalesScreen } from './src/screens/AdminProductSalesScreen';
 import { AdminAttendanceScreen } from './src/screens/AdminAttendanceScreen';
+import { AdminUdhaarScreen } from './src/screens/AdminUdhaarScreen';
+import { AdminStaffPerformanceScreen } from './src/screens/AdminStaffPerformanceScreen';
 
 const RootStack = createNativeStackNavigator();
 const StaffStack = createNativeStackNavigator();
@@ -45,6 +48,11 @@ const StaffStackNavigator = () => (
       name="CustomerList"
       component={CustomerListScreen}
       options={{ title: 'Customers' }}
+    />
+    <StaffStack.Screen
+      name="CustomerDetail"
+      component={CustomerDetailScreen}
+      options={{ title: 'Customer' }}
     />
     <StaffStack.Screen
       name="InventoryView"
@@ -80,6 +88,26 @@ const AdminStackNavigator = () => (
       name="AdminAttendance"
       component={AdminAttendanceScreen}
       options={{ title: 'Attendance' }}
+    />
+    <AdminStack.Screen
+      name="AdminUdhaar"
+      component={AdminUdhaarScreen}
+      options={{ title: 'Udhaar (Credit)' }}
+    />
+    <AdminStack.Screen
+      name="AdminStaffPerformance"
+      component={AdminStaffPerformanceScreen}
+      options={{ title: 'Staff Performance' }}
+    />
+    <AdminStack.Screen
+      name="CustomerList"
+      component={CustomerListScreen}
+      options={{ title: 'Customers' }}
+    />
+    <AdminStack.Screen
+      name="CustomerDetail"
+      component={CustomerDetailScreen}
+      options={{ title: 'Customer' }}
     />
   </AdminStack.Navigator>
 );

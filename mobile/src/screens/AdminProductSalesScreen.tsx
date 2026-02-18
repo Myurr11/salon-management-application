@@ -10,7 +10,8 @@ interface Props {
 
 export const AdminProductSalesScreen: React.FC<Props> = ({ navigation }) => {
   const { user } = useAuth();
-  const { getProductSales, staffMembers } = useData();
+  const { getProductSales } = useData();
+  const { staffMembers } = useAuth();
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
 
   if (!user || user.role !== 'admin') {

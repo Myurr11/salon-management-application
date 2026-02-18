@@ -25,7 +25,7 @@ export const RoleSelectionScreen: React.FC<Props> = ({ navigation }) => {
   const handleSelectStaff = (staffId: string) => {
     const staff = staffMembers.find(s => s.id === staffId);
     if (!staff) return;
-    setUser({ id: staff.id, name: staff.name, role: 'staff' });
+    setUser({ id: staff.id, name: staff.name, role: 'staff', branchId: staff.branchId });
     navigation.replace('StaffStack');
   };
 
