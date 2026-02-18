@@ -2,9 +2,9 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { AuthProvider } from './src/context/AuthContext';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { DataProvider } from './src/context/DataContext';
-import { RoleSelectionScreen } from './src/screens/RoleSelectionScreen';
+import { LoginScreen } from './src/screens/LoginScreen';
 import { StaffDashboardScreen } from './src/screens/StaffDashboardScreen';
 import { StaffBillingScreen } from './src/screens/StaffBillingScreen';
 import { BillViewScreen } from './src/screens/BillViewScreen';
@@ -17,6 +17,9 @@ import { AdminProductSalesScreen } from './src/screens/AdminProductSalesScreen';
 import { AdminAttendanceScreen } from './src/screens/AdminAttendanceScreen';
 import { AdminUdhaarScreen } from './src/screens/AdminUdhaarScreen';
 import { AdminStaffPerformanceScreen } from './src/screens/AdminStaffPerformanceScreen';
+import { BranchDetailScreen } from './src/screens/BranchDetailScreen';
+import { AdminAssignBranchScreen } from './src/screens/AdminAssignBranchScreen';
+import { AdminAddStaffScreen } from './src/screens/AdminAddStaffScreen';
 
 const RootStack = createNativeStackNavigator();
 const StaffStack = createNativeStackNavigator();
@@ -75,6 +78,11 @@ const AdminStackNavigator = () => (
       options={{ title: 'Admin Dashboard' }}
     />
     <AdminStack.Screen
+      name="BranchDetail"
+      component={BranchDetailScreen}
+      options={({ route }) => ({ title: (route.params as { branchName?: string })?.branchName ?? 'Branch' })}
+    />
+    <AdminStack.Screen
       name="AdminInventory"
       component={AdminInventoryScreen}
       options={{ title: 'Manage Inventory' }}
@@ -100,6 +108,16 @@ const AdminStackNavigator = () => (
       options={{ title: 'Staff Performance' }}
     />
     <AdminStack.Screen
+      name="AdminAssignBranch"
+      component={AdminAssignBranchScreen}
+      options={{ title: 'Assign Branch' }}
+    />
+    <AdminStack.Screen
+      name="AdminAddStaff"
+      component={AdminAddStaffScreen}
+      options={{ title: 'Add Staff' }}
+    />
+    <AdminStack.Screen
       name="CustomerList"
       component={CustomerListScreen}
       options={{ title: 'Customers' }}
@@ -112,18 +130,31 @@ const AdminStackNavigator = () => (
   </AdminStack.Navigator>
 );
 
+function AppContent() {
+  const { user } = useAuth();
+  return (
+    <NavigationContainer>
+      {user == null ? (
+        <LoginScreen navigation={null} />
+      ) : (
+        <RootStack.Navigator
+          initialRouteName={user.role === 'admin' ? 'AdminStack' : 'StaffStack'}
+          screenOptions={{ headerShown: false }}
+        >
+          <RootStack.Screen name="AdminStack" component={AdminStackNavigator} />
+          <RootStack.Screen name="StaffStack" component={StaffStackNavigator} />
+        </RootStack.Navigator>
+      )}
+    </NavigationContainer>
+  );
+}
+
 export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
         <DataProvider>
-          <NavigationContainer>
-            <RootStack.Navigator screenOptions={{ headerShown: false }}>
-              <RootStack.Screen name="RoleSelection" component={RoleSelectionScreen} />
-              <RootStack.Screen name="StaffStack" component={StaffStackNavigator} />
-              <RootStack.Screen name="AdminStack" component={AdminStackNavigator} />
-            </RootStack.Navigator>
-          </NavigationContainer>
+          <AppContent />
         </DataProvider>
       </AuthProvider>
     </SafeAreaProvider>

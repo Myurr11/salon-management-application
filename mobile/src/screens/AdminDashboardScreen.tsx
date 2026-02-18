@@ -2,6 +2,8 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { BarChartCard } from '../components/BarChartCard';
+import { RevenueBarChart } from '../components/RevenueBarChart';
 import type { ProductSale } from '../types';
 
 interface Props {
@@ -14,10 +16,6 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleLogout = () => {
     logout();
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'RoleSelection' }],
-    });
   };
 
   if (!user || user.role !== 'admin') {
@@ -83,53 +81,55 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       </View>
 
+      <RevenueBarChart
+        today={revenueSummary.todayTotal}
+        monthly={revenueSummary.monthlyTotal}
+        yearly={revenueSummary.yearlyTotal}
+      />
+
       {revenueSummary.byBranch && revenueSummary.byBranch.length > 0 ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Revenue by Branch</Text>
-          {revenueSummary.byBranch.map(b => (
-            <View key={b.branchId} style={styles.staffRevenueRow}>
-              <Text style={styles.staffName}>{b.branchName}</Text>
-              <Text style={styles.staffAmount}>₹{b.todayTotal.toFixed(0)} today</Text>
-            </View>
-          ))}
-          <View style={[styles.staffRevenueRow, { borderTopWidth: 1, borderTopColor: '#1f2937', marginTop: 8, paddingTop: 8 }]}>
-            <Text style={[styles.staffName, { fontWeight: '700' }]}>Combined</Text>
-            <Text style={styles.staffAmount}>₹{revenueSummary.todayTotal.toFixed(0)}</Text>
-          </View>
-        </View>
+        <BarChartCard
+          title="Revenue by Branch (today) — tap for details"
+          items={revenueSummary.byBranch.map((b) => ({
+            label: b.branchName,
+            value: b.todayTotal,
+          }))}
+          formatValue={(v) => `₹${v.toFixed(0)}`}
+          TouchableWrapper={({ onPress, children }) => (
+            <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+              {children}
+            </TouchableOpacity>
+          )}
+          onPressItem={(index) => {
+            const b = revenueSummary.byBranch?.[index];
+            if (b && b.branchId && b.branchId !== 'default') {
+              navigation.navigate('BranchDetail', { branchId: b.branchId, branchName: b.branchName });
+            }
+          }}
+        />
       ) : null}
 
       {revenueSummary.paymentBreakdown ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Today&apos;s Payment Breakdown</Text>
-          <View style={styles.staffRevenueRow}>
-            <Text style={styles.staffName}>Cash</Text>
-            <Text style={styles.staffAmount}>₹{(revenueSummary.paymentBreakdown.cash || 0).toFixed(0)}</Text>
-          </View>
-          <View style={styles.staffRevenueRow}>
-            <Text style={styles.staffName}>UPI</Text>
-            <Text style={styles.staffAmount}>₹{(revenueSummary.paymentBreakdown.upi || 0).toFixed(0)}</Text>
-          </View>
-          <View style={styles.staffRevenueRow}>
-            <Text style={styles.staffName}>Card</Text>
-            <Text style={styles.staffAmount}>₹{(revenueSummary.paymentBreakdown.card || 0).toFixed(0)}</Text>
-          </View>
-          <View style={styles.staffRevenueRow}>
-            <Text style={styles.staffName}>Udhaar</Text>
-            <Text style={styles.staffAmount}>₹{(revenueSummary.paymentBreakdown.udhaar || 0).toFixed(0)}</Text>
-          </View>
-        </View>
+        <BarChartCard
+          title="Today's Payment Breakdown"
+          items={[
+            { label: 'Cash', value: revenueSummary.paymentBreakdown.cash || 0, color: '#22c55e' },
+            { label: 'UPI', value: revenueSummary.paymentBreakdown.upi || 0, color: '#3b82f6' },
+            { label: 'Card', value: revenueSummary.paymentBreakdown.card || 0, color: '#f59e0b' },
+            { label: 'Udhaar', value: revenueSummary.paymentBreakdown.udhaar || 0, color: '#ef4444' },
+          ]}
+          formatValue={(v) => `₹${v.toFixed(0)}`}
+        />
       ) : null}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Today&apos;s Revenue by Staff</Text>
-        {revenueSummary.byStaffToday.map(staff => (
-          <View key={staff.staffId} style={styles.staffRevenueRow}>
-            <Text style={styles.staffName}>{staff.staffName}</Text>
-            <Text style={styles.staffAmount}>₹{staff.total.toFixed(0)}</Text>
-          </View>
-        ))}
-      </View>
+      <BarChartCard
+        title="Today's Revenue by Staff"
+        items={revenueSummary.byStaffToday.map((s) => ({
+          label: s.staffName,
+          value: s.total,
+        }))}
+        formatValue={(v) => `₹${v.toFixed(0)}`}
+      />
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -196,6 +196,18 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
           onPress={() => navigation.navigate('AdminStaffPerformance')}
         >
           <Text style={styles.actionButtonText}>Staff Performance</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('AdminAssignBranch')}
+        >
+          <Text style={styles.actionButtonText}>Assign Branch</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('AdminAddStaff')}
+        >
+          <Text style={styles.actionButtonText}>Add Staff</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>

@@ -12,6 +12,7 @@ export interface StaffMember {
   name: string;
   branchId?: string | null;
   branchName?: string | null;
+  username?: string | null;
 }
 
 export interface Service {

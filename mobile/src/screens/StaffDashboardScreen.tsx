@@ -54,10 +54,6 @@ export const StaffDashboardScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleLogout = () => {
     logout();
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'RoleSelection' }],
-    });
   };
 
   if (!user || user.role !== 'staff') {

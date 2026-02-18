@@ -47,6 +47,13 @@ interface DataContextValue {
     byBranch: { branchId: string; branchName: string; todayTotal: number; monthlyTotal: number; yearlyTotal: number }[];
     paymentBreakdown: { cash: number; upi: number; card: number; udhaar: number };
   };
+  getBranchSummary: (branchId: string) => {
+    todayTotal: number;
+    monthlyTotal: number;
+    yearlyTotal: number;
+    byStaffToday: { staffId: string; staffName: string; total: number }[];
+    paymentBreakdown: { cash: number; upi: number; card: number; udhaar: number };
+  };
   getProductSales: (filters?: { staffId?: string; branchId?: string; startDate?: string; endDate?: string }) => Promise<ProductSale[]>;
   attendance: Attendance[];
   getAttendance: (filters?: { staffId?: string; branchId?: string; startDate?: string; endDate?: string; date?: string }) => Promise<Attendance[]>;
@@ -425,6 +432,48 @@ export const DataProvider = ({ children }: DataProviderProps) => {
     };
   }, [visits, staffMembers, branches]);
 
+  const getBranchSummary = useCallback(
+    (branchId: string) => {
+      const now = new Date();
+      const today = startOfDay(now);
+      const todayStr = today.toISOString().split('T')[0];
+      const month = now.getMonth();
+      const year = now.getFullYear();
+      const defaultBranchId = '00000000-0000-0000-0000-000000000001';
+      const branchVisits = visits.filter(v => (v.branchId ?? defaultBranchId) === branchId);
+
+      let todayTotal = 0;
+      let monthlyTotal = 0;
+      let yearlyTotal = 0;
+      const todayByStaff: Record<string, number> = {};
+      const paymentBreakdown = { cash: 0, upi: 0, card: 0, udhaar: 0 };
+
+      branchVisits.forEach(v => {
+        const visitDate = new Date(v.date);
+        const visitDateStr = v.date.split('T')[0];
+        const mode = v.paymentMode || 'cash';
+        if (visitDate.getFullYear() === year) {
+          yearlyTotal += v.total;
+          if (visitDate.getMonth() === month) monthlyTotal += v.total;
+        }
+        if (visitDateStr === todayStr) {
+          todayTotal += v.total;
+          paymentBreakdown[mode] = (paymentBreakdown[mode] || 0) + v.total;
+          todayByStaff[v.staffId] = (todayByStaff[v.staffId] || 0) + v.total;
+        }
+      });
+
+      const byStaffToday = staffMembers.map(s => ({
+        staffId: s.id,
+        staffName: s.name,
+        total: todayByStaff[s.id] || 0,
+      }));
+
+      return { todayTotal, monthlyTotal, yearlyTotal, byStaffToday, paymentBreakdown };
+    },
+    [visits, staffMembers],
+  );
+
   const value: DataContextValue = useMemo(
     () => ({
       services,
@@ -445,6 +494,7 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       deleteInventoryItem,
       getStaffTodayStats,
       getAdminRevenueSummary,
+      getBranchSummary,
       getProductSales,
       getAttendance,
       checkIn,
@@ -475,6 +525,7 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       deleteInventoryItem,
       getStaffTodayStats,
       getAdminRevenueSummary,
+      getBranchSummary,
       getProductSales,
       getAttendance,
       checkIn,

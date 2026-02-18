@@ -21,9 +21,9 @@ export const getBranches = async (): Promise<Branch[]> => {
   return (data || []).map(item => ({ id: item.id, name: item.name }));
 };
 
-// Staff Members (with optional branch filter)
+// Staff Members (with optional branch filter); includes username for Assign Branch
 export const getStaffMembers = async (branchId?: string | null): Promise<StaffMember[]> => {
-  let query = supabase.from('staff_members').select('id, name, branch_id').order('name');
+  let query = supabase.from('staff_members').select('id, name, branch_id, username').order('name');
   if (branchId) {
     query = query.eq('branch_id', branchId);
   }
@@ -33,7 +33,99 @@ export const getStaffMembers = async (branchId?: string | null): Promise<StaffMe
     id: item.id,
     name: item.name,
     branchId: item.branch_id ?? undefined,
+    username: item.username ?? undefined,
   }));
+};
+
+// Auth: get admin by username (for login)
+export const getAdminByUsername = async (
+  username: string,
+): Promise<{ id: string; username: string; password_hash: string } | null> => {
+  const { data, error } = await supabase
+    .from('admin_users')
+    .select('id, username, password_hash')
+    .eq('username', username.trim().toLowerCase())
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+};
+
+// Auth: get staff by username (for login)
+export const getStaffByUsername = async (
+  username: string,
+): Promise<{ id: string; name: string; branch_id: string | null; password_hash: string | null } | null> => {
+  const { data, error } = await supabase
+    .from('staff_members')
+    .select('id, name, branch_id, password_hash')
+    .eq('username', username.trim().toLowerCase())
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+};
+
+// Create default admin (first-time setup)
+export const createAdminUser = async (
+  username: string,
+  passwordHash: string,
+): Promise<{ id: string }> => {
+  const { data, error } = await supabase
+    .from('admin_users')
+    .insert({ username: username.trim().toLowerCase(), password_hash: passwordHash })
+    .select('id')
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+// Update staff branch (Assign Branch screen)
+export const updateStaffBranch = async (
+  staffId: string,
+  branchId: string | null,
+): Promise<void> => {
+  const { error } = await supabase
+    .from('staff_members')
+    .update({ branch_id: branchId, updated_at: new Date().toISOString() })
+    .eq('id', staffId);
+  if (error) throw error;
+};
+
+// Update staff password (admin sets from Assign Branch)
+export const updateStaffPassword = async (
+  staffId: string,
+  passwordHash: string,
+): Promise<void> => {
+  const { error } = await supabase
+    .from('staff_members')
+    .update({ password_hash: passwordHash, updated_at: new Date().toISOString() })
+    .eq('id', staffId);
+  if (error) throw error;
+};
+
+// Create new staff (admin adds staff with id/username and password)
+export const createStaffMember = async (payload: {
+  name: string;
+  username: string;
+  passwordHash: string;
+  branchId?: string | null;
+}): Promise<StaffMember> => {
+  const usernameLower = payload.username.trim().toLowerCase();
+  const { data, error } = await supabase
+    .from('staff_members')
+    .insert({
+      name: payload.name.trim(),
+      username: usernameLower,
+      password_hash: payload.passwordHash,
+      branch_id: payload.branchId ?? null,
+    })
+    .select('id, name, branch_id, username')
+    .single();
+  if (error) throw error;
+  return {
+    id: data.id,
+    name: data.name,
+    branchId: data.branch_id ?? undefined,
+    username: data.username ?? undefined,
+  };
 };
 
 // Customers
