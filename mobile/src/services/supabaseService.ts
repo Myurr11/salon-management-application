@@ -63,6 +63,19 @@ export const getStaffByUsername = async (
   return data;
 };
 
+// Auth: get staff by ID (for password verification)
+export const getStaffById = async (
+  staffId: string,
+): Promise<{ id: string; name: string; branch_id: string | null; password_hash: string | null } | null> => {
+  const { data, error } = await supabase
+    .from('staff_members')
+    .select('id, name, branch_id, password_hash')
+    .eq('id', staffId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+};
+
 // Create default admin (first-time setup)
 export const createAdminUser = async (
   username: string,

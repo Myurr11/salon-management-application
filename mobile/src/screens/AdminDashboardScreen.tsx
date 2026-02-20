@@ -7,6 +7,9 @@ import { BarChartCard } from '../components/BarChartCard';
 import { RevenueBarChart } from '../components/RevenueBarChart';
 import type { ProductSale } from '../types';
 import { colors, theme, shadows } from '../theme';
+import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
+import { StatCard } from '../components/ui/StatCard';
 
 interface Props {
   navigation: any;
@@ -62,24 +65,44 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.headerRow}>
-        <Text style={styles.headerTitle}>Admin Dashboard</Text>
-        <TouchableOpacity style={[styles.logoutButton, shadows.sm]} onPress={handleLogout}>
-          <Text style={styles.logoutButtonText}>Logout</Text>
+        <View>
+          <Text style={[theme.typography.bodySmall, { color: colors.textMuted }]}>
+            {new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </Text>
+          <Text style={theme.typography.h2}>Admin Dashboard</Text>
+        </View>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
+          <MaterialCommunityIcons name="logout" size={20} color={colors.error} />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.statsGrid}>
-        <View style={[styles.statCard, shadows.sm]}>
-          <Text style={styles.statLabel}>Today Revenue</Text>
-          <Text style={styles.statValue}>₹{revenueSummary.todayTotal.toFixed(0)}</Text>
+      <View style={styles.statsRow}>
+        <View style={styles.statCardWrapper}>
+          <StatCard
+            title="Today's Revenue"
+            value={`₹${revenueSummary.todayTotal.toFixed(0)}`}
+            icon="cash-multiple"
+            iconColor={colors.primary}
+            iconBgColor={colors.primaryContainer}
+          />
         </View>
-        <View style={[styles.statCard, shadows.sm]}>
-          <Text style={styles.statLabel}>Monthly Revenue</Text>
-          <Text style={styles.statValue}>₹{revenueSummary.monthlyTotal.toFixed(0)}</Text>
+        <View style={styles.statCardWrapper}>
+          <StatCard
+            title="Monthly Revenue"
+            value={`₹${revenueSummary.monthlyTotal.toFixed(0)}`}
+            icon="calendar-month"
+            iconColor={colors.accent}
+            iconBgColor={colors.accentMuted}
+          />
         </View>
-        <View style={[styles.statCard, shadows.sm]}>
-          <Text style={styles.statLabel}>Yearly Revenue</Text>
-          <Text style={styles.statValue}>₹{revenueSummary.yearlyTotal.toFixed(0)}</Text>
+        <View style={styles.statCardWrapper}>
+          <StatCard
+            title="Yearly Revenue"
+            value={`₹${revenueSummary.yearlyTotal.toFixed(0)}`}
+            icon="chart-line"
+            iconColor={colors.success}
+            iconBgColor={colors.successMuted}
+          />
         </View>
       </View>
 
@@ -135,20 +158,36 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Low Stock Items</Text>
+          <View style={styles.sectionTitleRow}>
+            <MaterialCommunityIcons name="alert-circle" size={18} color={colors.warning} />
+            <Text style={[theme.typography.h4, { marginLeft: theme.spacing.sm }]}>Low Stock Items</Text>
+            {lowStockItems.length > 0 && (
+              <Badge text={`${lowStockItems.length}`} variant="warning" size="sm" style={{ marginLeft: theme.spacing.sm }} />
+            )}
+          </View>
           <TouchableOpacity onPress={() => navigation.navigate('AdminInventory')}>
-            <Text style={styles.manageLink}>Manage</Text>
+            <Text style={[theme.typography.bodySmall, { color: colors.primary }]}>Manage</Text>
           </TouchableOpacity>
         </View>
         {lowStockItems.length === 0 ? (
-          <Text style={styles.emptyText}>All items are well stocked.</Text>
+          <View style={styles.emptyState}>
+            <MaterialCommunityIcons name="check-circle" size={32} color={colors.success} />
+            <Text style={[theme.typography.bodySmall, { color: colors.textMuted, marginTop: theme.spacing.sm }]}>
+              All items are well stocked
+            </Text>
+          </View>
         ) : (
           lowStockItems.map(item => (
             <View key={item.id} style={[styles.lowStockItem, shadows.sm]}>
-              <Text style={styles.lowStockName}>{item.name}</Text>
-              <Text style={styles.lowStockQty}>
-                {item.quantity} / {item.minThreshold} units
-              </Text>
+              <View style={styles.lowStockInfo}>
+                <MaterialCommunityIcons name="package-variant" size={18} color={colors.textSecondary} />
+                <Text style={[theme.typography.bodySmall, { marginLeft: theme.spacing.sm }]}>{item.name}</Text>
+              </View>
+              <Badge 
+                text={`${item.quantity} left`} 
+                variant={item.quantity === 0 ? 'error' : 'warning'} 
+                size="sm" 
+              />
             </View>
           ))
         )}
@@ -201,7 +240,7 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
             onPress={() => navigation.navigate('AdminUdhaar')}
             activeOpacity={0.8}
           >
-            <MaterialCommunityIcons name="credit-card-outline" size={28} color={colors.chartPink} style={styles.actionWidgetIcon} />
+            <MaterialCommunityIcons name="credit-card-outline" size={28} color={colors.chartPurple} style={styles.actionWidgetIcon} />
             <Text style={styles.actionWidgetText}>Udhaar</Text>
           </TouchableOpacity>
         </View>
@@ -273,28 +312,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  statsGrid: {
+  statsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 12,
     marginBottom: theme.spacing.xl,
   },
-  statCard: {
+  statCardWrapper: {
     flex: 1,
-    minWidth: '45%',
-    backgroundColor: colors.surface,
-    borderRadius: theme.radius.xl,
-    padding: theme.spacing.xl,
-  },
-  statLabel: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginBottom: 6,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.primary,
+    minWidth: 0,
   },
   section: {
     marginBottom: theme.spacing.xl,
@@ -310,6 +335,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text,
     marginBottom: 12,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: theme.spacing.xl,
   },
   manageLink: {
     fontSize: 14,
@@ -340,21 +373,18 @@ const styles = StyleSheet.create({
   lowStockItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: theme.spacing.lg,
-    backgroundColor: colors.accentPink,
-    borderRadius: theme.radius.lg,
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.md,
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  lowStockName: {
-    fontSize: 14,
-    color: colors.chartPink,
-    fontWeight: '500',
-  },
-  lowStockQty: {
-    fontSize: 14,
-    color: colors.chartPink,
-    fontWeight: '600',
+  lowStockInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   saleCard: {
     backgroundColor: colors.surface,
@@ -412,19 +442,19 @@ const styles = StyleSheet.create({
     minHeight: 88,
   },
   widgetLavender: {
-    backgroundColor: colors.accentLavender,
+    backgroundColor: colors.accentPurple,
   },
   widgetBlue: {
     backgroundColor: colors.accentBlue,
   },
   widgetPink: {
-    backgroundColor: colors.accentPink,
+    backgroundColor: colors.accentRose,
   },
   widgetAmber: {
     backgroundColor: colors.accentAmber,
   },
   widgetTeal: {
-    backgroundColor: colors.accentTeal,
+    backgroundColor: colors.accentGreen,
   },
   actionWidgetPlaceholder: {
     flex: 1,

@@ -11,11 +11,14 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import type { InventoryItem, PaymentMode, Service, VisitProductLine, VisitServiceLine } from '../types';
 import { colors, theme, shadows } from '../theme';
 import { DatePickerField } from '../components/DatePickerField';
+import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
 
 interface Props {
   navigation: any;
@@ -24,8 +27,12 @@ interface Props {
 type CustomerMode = 'new' | 'existing';
 
 export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
-  const { user } = useAuth();
+  const { user, staffMembers, selectedStaffId, isSharedTabletMode, setSelectedStaff, getEffectiveStaffId } = useAuth();
   const { services, customers, inventory, addOrUpdateCustomer, recordVisit } = useData();
+  
+  // Get effective staff ID and details
+  const effectiveStaffId = getEffectiveStaffId();
+  const selectedStaff = staffMembers.find(s => s.id === selectedStaffId);
 
   const [customerMode, setCustomerMode] = useState<CustomerMode>('new');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
@@ -171,8 +178,13 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
   }, [subtotal, discountPercent, discountAmount, amountOverride]);
 
   const handleSubmit = async () => {
-    if (!user || user.role !== 'staff') {
-      Alert.alert('Error', 'No staff user selected.');
+    const staffId = getEffectiveStaffId();
+    const staffName = isSharedTabletMode && selectedStaff 
+      ? selectedStaff.name 
+      : user?.name;
+    
+    if (!staffId || !staffName) {
+      Alert.alert('Error', 'No staff user selected. Please select a staff member.');
       return;
     }
 
@@ -227,11 +239,11 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
       }
 
       const visitId = await recordVisit({
-        staffId: user.id,
-        staffName: user.name,
+        staffId,
+        staffName,
         customerId,
         customerName: name,
-        branchId: user.branchId || undefined,
+        branchId: selectedStaff?.branchId || user?.branchId || undefined,
         date: dateOnly,
         services: selectedLines,
         products: selectedProducts,
@@ -261,16 +273,49 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
+  const getServiceIcon = (serviceName: string): keyof typeof MaterialCommunityIcons.glyphMap => {
+    const name = serviceName.toLowerCase();
+    if (name.includes('hair')) return 'hair-dryer';
+    if (name.includes('cut')) return 'content-cut';
+    if (name.includes('color') || name.includes('colour')) return 'palette';
+    if (name.includes('wash') || name.includes('shampoo')) return 'shower';
+    if (name.includes('style') || name.includes('blow')) return 'weather-windy';
+    if (name.includes('spa') || name.includes('treatment')) return 'spa';
+    if (name.includes('facial') || name.includes('face')) return 'face-woman';
+    if (name.includes('massage')) return 'hand-heart';
+    if (name.includes('nail') || name.includes('manicure') || name.includes('pedicure')) return 'hand-back-right';
+    if (name.includes('wax')) return 'fire';
+    if (name.includes('thread')) return 'needle';
+    if (name.includes('beard') || name.includes('shave')) return 'mustache';
+    return 'star-circle';
+  };
+
   const renderService = useCallback(({ item }: { item: Service }) => {
     const selected = selectedLines.some(l => l.serviceId === item.id);
     return (
       <TouchableOpacity
-        style={[styles.serviceChip, selected && styles.serviceChipSelected]}
+        style={[styles.serviceWidget, selected && styles.serviceWidgetSelected]}
         onPress={() => toggleService(item)}
+        activeOpacity={0.8}
       >
-        <Text style={[styles.serviceChipLabel, selected && styles.serviceChipLabelSelected]}>
-          {item.name} • ₹{item.price}
+        <View style={[styles.serviceIconContainer, selected && styles.serviceIconContainerSelected]}>
+          <MaterialCommunityIcons 
+            name={getServiceIcon(item.name)} 
+            size={24} 
+            color={selected ? colors.primary : colors.textSecondary} 
+          />
+        </View>
+        <Text style={[styles.serviceWidgetName, selected && styles.serviceWidgetNameSelected]} numberOfLines={2}>
+          {item.name}
         </Text>
+        <Text style={[styles.serviceWidgetPrice, selected && styles.serviceWidgetPriceSelected]}>
+          ₹{item.price}
+        </Text>
+        {selected && (
+          <View style={styles.selectedBadge}>
+            <MaterialCommunityIcons name="check-circle" size={16} color={colors.success} />
+          </View>
+        )}
       </TouchableOpacity>
     );
   }, [selectedLines]);
@@ -293,54 +338,141 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
     </View>
   ), []);
 
+  const handleSwitchStaff = () => {
+    setSelectedStaff(null);
+    navigation.replace('StaffSelection');
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   const renderHeader = useCallback(() => (
     <View style={styles.headerContainer}>
-      <Text style={styles.title}>New Customer Visit</Text>
+      {/* Staff Selector - Only show in shared tablet mode */}
+      {isSharedTabletMode && (
+        <View style={[styles.staffSelectorCard, shadows.sm]}>
+          <View style={styles.staffSelectorRow}>
+            <View style={styles.staffInfo}>
+              {selectedStaff ? (
+                <>
+                  <View style={[styles.staffAvatar, { backgroundColor: colors.primary }]}>
+                    <Text style={styles.staffAvatarText}>{getInitials(selectedStaff.name)}</Text>
+                  </View>
+                  <View style={styles.staffDetails}>
+                    <Text style={styles.staffLabel}>Billing as</Text>
+                    <Text style={styles.staffName}>{selectedStaff.name}</Text>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={[styles.staffAvatar, { backgroundColor: colors.error }]}>
+                    <MaterialCommunityIcons name="alert" size={20} color={colors.textInverse} />
+                  </View>
+                  <View style={styles.staffDetails}>
+                    <Text style={styles.staffLabel}>No Staff Selected</Text>
+                    <Text style={styles.staffName}>Please select a staff member</Text>
+                  </View>
+                </>
+              )}
+            </View>
+            <TouchableOpacity 
+              style={styles.switchStaffButton}
+              onPress={handleSwitchStaff}
+              activeOpacity={0.8}
+            >
+              <MaterialCommunityIcons name="account-switch" size={18} color={colors.primary} />
+              <Text style={styles.switchStaffText}>Switch</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Customer details</Text>
+        <View style={styles.cardHeader}>
+          <MaterialCommunityIcons name="account-details" size={20} color={colors.primary} />
+          <Text style={[theme.typography.h4, { marginLeft: theme.spacing.sm }]}>Customer Details</Text>
+        </View>
+        
         <View style={styles.modeRow}>
           <TouchableOpacity
-            style={[styles.modePill, { marginRight: 4 }, customerMode === 'new' && styles.modePillActive]}
+            style={[styles.modePill, customerMode === 'new' && styles.modePillActive]}
             onPress={() => setCustomerMode('new')}
+            activeOpacity={0.8}
           >
-            <Text style={[styles.modePillText, customerMode === 'new' && styles.modePillTextActive]}>New</Text>
+            <MaterialCommunityIcons 
+              name="account-plus" 
+              size={16} 
+              color={customerMode === 'new' ? colors.primary : colors.textSecondary} 
+              style={{ marginRight: 4 }}
+            />
+            <Text style={[theme.typography.bodySmall, customerMode === 'new' && styles.modePillTextActive]}>
+              New
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.modePill, { marginLeft: 4 }, customerMode === 'existing' && styles.modePillActive]}
+            style={[styles.modePill, customerMode === 'existing' && styles.modePillActive]}
             onPress={() => setCustomerMode('existing')}
+            activeOpacity={0.8}
           >
-            <Text style={[styles.modePillText, customerMode === 'existing' && styles.modePillTextActive]}>
+            <MaterialCommunityIcons 
+              name="account-search" 
+              size={16} 
+              color={customerMode === 'existing' ? colors.primary : colors.textSecondary}
+              style={{ marginRight: 4 }}
+            />
+            <Text style={[theme.typography.bodySmall, customerMode === 'existing' && styles.modePillTextActive]}>
               Existing
             </Text>
           </TouchableOpacity>
         </View>
 
         {customerMode === 'existing' ? (
-          <View style={{ marginTop: 12 }}>
+          <View style={{ marginTop: theme.spacing.md }}>
             {customers.length === 0 ? (
-              <Text style={{ color: colors.textMuted, fontSize: 13 }}>No customers yet. Add a new one.</Text>
+              <View style={styles.emptyCustomers}>
+                <MaterialCommunityIcons name="account-off" size={32} color={colors.border} />
+                <Text style={[theme.typography.bodySmall, { color: colors.textMuted, marginTop: theme.spacing.sm }]}>
+                  No customers yet. Add a new one.
+                </Text>
+              </View>
             ) : (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {customers.map(item => (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={[
-                      styles.customerChip,
-                      selectedCustomerId === item.id && styles.customerChipSelected,
-                    ]}
-                    onPress={() => setSelectedCustomerId(item.id)}
-                  >
-                    <Text
-                      style={[
-                        styles.customerChipText,
-                        selectedCustomerId === item.id && styles.customerChipTextSelected,
-                      ]}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.customersScroll}>
+                {customers.map(item => {
+                  const isSelected = selectedCustomerId === item.id;
+                  return (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={[styles.customerWidget, isSelected && styles.customerWidgetSelected]}
+                      onPress={() => setSelectedCustomerId(item.id)}
+                      activeOpacity={0.8}
                     >
-                      {item.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      <View style={[styles.customerAvatar, isSelected && styles.customerAvatarSelected]}>
+                        <Text style={styles.customerAvatarText}>
+                          {item.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                        </Text>
+                      </View>
+                      <Text style={[styles.customerWidgetName, isSelected && styles.customerWidgetNameSelected]} numberOfLines={2}>
+                        {item.name}
+                      </Text>
+                      {item.phone && (
+                        <Text style={styles.customerWidgetPhone} numberOfLines={1}>
+                          {item.phone}
+                        </Text>
+                      )}
+                      {isSelected && (
+                        <View style={styles.selectedBadge}>
+                          <MaterialCommunityIcons name="check-circle" size={16} color={colors.success} />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
               </ScrollView>
             )}
           </View>
@@ -401,8 +533,11 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Services taken</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 4 }}>
+        <View style={styles.cardHeader}>
+          <MaterialCommunityIcons name="spa" size={20} color={colors.primary} />
+          <Text style={[theme.typography.h4, { marginLeft: theme.spacing.sm }]}>Services</Text>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.servicesScroll}>
           {services.map(item => renderService({ item }))}
         </ScrollView>
 
@@ -416,17 +551,26 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Products</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 4 }}>
+        <View style={styles.cardHeader}>
+          <MaterialCommunityIcons name="package-variant" size={20} color={colors.accent} />
+          <Text style={[theme.typography.h4, { marginLeft: theme.spacing.sm }]}>Products</Text>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsScroll}>
           {inventory.filter(item => item.quantity > 0).map(item => (
             <TouchableOpacity
               key={item.id}
-              style={styles.productChip}
+              style={styles.productWidget}
               onPress={() => addProduct(item)}
+              activeOpacity={0.8}
             >
-              <Text style={styles.productChipText}>
-                {item.name} • ₹{item.price} • Qty: {item.quantity}
-              </Text>
+              <View style={styles.productIconContainer}>
+                <MaterialCommunityIcons name="spray" size={24} color={colors.accent} />
+              </View>
+              <Text style={styles.productWidgetName} numberOfLines={2}>{item.name}</Text>
+              <Text style={styles.productWidgetPrice}>₹{item.price}</Text>
+              <View style={styles.stockBadge}>
+                <Text style={styles.stockText}>{item.quantity} in stock</Text>
+              </View>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -552,51 +696,48 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   scrollContent: {
-    paddingBottom: 32,
+    paddingBottom: theme.spacing.xxxl,
     paddingHorizontal: theme.spacing.lg,
   },
   headerContainer: {
-    paddingTop: 16,
+    paddingTop: theme.spacing.lg,
   },
   container: {
-    paddingTop: 16,
+    paddingTop: theme.spacing.lg,
     paddingHorizontal: theme.spacing.lg,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 16,
   },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: theme.radius.xl,
+    borderRadius: theme.radius.md,
     ...shadows.sm,
-    padding: 14,
+    padding: theme.spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    marginBottom: 16,
+    marginBottom: theme.spacing.lg,
   },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text,
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
   },
   modeRow: {
     flexDirection: 'row',
-    marginTop: 10,
+    marginTop: theme.spacing.md,
     flexWrap: 'wrap',
-    gap: 8,
+    gap: theme.spacing.sm,
   },
   modePill: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: theme.radius.full,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radius.md,
     borderWidth: 1,
     borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
   modePillActive: {
-    backgroundColor: colors.primaryMuted,
+    backgroundColor: colors.primaryContainer,
     borderColor: colors.primary,
   },
   modePillText: {
@@ -607,36 +748,76 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '600',
   },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: theme.spacing.md,
+  },
   input: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: theme.radius.full,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
     color: colors.text,
     fontSize: 14,
-    marginTop: 10,
+    marginTop: theme.spacing.md,
     backgroundColor: colors.background,
   },
-  serviceChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: theme.radius.full,
+  servicesScroll: {
+    paddingVertical: theme.spacing.sm,
+  },
+  serviceWidget: {
+    width: 100,
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    marginRight: 8,
+    marginRight: theme.spacing.md,
+    padding: theme.spacing.md,
+    alignItems: 'center',
+    ...shadows.sm,
   },
-  serviceChipSelected: {
-    backgroundColor: colors.primaryMuted,
+  serviceWidgetSelected: {
     borderColor: colors.primary,
+    backgroundColor: colors.primaryContainer,
   },
-  serviceChipLabel: {
-    fontSize: 13,
+  serviceIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: theme.radius.lg,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  serviceIconContainerSelected: {
+    backgroundColor: colors.surface,
+  },
+  serviceWidgetName: {
+    fontSize: 12,
     color: colors.text,
+    textAlign: 'center',
+    marginBottom: 4,
+    height: 32,
   },
-  serviceChipLabelSelected: {
+  serviceWidgetNameSelected: {
     color: colors.primary,
     fontWeight: '600',
+  },
+  serviceWidgetPrice: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  serviceWidgetPriceSelected: {
+    color: colors.primary,
+  },
+  selectedBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
   },
   lineRow: {
     flexDirection: 'row',
@@ -674,25 +855,60 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'right',
   },
-  customerChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: theme.radius.full,
+  emptyCustomers: {
+    alignItems: 'center',
+    paddingVertical: theme.spacing.xl,
+  },
+  customersScroll: {
+    paddingVertical: theme.spacing.sm,
+  },
+  customerWidget: {
+    width: 100,
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    marginRight: 8,
+    marginRight: theme.spacing.md,
+    padding: theme.spacing.md,
+    alignItems: 'center',
+    ...shadows.sm,
   },
-  customerChipSelected: {
-    backgroundColor: colors.primaryMuted,
+  customerWidgetSelected: {
     borderColor: colors.primary,
+    backgroundColor: colors.primaryContainer,
   },
-  customerChipText: {
-    fontSize: 13,
+  customerAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  customerAvatarSelected: {
+    backgroundColor: colors.primary,
+  },
+  customerAvatarText: {
+    color: colors.textInverse,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  customerWidgetName: {
+    fontSize: 12,
     color: colors.text,
+    textAlign: 'center',
+    marginBottom: 2,
+    height: 32,
   },
-  customerChipTextSelected: {
+  customerWidgetNameSelected: {
     color: colors.primary,
     fontWeight: '600',
+  },
+  customerWidgetPhone: {
+    fontSize: 10,
+    color: colors.textMuted,
+    textAlign: 'center',
   },
   footer: {
     flexDirection: 'row',
@@ -723,18 +939,52 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
-  productChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: theme.radius.full,
+  productsScroll: {
+    paddingVertical: theme.spacing.sm,
+  },
+  productWidget: {
+    width: 100,
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    marginRight: 8,
-    backgroundColor: colors.background,
+    marginRight: theme.spacing.md,
+    padding: theme.spacing.md,
+    alignItems: 'center',
+    ...shadows.sm,
   },
-  productChipText: {
-    fontSize: 13,
+  productIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: theme.radius.lg,
+    backgroundColor: colors.accentMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  productWidgetName: {
+    fontSize: 12,
     color: colors.text,
+    textAlign: 'center',
+    marginBottom: 4,
+    height: 32,
+  },
+  productWidgetPrice: {
+    fontSize: 14,
+    color: colors.accent,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  stockBadge: {
+    backgroundColor: colors.successLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: theme.radius.full,
+  },
+  stockText: {
+    fontSize: 10,
+    color: colors.success,
+    fontWeight: '500',
   },
   productRow: {
     flexDirection: 'row',
@@ -787,5 +1037,64 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     minWidth: 60,
     textAlign: 'right',
+  },
+  // Staff Selector Styles
+  staffSelectorCard: {
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  staffSelectorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  staffInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  staffAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
+  },
+  staffAvatarText: {
+    color: colors.textInverse,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  staffDetails: {
+    flex: 1,
+  },
+  staffLabel: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginBottom: 2,
+  },
+  staffName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  switchStaffButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primaryContainer,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: theme.radius.md,
+    gap: 4,
+  },
+  switchStaffText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primary,
   },
 });

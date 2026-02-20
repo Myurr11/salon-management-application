@@ -1,49 +1,67 @@
 /**
- * Material U inspired color palette - soft pastels, lavender, inviting tones
+ * Professional Corporate Color Palette
+ * Clean, modern, business-focused design system
  */
 export const colors = {
-  // Backgrounds - off-white, very light gray
-  background: '#fafafa',
-  backgroundSecondary: '#f5f5f5',
+  // Backgrounds
+  background: '#f8fafc',
+  backgroundSecondary: '#f1f5f9',
   surface: '#ffffff',
   surfaceElevated: '#ffffff',
 
   // Text
-  text: '#1c1b1f',
-  textSecondary: '#49454f',
-  textMuted: '#79747e',
+  text: '#0f172a',
+  textSecondary: '#475569',
+  textMuted: '#64748b',
   textInverse: '#ffffff',
 
-  // Borders - subtle
-  border: '#e7e0ec',
-  borderLight: '#f3edf7',
+  // Borders
+  border: '#e2e8f0',
+  borderLight: '#f1f5f9',
 
-  // Primary - Material U purple/lavender
-  primary: '#6750a4',
-  primaryLight: '#7f67be',
-  primaryMuted: '#e8def8',
-  primaryContainer: '#eaddff',
+  // Primary - Deep Navy Blue
+  primary: '#1e3a5f',
+  primaryLight: '#2d4a6f',
+  primaryMuted: '#e2e8f0',
+  primaryContainer: '#dbeafe',
 
-  // Pastel accents (for cards, highlights)
-  accentLavender: '#e8def8',
-  accentBlue: '#e3f2fd',
-  accentPink: '#fce4ec',
-  accentAmber: '#fff3e0',
-  accentTeal: '#e0f2f1',
+  // Secondary - Slate Gray
+  secondary: '#64748b',
+  secondaryLight: '#94a3b8',
+  secondaryMuted: '#f1f5f9',
+
+  // Accent - Corporate Teal
+  accent: '#0d9488',
+  accentLight: '#14b8a6',
+  accentMuted: '#ccfbf1',
+
+  // Accent variations for cards
+  accentBlue: '#dbeafe',
+  accentGreen: '#dcfce7',
+  accentAmber: '#fef3c7',
+  accentRose: '#ffe4e6',
+  accentPurple: '#f3e8ff',
 
   // Status
-  success: '#2e7d32',
-  successMuted: '#e8f5e9',
-  error: '#b3261e',
-  errorMuted: '#fdeaea',
-  warning: '#e65100',
-  warningMuted: '#fff3e0',
+  success: '#059669',
+  successMuted: '#d1fae5',
+  successLight: '#ecfdf5',
+  error: '#dc2626',
+  errorMuted: '#fee2e2',
+  errorLight: '#fef2f2',
+  warning: '#d97706',
+  warningMuted: '#fef3c7',
+  warningLight: '#fffbeb',
+  info: '#2563eb',
+  infoMuted: '#dbeafe',
+  infoLight: '#eff6ff',
 
   // Chart accents
-  chartGreen: '#2e7d32',
-  chartBlue: '#1976d2',
-  chartAmber: '#ed6c02',
-  chartRed: '#b3261e',
-  chartPurple: '#6750a4',
-  chartPink: '#ad1457',
+  chartGreen: '#059669',
+  chartBlue: '#2563eb',
+  chartAmber: '#d97706',
+  chartRed: '#dc2626',
+  chartPurple: '#7c3aed',
+  chartTeal: '#0d9488',
+  chartNavy: '#1e3a5f',
 } as const;

@@ -1,8 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useData } from '../context/DataContext';
 import type { Visit } from '../types';
-import { colors, theme } from '../theme';
+import { colors, theme, shadows } from '../theme';
+import { Button } from '../components/ui/Button';
 
 interface Props {
   navigation: any;
@@ -44,44 +46,55 @@ export const BillViewScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.billContainer}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <View style={[styles.billContainer, shadows.md]}>
         <View style={styles.header}>
-          <Text style={styles.salonName}>SALON MANAGER</Text>
-          <Text style={styles.address}>123 Main Street, City</Text>
-          <Text style={styles.phone}>Phone: +91 98765 43210</Text>
-        </View>
-
-        <View style={styles.divider} />
-
-        <View style={styles.section}>
-          <Text style={styles.label}>Bill No:</Text>
-          <Text style={styles.value}>{visit.billNumber || visit.id}</Text>
-        </View>
-        {(branchName || visit.branchName) ? (
-          <View style={styles.section}>
-            <Text style={styles.label}>Branch:</Text>
-            <Text style={styles.value}>{branchName || visit.branchName}</Text>
+          <View style={styles.logoCircle}>
+            <MaterialCommunityIcons name="store" size={32} color={colors.primary} />
           </View>
-        ) : null}
-        <View style={styles.section}>
-          <Text style={styles.label}>Date:</Text>
-          <Text style={styles.value}>{formatDate(visit.date)}</Text>
-        </View>
-        <View style={styles.section}>
-          <Text style={styles.label}>Time:</Text>
-          <Text style={styles.value}>{formatTime(visit.createdAt)}</Text>
+          <Text style={theme.typography.h2}>SALON MANAGER</Text>
+          <Text style={[theme.typography.caption, { color: colors.textMuted, marginTop: 4 }]}>
+            123 Main Street, City
+          </Text>
+          <Text style={[theme.typography.caption, { color: colors.textMuted }]}>
+            +91 98765 43210
+          </Text>
         </View>
 
         <View style={styles.divider} />
 
-        <View style={styles.section}>
-          <Text style={styles.label}>Customer:</Text>
-          <Text style={styles.value}>{visit.customerName}</Text>
+        <View style={styles.infoGrid}>
+          <View style={styles.infoItem}>
+            <Text style={[theme.typography.caption, { color: colors.textMuted }]}>Bill No</Text>
+            <Text style={theme.typography.body}>{visit.billNumber || visit.id.slice(0, 8)}</Text>
+          </View>
+          {(branchName || visit.branchName) ? (
+            <View style={styles.infoItem}>
+              <Text style={[theme.typography.caption, { color: colors.textMuted }]}>Branch</Text>
+              <Text style={theme.typography.body}>{branchName || visit.branchName}</Text>
+            </View>
+          ) : null}
+          <View style={styles.infoItem}>
+            <Text style={[theme.typography.caption, { color: colors.textMuted }]}>Date</Text>
+            <Text style={theme.typography.body}>{formatDate(visit.date)}</Text>
+          </View>
+          <View style={styles.infoItem}>
+            <Text style={[theme.typography.caption, { color: colors.textMuted }]}>Time</Text>
+            <Text style={theme.typography.body}>{formatTime(visit.createdAt)}</Text>
+          </View>
         </View>
-        <View style={styles.section}>
-          <Text style={styles.label}>Staff:</Text>
-          <Text style={styles.value}>{visit.staffName}</Text>
+
+        <View style={styles.divider} />
+
+        <View style={styles.customerSection}>
+          <View style={styles.customerRow}>
+            <MaterialCommunityIcons name="account" size={18} color={colors.primary} />
+            <Text style={[theme.typography.body, { marginLeft: theme.spacing.sm }]}>{visit.customerName}</Text>
+          </View>
+          <View style={styles.customerRow}>
+            <MaterialCommunityIcons name="account-tie" size={18} color={colors.accent} />
+            <Text style={[theme.typography.body, { marginLeft: theme.spacing.sm }]}>{visit.staffName}</Text>
+          </View>
         </View>
 
         <View style={styles.divider} />
@@ -146,23 +159,33 @@ export const BillViewScreen: React.FC<Props> = ({ navigation, route }) => {
         </View>
 
         <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>Total Amount:</Text>
-          <Text style={styles.totalAmount}>₹{visit.total.toFixed(0)}</Text>
+          <Text style={theme.typography.h3}>Total Amount</Text>
+          <Text style={[theme.typography.h1, { color: colors.primary }]}>₹{visit.total.toFixed(0)}</Text>
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Thank you for your visit!</Text>
-          <Text style={styles.footerText}>Visit us again</Text>
+          <MaterialCommunityIcons name="heart" size={16} color={colors.error} />
+          <Text style={[theme.typography.caption, { color: colors.textMuted, marginLeft: theme.spacing.xs }]}>
+            Thank you for your visit!
+          </Text>
         </View>
       </View>
 
       <View style={styles.actions}>
-        <TouchableOpacity style={styles.printButton} onPress={handlePrint}>
-          <Text style={styles.printButtonText}>Print Bill</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.closeButtonText}>Close</Text>
-        </TouchableOpacity>
+        <Button
+          title="Print Bill"
+          onPress={handlePrint}
+          variant="primary"
+          icon="printer"
+          fullWidth
+          style={{ marginBottom: theme.spacing.md }}
+        />
+        <Button
+          title="Close"
+          onPress={() => navigation.goBack()}
+          variant="outline"
+          fullWidth
+        />
       </View>
     </ScrollView>
   );
@@ -176,49 +199,44 @@ const styles = StyleSheet.create({
   billContainer: {
     backgroundColor: colors.surface,
     margin: theme.spacing.lg,
-    padding: theme.spacing.lg,
+    padding: theme.spacing.xxl,
     borderRadius: theme.radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: theme.spacing.lg,
   },
-  salonName: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 4,
-  },
-  address: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginBottom: 2,
-  },
-  phone: {
-    fontSize: 12,
-    color: colors.textSecondary,
+  logoCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primaryContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.md,
   },
   divider: {
     height: 1,
     backgroundColor: colors.border,
-    marginVertical: 12,
+    marginVertical: theme.spacing.md,
   },
-  section: {
+  infoGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
+    flexWrap: 'wrap',
   },
-  label: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    fontWeight: '500',
+  infoItem: {
+    width: '50%',
+    marginBottom: theme.spacing.md,
   },
-  value: {
-    fontSize: 14,
-    color: colors.text,
-    fontWeight: '600',
+  customerSection: {
+    marginVertical: theme.spacing.sm,
+  },
+  customerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
   },
   sectionTitle: {
     fontSize: 16,
@@ -230,7 +248,11 @@ const styles = StyleSheet.create({
   itemRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
   },
   itemLeft: {
     flex: 1,
@@ -258,64 +280,40 @@ const styles = StyleSheet.create({
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 8,
-    paddingTop: 12,
+    alignItems: 'center',
+    marginTop: theme.spacing.md,
+    paddingTop: theme.spacing.lg,
     borderTopWidth: 2,
     borderTopColor: colors.border,
   },
-  totalLabel: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  totalAmount: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.text,
-  },
   footer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 20,
-  },
-  footerText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginBottom: 4,
+    justifyContent: 'center',
+    marginTop: theme.spacing.xl,
   },
   actions: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    gap: 12,
-  },
-  printButton: {
-    flex: 1,
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  printButtonText: {
-    color: colors.textInverse,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  closeButton: {
-    flex: 1,
-    backgroundColor: colors.backgroundSecondary,
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  closeButtonText: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: '600',
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.xxl,
   },
   errorText: {
     color: colors.error,
     fontSize: 16,
     textAlign: 'center',
     marginTop: 50,
+  },
+  section: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.sm,
+  },
+  label: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  value: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: '600',
   },
 });

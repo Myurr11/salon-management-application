@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { DatePickerField } from '../components/DatePickerField';
 import { useData } from '../context/DataContext';
-import { colors, theme } from '../theme';
+import { colors, theme, shadows } from '../theme';
 import type { Attendance } from '../types';
 
 interface Props {
@@ -66,34 +67,58 @@ export const AdminAttendanceScreen: React.FC<Props> = ({ navigation }) => {
     return `${diffHours.toFixed(1)} hrs`;
   };
 
-  const renderAttendance = ({ item }: { item: Attendance }) => (
-    <View style={styles.attendanceCard}>
-      <View style={styles.attendanceHeader}>
-        <Text style={styles.staffName}>{item.staffName}</Text>
-        <View style={[styles.statusBadge, getStatusStyle(item.status)]}>
-          <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
+  const getStatusIcon = (status: string): keyof typeof MaterialCommunityIcons.glyphMap => {
+    switch (status) {
+      case 'present': return 'check-circle';
+      case 'late': return 'clock-alert';
+      case 'half_day': return 'circle-half-full';
+      case 'absent': return 'close-circle';
+      default: return 'help-circle';
+    }
+  };
+
+  const renderAttendance = ({ item }: { item: Attendance }) => {
+    const statusStyle = getStatusStyle(item.status);
+    return (
+      <View style={[styles.attendanceCard, shadows.sm]}>
+        <View style={styles.cardHeader}>
+          <View style={[styles.avatarCircle, { backgroundColor: statusStyle.backgroundColor }]}>
+            <MaterialCommunityIcons name={getStatusIcon(item.status)} size={22} color={statusStyle.borderColor} />
+          </View>
+          <View style={styles.staffInfo}>
+            <Text style={styles.staffName} numberOfLines={1}>{item.staffName}</Text>
+            <View style={[styles.statusPill, { backgroundColor: statusStyle.backgroundColor, borderColor: statusStyle.borderColor }]}>
+              <Text style={[styles.statusText, { color: statusStyle.borderColor }]}>{item.status.toUpperCase()}</Text>
+            </View>
+          </View>
+          <View style={styles.hoursContainer}>
+            <Text style={styles.hoursLabel}>Hours</Text>
+            <Text style={styles.hoursValue}>{calculateHours(item.checkInTime, item.checkOutTime)}</Text>
+          </View>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.timeGrid}>
+          <View style={styles.timeItem}>
+            <MaterialCommunityIcons name="login-variant" size={16} color={colors.success} />
+            <Text style={styles.timeLabel}>Check In</Text>
+            <Text style={styles.timeValue}>{formatTime(item.checkInTime)}</Text>
+          </View>
+          <View style={styles.timeDivider} />
+          <View style={styles.timeItem}>
+            <MaterialCommunityIcons name="logout-variant" size={16} color={colors.error} />
+            <Text style={styles.timeLabel}>Check Out</Text>
+            <Text style={styles.timeValue}>{formatTime(item.checkOutTime)}</Text>
+          </View>
+          <View style={styles.timeDivider} />
+          <View style={styles.timeItem}>
+            <MaterialCommunityIcons name="calendar" size={16} color={colors.primary} />
+            <Text style={styles.timeLabel}>Date</Text>
+            <Text style={styles.timeValue}>{formatDate(item.attendanceDate)}</Text>
+          </View>
         </View>
       </View>
-      <View style={styles.attendanceDetails}>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Date:</Text>
-          <Text style={styles.detailValue}>{formatDate(item.attendanceDate)}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Check In:</Text>
-          <Text style={styles.detailValue}>{formatTime(item.checkInTime)}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Check Out:</Text>
-          <Text style={styles.detailValue}>{formatTime(item.checkOutTime)}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Hours:</Text>
-          <Text style={styles.detailValue}>{calculateHours(item.checkInTime, item.checkOutTime)}</Text>
-        </View>
-      </View>
-    </View>
-  );
+    );
+  };
 
   const getStatusStyle = (status: string) => {
     switch (status) {
@@ -169,25 +194,22 @@ export const AdminAttendanceScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       </View>
 
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Attendance Records</Text>
-        <Text style={styles.headerSubtitle}>{attendanceRecords.length} record(s)</Text>
-      </View>
-
       {loading ? (
         <View style={styles.center}>
+          <MaterialCommunityIcons name="loading" size={32} color={colors.textMuted} />
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
       ) : attendanceRecords.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No attendance records found for selected date.</Text>
+        <View style={styles.center}>
+          <MaterialCommunityIcons name="clipboard-text-clock" size={64} color={colors.border} />
+          <Text style={styles.emptyText}>No attendance records found</Text>
         </View>
       ) : (
         <FlatList
           data={attendanceRecords}
           keyExtractor={item => item.id}
           renderItem={renderAttendance}
-          contentContainerStyle={{ paddingBottom: 20 }}
+          contentContainerStyle={styles.listContent}
         />
       )}
     </View>
@@ -198,27 +220,31 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    paddingTop: 16,
   },
   center: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 40,
   },
   filters: {
     paddingHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   filterRow: {
     marginBottom: 12,
   },
   filterLabel: {
-    fontSize: 14,
-    color: colors.textSecondary,
+    fontSize: 13,
+    color: colors.textMuted,
     marginBottom: 8,
+    fontWeight: '600',
   },
   dateInput: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
     borderRadius: theme.radius.md,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -238,7 +264,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.full,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
   },
   filterChipActive: {
     backgroundColor: colors.primaryMuted,
@@ -253,57 +279,82 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
-    marginBottom: 12,
+    paddingTop: theme.spacing.lg,
+    paddingBottom: theme.spacing.md,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
+  headerIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: theme.radius.lg,
+    backgroundColor: colors.primaryContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
+  },
+  headerContent: { flex: 1 },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 14,
     color: colors.textSecondary,
   },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 40,
+  listContent: {
+    padding: theme.spacing.lg,
+    paddingBottom: 20,
   },
   emptyText: {
     color: colors.textMuted,
     fontSize: 14,
     textAlign: 'center',
+    marginTop: theme.spacing.md,
   },
   loadingText: {
     color: colors.textSecondary,
     fontSize: 14,
+    marginTop: theme.spacing.md,
   },
   attendanceCard: {
     backgroundColor: colors.surface,
-    borderRadius: theme.radius.lg,
+    borderRadius: theme.radius.xl,
     padding: theme.spacing.lg,
-    marginHorizontal: theme.spacing.lg,
-    marginBottom: 12,
+    marginBottom: theme.spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  attendanceHeader: {
+  cardHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
   },
+  avatarCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
+  },
+  staffInfo: { flex: 1 },
   staffName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.text,
+    marginBottom: 4,
   },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: theme.radius.full,
     borderWidth: 1,
   },
@@ -311,21 +362,38 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
   },
-  attendanceDetails: {
-    gap: 8,
+  hoursContainer: { alignItems: 'flex-end' },
+  hoursLabel: { fontSize: 11, color: colors.textMuted, marginBottom: 2 },
+  hoursValue: { fontSize: 16, fontWeight: '700', color: colors.text },
+  divider: {
+    height: 1,
+    backgroundColor: colors.borderLight,
+    marginVertical: theme.spacing.md,
   },
-  detailRow: {
+  timeGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
+    alignItems: 'center',
   },
-  detailLabel: {
-    fontSize: 13,
-    color: colors.textSecondary,
+  timeItem: {
+    alignItems: 'center',
+    flex: 1,
   },
-  detailValue: {
+  timeDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: colors.border,
+  },
+  timeLabel: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 4,
+  },
+  timeValue: {
     fontSize: 13,
+    fontWeight: '600',
     color: colors.text,
-    fontWeight: '500',
+    marginTop: 2,
   },
   errorText: {
     color: colors.error,

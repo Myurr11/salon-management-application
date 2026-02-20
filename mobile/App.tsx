@@ -22,10 +22,42 @@ import { AdminStaffPerformanceScreen } from './src/screens/AdminStaffPerformance
 import { BranchDetailScreen } from './src/screens/BranchDetailScreen';
 import { AdminAssignBranchScreen } from './src/screens/AdminAssignBranchScreen';
 import { AdminAddStaffScreen } from './src/screens/AdminAddStaffScreen';
+import { StaffSelectionScreen } from './src/screens/StaffSelectionScreen';
+import { StaffAttendanceScreen } from './src/screens/StaffAttendanceScreen';
+import { StaffPasswordScreen } from './src/screens/StaffPasswordScreen';
 
 const RootStack = createNativeStackNavigator();
 const StaffStack = createNativeStackNavigator();
 const AdminStack = createNativeStackNavigator();
+const AuthStack = createNativeStackNavigator();
+
+const AuthNavigator = () => (
+  <AuthStack.Navigator
+    screenOptions={{
+      headerShown: false,
+      contentStyle: { backgroundColor: colors.background },
+    }}
+  >
+    <AuthStack.Screen name="Login" component={LoginScreen} />
+    <AuthStack.Screen name="StaffSelection" component={StaffSelectionScreen} />
+    <AuthStack.Screen name="StaffPassword" component={StaffPasswordScreen} />
+  </AuthStack.Navigator>
+);
+
+// Shared tablet flow navigator (for staff selection + password)
+const SharedTabletStack = createNativeStackNavigator();
+
+const SharedTabletNavigator = () => (
+  <SharedTabletStack.Navigator
+    screenOptions={{
+      headerShown: false,
+      contentStyle: { backgroundColor: colors.background },
+    }}
+  >
+    <SharedTabletStack.Screen name="StaffSelection" component={StaffSelectionScreen} />
+    <SharedTabletStack.Screen name="StaffPassword" component={StaffPasswordScreen} />
+  </SharedTabletStack.Navigator>
+);
 
 const StaffStackNavigator = () => (
   <StaffStack.Navigator
@@ -65,6 +97,11 @@ const StaffStackNavigator = () => (
       name="InventoryView"
       component={InventoryViewScreen}
       options={{ title: 'Inventory' }}
+    />
+    <StaffStack.Screen
+      name="StaffAttendance"
+      component={StaffAttendanceScreen}
+      options={{ title: 'Mark Attendance' }}
     />
   </StaffStack.Navigator>
 );
@@ -137,20 +174,25 @@ const AdminStackNavigator = () => (
 );
 
 function AppContent() {
-  const { user } = useAuth();
+  const { user, isSharedTabletMode, selectedStaffId } = useAuth();
+  const isAuthenticated = user != null;
+  const needsStaffSelection = isSharedTabletMode && !selectedStaffId;
+  
   return (
     <NavigationContainer>
-      {user == null ? (
-        <LoginScreen navigation={null} />
-      ) : (
-        <RootStack.Navigator
-          initialRouteName={user.role === 'admin' ? 'AdminStack' : 'StaffStack'}
-          screenOptions={{ headerShown: false }}
-        >
+      <RootStack.Navigator
+        screenOptions={{ headerShown: false }}
+      >
+        {!isAuthenticated ? (
+          <RootStack.Screen name="Auth" component={AuthNavigator} />
+        ) : needsStaffSelection ? (
+          <RootStack.Screen name="SharedTablet" component={SharedTabletNavigator} />
+        ) : user.role === 'admin' ? (
           <RootStack.Screen name="AdminStack" component={AdminStackNavigator} />
+        ) : (
           <RootStack.Screen name="StaffStack" component={StaffStackNavigator} />
-        </RootStack.Navigator>
-      )}
+        )}
+      </RootStack.Navigator>
     </NavigationContainer>
   );
 }

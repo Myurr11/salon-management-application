@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { colors, theme, shadows } from '../theme';
 
@@ -26,7 +27,14 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const handleLogin = async () => {
     setSubmitting(true);
     try {
-      await login(username, password);
+      const result = await login(username, password);
+      if (result === 'shared_tablet') {
+        // Navigate to staff selection screen for shared tablet
+        navigation.navigate('StaffSelection');
+      }
+      // For 'admin' and 'staff', navigation happens via AuthContext/App.tsx
+    } catch (error) {
+      console.error('Login error:', error);
     } finally {
       setSubmitting(false);
     }
@@ -41,32 +49,38 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
         <View style={styles.content}>
           <View style={styles.logoSection}>
             <View style={[styles.logoCircle, shadows.md]}>
-              <Text style={styles.logoIcon}>✂</Text>
+              <MaterialCommunityIcons name="store" size={36} color={colors.primary} />
             </View>
-            <Text style={styles.title}>Welcome Back!</Text>
-            <Text style={styles.subtitle}>Sign in to continue to Salon Manager</Text>
+            <Text style={[theme.typography.h1, styles.title]}>Welcome Back</Text>
+            <Text style={[theme.typography.body, styles.subtitle]}>Sign in to continue to Salon Manager</Text>
           </View>
 
           <View style={[styles.card, shadows.md]}>
-            <TextInput
-              style={styles.input}
-              placeholder="Username"
-              placeholderTextColor={colors.textMuted}
-              value={username}
-              onChangeText={setUsername}
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!submitting}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              placeholderTextColor={colors.textMuted}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              editable={!submitting}
-            />
+            <View style={styles.inputContainer}>
+              <MaterialCommunityIcons name="account-outline" size={20} color={colors.textMuted} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Username"
+                placeholderTextColor={colors.textMuted}
+                value={username}
+                onChangeText={setUsername}
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!submitting}
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <MaterialCommunityIcons name="lock-outline" size={20} color={colors.textMuted} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                placeholderTextColor={colors.textMuted}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                editable={!submitting}
+              />
+            </View>
             {loginError ? (
               <View style={styles.errorBox}>
                 <Text style={styles.errorText}>{loginError}</Text>
@@ -76,19 +90,25 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
               style={[styles.loginButton, submitting && styles.loginButtonDisabled]}
               onPress={handleLogin}
               disabled={submitting}
-              activeOpacity={0.85}
+              activeOpacity={0.9}
             >
               {submitting ? (
                 <ActivityIndicator color={colors.textInverse} size="small" />
               ) : (
-                <Text style={styles.loginButtonText}>Sign In</Text>
+                <Text style={theme.typography.button}>Sign In</Text>
               )}
             </TouchableOpacity>
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Admin: use your admin credentials</Text>
-            <Text style={styles.footerText}>Staff: use the username & password provided to you</Text>
+            <View style={styles.footerItem}>
+              <MaterialCommunityIcons name="tablet" size={14} color={colors.textMuted} />
+              <Text style={[theme.typography.caption, styles.footerText]}>Shared Tablet: username "salon" / password "salon123"</Text>
+            </View>
+            <View style={styles.footerItem}>
+              <MaterialCommunityIcons name="shield-account" size={14} color={colors.textMuted} />
+              <Text style={[theme.typography.caption, styles.footerText]}>Admin: use your admin credentials</Text>
+            </View>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -110,51 +130,57 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.accentLavender,
+    width: 72,
+    height: 72,
+    borderRadius: theme.radius.xl,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
-  },
-  logoIcon: {
-    fontSize: 40,
+    marginBottom: theme.spacing.xl,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
     color: colors.text,
-    letterSpacing: 0.2,
-    marginBottom: 8,
+    marginBottom: theme.spacing.sm,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 15,
     color: colors.textSecondary,
-    fontWeight: '500',
     textAlign: 'center',
   },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: theme.radius.xxl,
-    padding: theme.spacing.xl + 4,
-    marginBottom: theme.spacing.xxl,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.xxl,
+    marginBottom: theme.spacing.xxxl,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
+  },
+  inputIcon: {
+    marginRight: theme.spacing.sm,
   },
   input: {
-    backgroundColor: colors.backgroundSecondary,
-    borderRadius: theme.radius.lg,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: 16,
+    flex: 1,
+    paddingVertical: theme.spacing.md,
     fontSize: 16,
     color: colors.text,
-    marginBottom: theme.spacing.md,
   },
   errorBox: {
-    backgroundColor: colors.errorMuted,
-    borderRadius: theme.radius.lg,
+    backgroundColor: colors.errorLight,
+    borderRadius: theme.radius.md,
     padding: theme.spacing.md,
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.errorMuted,
   },
   errorText: {
     color: colors.error,
@@ -163,28 +189,26 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     backgroundColor: colors.primary,
-    borderRadius: theme.radius.full,
-    paddingVertical: 16,
+    borderRadius: theme.radius.md,
+    paddingVertical: theme.spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 52,
+    minHeight: 48,
   },
   loginButtonDisabled: {
-    opacity: 0.8,
-  },
-  loginButtonText: {
-    color: colors.textInverse,
-    fontSize: 16,
-    fontWeight: '600',
+    opacity: 0.7,
   },
   footer: {
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: theme.spacing.lg,
+  },
+  footerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.xs,
   },
   footerText: {
-    fontSize: 12,
     color: colors.textMuted,
-    marginBottom: 4,
-    textAlign: 'center',
+    marginLeft: theme.spacing.xs,
   },
 });

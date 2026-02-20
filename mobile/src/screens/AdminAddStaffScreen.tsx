@@ -11,6 +11,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import bcrypt from 'bcryptjs';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
@@ -100,86 +101,138 @@ export const AdminAddStaffScreen: React.FC<{ navigation: any }> = ({ navigation 
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerIcon}>
+          <MaterialCommunityIcons name="account-plus" size={28} color={colors.primary} />
+        </View>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Add New Staff</Text>
+          <Text style={styles.headerSubtitle}>Create staff login credentials</Text>
+        </View>
+      </View>
+
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Add new staff</Text>
-        <Text style={styles.hint}>Set the Staff ID and password they will use to log in.</Text>
-
-        <Text style={styles.label}>Name</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Full name"
-          placeholderTextColor="#64748b"
-          value={name}
-          onChangeText={setName}
-          editable={!saving}
-        />
-
-        <Text style={styles.label}>Staff ID (username for login)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. john_smith or john001"
-          placeholderTextColor="#64748b"
-          value={username}
-          onChangeText={(t) => setUsername(t.toLowerCase().replace(/\s/g, '_'))}
-          autoCapitalize="none"
-          autoCorrect={false}
-          editable={!saving}
-        />
-
-        <Text style={styles.label}>Password (min {MIN_PASSWORD_LENGTH} characters)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor="#64748b"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          editable={!saving}
-        />
-
-        <Text style={styles.label}>Confirm password</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Re-enter password"
-          placeholderTextColor="#64748b"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          secureTextEntry
-          editable={!saving}
-        />
-
-        <Text style={styles.label}>Branch (optional)</Text>
-        <View style={styles.branchRow}>
-          <TouchableOpacity
-            style={[styles.chip, branchId === null && styles.chipActive]}
-            onPress={() => setBranchId(null)}
-          >
-            <Text style={[styles.chipText, branchId === null && styles.chipTextActive]}>
-              None
-            </Text>
-          </TouchableOpacity>
-          {branches.map((b) => (
-            <TouchableOpacity
-              key={b.id}
-              style={[styles.chip, branchId === b.id && styles.chipActive]}
-              onPress={() => setBranchId(b.id)}
-            >
-              <Text style={[styles.chipText, branchId === b.id && styles.chipTextActive]}>
-                {b.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        {/* Name Input */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Full Name</Text>
+          <View style={styles.inputContainer}>
+            <MaterialCommunityIcons name="account-outline" size={20} color={colors.textMuted} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Enter staff name"
+              placeholderTextColor={colors.textMuted}
+              value={name}
+              onChangeText={setName}
+              editable={!saving}
+            />
+          </View>
         </View>
 
+        {/* Username Input */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Staff ID (Username)</Text>
+          <View style={styles.inputContainer}>
+            <MaterialCommunityIcons name="card-account-details-outline" size={20} color={colors.textMuted} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. john_smith or john001"
+              placeholderTextColor={colors.textMuted}
+              value={username}
+              onChangeText={(t) => setUsername(t.toLowerCase().replace(/\s/g, '_'))}
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!saving}
+            />
+          </View>
+        </View>
+
+        {/* Password Input */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Password (min {MIN_PASSWORD_LENGTH} characters)</Text>
+          <View style={styles.inputContainer}>
+            <MaterialCommunityIcons name="lock-outline" size={20} color={colors.textMuted} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Create password"
+              placeholderTextColor={colors.textMuted}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              editable={!saving}
+            />
+          </View>
+        </View>
+
+        {/* Confirm Password Input */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Confirm Password</Text>
+          <View style={styles.inputContainer}>
+            <MaterialCommunityIcons name="lock-check-outline" size={20} color={colors.textMuted} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Re-enter password"
+              placeholderTextColor={colors.textMuted}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+              editable={!saving}
+            />
+          </View>
+        </View>
+
+        {/* Branch Selection */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Branch Assignment (Optional)</Text>
+          <View style={styles.branchRow}>
+            <TouchableOpacity
+              style={[styles.chip, branchId === null && styles.chipActive]}
+              onPress={() => setBranchId(null)}
+            >
+              <MaterialCommunityIcons 
+                name={branchId === null ? "check-circle" : "circle-outline"} 
+                size={14} 
+                color={branchId === null ? colors.textInverse : colors.textSecondary} 
+                style={{ marginRight: 4 }}
+              />
+              <Text style={[styles.chipText, branchId === null && styles.chipTextActive]}>
+                Unassigned
+              </Text>
+            </TouchableOpacity>
+            {branches.map((b) => (
+              <TouchableOpacity
+                key={b.id}
+                style={[styles.chip, branchId === b.id && styles.chipActive]}
+                onPress={() => setBranchId(b.id)}
+              >
+                <MaterialCommunityIcons 
+                  name={branchId === b.id ? "check-circle" : "office-building-outline"} 
+                  size={14} 
+                  color={branchId === b.id ? colors.textInverse : colors.textSecondary} 
+                  style={{ marginRight: 4 }}
+                />
+                <Text style={[styles.chipText, branchId === b.id && styles.chipTextActive]}>
+                  {b.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Submit Button */}
         <TouchableOpacity
           style={[styles.submitBtn, saving && styles.submitBtnDisabled]}
           onPress={handleSubmit}
           disabled={saving}
+          activeOpacity={0.8}
         >
           {saving ? (
             <ActivityIndicator color={colors.textInverse} size="small" />
           ) : (
-            <Text style={styles.submitBtnText}>Add staff</Text>
+            <>
+              <MaterialCommunityIcons name="account-plus" size={20} color={colors.textInverse} />
+              <Text style={styles.submitBtnText}>Add Staff Member</Text>
+            </>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -191,39 +244,70 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   errorText: { color: colors.error, fontSize: 16 },
-  scroll: { padding: theme.spacing.lg, paddingTop: 24, paddingBottom: 40 },
-  title: { fontSize: 22, fontWeight: '700', color: colors.text, marginBottom: 6 },
-  hint: { fontSize: 14, color: colors.textSecondary, marginBottom: 24 },
-  label: { fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 8 },
-  input: {
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.lg,
+    paddingBottom: theme.spacing.md,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  headerIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: theme.radius.lg,
+    backgroundColor: colors.primaryContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
+  },
+  headerContent: { flex: 1 },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: colors.text },
+  headerSubtitle: { fontSize: 14, color: colors.textSecondary },
+  scroll: { padding: theme.spacing.lg, paddingBottom: 40 },
+  inputGroup: { marginBottom: theme.spacing.lg },
+  label: { fontSize: 13, fontWeight: '600', color: colors.textMuted, marginBottom: 8 },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.surface,
     borderRadius: theme.radius.lg,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: colors.text,
-    marginBottom: 18,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  branchRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 24 },
+  inputIcon: { marginLeft: theme.spacing.md },
+  input: {
+    flex: 1,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: colors.text,
+  },
+  branchRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   chip: {
-    paddingHorizontal: theme.spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: theme.radius.full,
     borderWidth: 1,
     borderColor: colors.border,
+    backgroundColor: colors.background,
   },
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipText: { fontSize: 14, color: colors.textSecondary },
   chipTextActive: { color: colors.textInverse, fontWeight: '600' },
   submitBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: colors.primary,
     paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    minHeight: 52,
-    justifyContent: 'center',
+    borderRadius: theme.radius.lg,
+    gap: 8,
+    marginTop: theme.spacing.md,
   },
   submitBtnDisabled: { opacity: 0.7 },
   submitBtnText: { color: colors.textInverse, fontWeight: '700', fontSize: 16 },

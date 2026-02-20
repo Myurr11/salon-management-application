@@ -6,36 +6,43 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import type { Attendance, Visit } from '../types';
 import { colors, theme, shadows } from '../theme';
+import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
 
 interface Props {
   navigation: any;
 }
 
 export const StaffDashboardScreen: React.FC<Props> = ({ navigation }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, staffMembers, selectedStaffId, isSharedTabletMode, setSelectedStaff } = useAuth();
   const { getStaffTodayStats, getTodayAttendance, checkIn, checkOut, refreshData } = useData();
   const [todayAttendance, setTodayAttendance] = useState<Attendance | null>(null);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
 
+  // Get the effective staff ID (either selected in shared mode or logged-in user)
+  const effectiveStaffId = isSharedTabletMode ? selectedStaffId : user?.id;
+  const selectedStaff = staffMembers.find(s => s.id === selectedStaffId);
+
   useEffect(() => {
-    if (user?.id && user?.role === 'staff') {
-      getTodayAttendance(user.id).then(setTodayAttendance);
+    if (effectiveStaffId) {
+      getTodayAttendance(effectiveStaffId).then(setTodayAttendance);
     } else {
       setTodayAttendance(null);
     }
-  }, [user?.id, user?.role, getTodayAttendance]);
+  }, [effectiveStaffId, getTodayAttendance]);
 
   const handleCheckIn = async () => {
-    if (!user?.id) return;
+    if (!effectiveStaffId) return;
     setAttendanceLoading(true);
     try {
-      await checkIn(user.id);
+      await checkIn(effectiveStaffId);
       await refreshData();
-      const next = await getTodayAttendance(user.id);
+      const next = await getTodayAttendance(effectiveStaffId);
       setTodayAttendance(next);
     } finally {
       setAttendanceLoading(false);
@@ -43,16 +50,21 @@ export const StaffDashboardScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const handleCheckOut = async () => {
-    if (!user?.id) return;
+    if (!effectiveStaffId) return;
     setAttendanceLoading(true);
     try {
-      await checkOut(user.id);
+      await checkOut(effectiveStaffId);
       await refreshData();
-      const next = await getTodayAttendance(user.id);
+      const next = await getTodayAttendance(effectiveStaffId);
       setTodayAttendance(next);
     } finally {
       setAttendanceLoading(false);
     }
+  };
+
+  const handleSwitchStaff = () => {
+    setSelectedStaff(null);
+    // Navigation happens automatically via AppContent when selectedStaffId becomes null
   };
 
   if (!user || user.role !== 'staff') {
@@ -63,10 +75,25 @@ export const StaffDashboardScreen: React.FC<Props> = ({ navigation }) => {
     );
   }
 
+  // In shared tablet mode, require staff selection
+  if (isSharedTabletMode && !selectedStaffId) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorText}>Please select a staff member.</Text>
+        <Button
+          title="Select Staff"
+          onPress={handleSwitchStaff}
+          variant="primary"
+          style={{ marginTop: theme.spacing.lg }}
+        />
+      </View>
+    );
+  }
+
   const { totalRevenue, customerCount, visits } = useMemo(() => {
-    if (!user?.id) return { totalRevenue: 0, customerCount: 0, visits: [] };
-    return getStaffTodayStats(user.id);
-  }, [getStaffTodayStats, user?.id]);
+    if (!effectiveStaffId) return { totalRevenue: 0, customerCount: 0, visits: [] };
+    return getStaffTodayStats(effectiveStaffId);
+  }, [getStaffTodayStats, effectiveStaffId]);
 
   const formatTime = (timeString?: string) => {
     if (!timeString) return '--';
@@ -78,47 +105,99 @@ export const StaffDashboardScreen: React.FC<Props> = ({ navigation }) => {
 
   const progressPercent = visits.length > 0 ? Math.min(100, (visits.length / 12) * 100) : 0;
 
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const getAvatarColor = (name: string) => {
+    const avatarColors = ['#1e3a5f', '#0d9488', '#059669', '#2563eb', '#7c3aed'];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return avatarColors[Math.abs(hash) % avatarColors.length];
+  };
+
   const renderVisit = ({ item }: { item: Visit }) => (
     <TouchableOpacity
       style={[styles.visitCard, shadows.sm]}
       onPress={() => navigation.navigate('BillView', { visitId: item.id })}
+      activeOpacity={0.8}
     >
-      <View style={styles.visitIcon}>
-        <Text style={styles.visitIconText}>👤</Text>
+      <View style={[styles.visitAvatar, { backgroundColor: getAvatarColor(item.customerName) }]}>
+        <Text style={styles.visitAvatarText}>{getInitials(item.customerName)}</Text>
       </View>
-      <View style={{ flex: 1, marginLeft: 12 }}>
-        <Text style={styles.visitCustomer}>{item.customerName}</Text>
-        <Text style={styles.visitServices} numberOfLines={1}>
+      <View style={styles.visitContent}>
+        <Text style={theme.typography.body} numberOfLines={1}>
+          {item.customerName}
+        </Text>
+        <Text style={[theme.typography.caption, { color: colors.textMuted }]} numberOfLines={1}>
           {item.services.map(s => s.serviceName).join(', ')}
           {item.products.length > 0 && ` + ${item.products.length} product(s)`}
         </Text>
       </View>
-      <Text style={styles.visitAmount}>₹{item.total.toFixed(0)}</Text>
+      <View style={styles.visitAmountContainer}>
+        <Text style={[theme.typography.caption, { color: colors.textMuted }]}>Bill Amount</Text>
+        <Text style={[theme.typography.h4, { color: colors.success }]}>
+          ₹{item.total.toFixed(0)}
+        </Text>
+      </View>
     </TouchableOpacity>
   );
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.headerRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Welcome Back,</Text>
-          <Text style={styles.headerTitle}>{user.name}!</Text>
-          <Text style={styles.headerSubtitle}>Here is your performance for today</Text>
+        <View style={styles.headerContent}>
+          <Text style={[theme.typography.bodySmall, { color: colors.textMuted }]}>
+            Welcome back,
+          </Text>
+          <Text style={theme.typography.h2}>
+            {isSharedTabletMode && selectedStaff ? selectedStaff.name : user.name}
+          </Text>
+          {isSharedTabletMode && (
+            <Text style={[theme.typography.caption, { color: colors.accent }]}>
+              Shared Tablet Mode
+            </Text>
+          )}
         </View>
-        <TouchableOpacity style={[styles.logoutButton, shadows.sm]} onPress={logout}>
-          <Text style={styles.logoutButtonText}>Logout</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          {isSharedTabletMode && (
+            <TouchableOpacity 
+              style={[styles.headerButton, { backgroundColor: colors.accentLight }]} 
+              onPress={handleSwitchStaff} 
+              activeOpacity={0.8}
+            >
+              <MaterialCommunityIcons name="account-switch" size={18} color={colors.accent} />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.logoutButton} onPress={logout} activeOpacity={0.8}>
+            <MaterialCommunityIcons name={isSharedTabletMode ? "lock" : "logout"} size={18} color={colors.error} />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Progress card - Material U style */}
       <View style={[styles.progressCard, shadows.md]}>
         <View style={styles.progressHeader}>
-          <Text style={styles.progressIcon}>📊</Text>
-          <Text style={styles.progressTitle}>Your progress now</Text>
+          <MaterialCommunityIcons name="chart-line" size={20} color={colors.primary} />
+          <Text style={[theme.typography.label, { marginLeft: theme.spacing.sm }]}>
+            Today's Progress
+          </Text>
         </View>
-        <Text style={styles.progressText}>
-          {visits.length}/12 Task Complete · {Math.round(progressPercent)}%
-        </Text>
+        <View style={styles.progressRow}>
+          <Text style={theme.typography.bodySmall}>
+            <Text style={{ color: colors.primary, fontWeight: '600' }}>{visits.length}</Text>
+            <Text style={{ color: colors.textMuted }}> / 12 customers</Text>
+          </Text>
+          <Text style={[theme.typography.caption, { color: colors.primary }]}>
+            {Math.round(progressPercent)}%
+          </Text>
+        </View>
         <View style={styles.progressBarBg}>
           <View
             style={[
@@ -129,90 +208,131 @@ export const StaffDashboardScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       </View>
 
-      <View style={styles.attendanceCard}>
-        <Text style={styles.attendanceTitle}>Attendance</Text>
+      <View style={[styles.attendanceCard, shadows.sm]}>
+        <View style={styles.attendanceHeader}>
+          <MaterialCommunityIcons name="clock-outline" size={20} color={colors.textSecondary} />
+          <Text style={[theme.typography.label, { marginLeft: theme.spacing.sm }]}>
+            Attendance
+          </Text>
+        </View>
         <View style={styles.attendanceTimes}>
           <View style={styles.attendanceTimeItem}>
-            <Text style={styles.attendanceTimeLabel}>Check In</Text>
-            <Text style={styles.attendanceTimeValue}>
+            <Text style={[theme.typography.caption, { color: colors.textMuted }]}>Check In</Text>
+            <Text style={[theme.typography.h3, { color: todayAttendance?.checkInTime ? colors.success : colors.textMuted }]}>
               {formatTime(todayAttendance?.checkInTime)}
             </Text>
           </View>
+          <View style={styles.divider} />
           <View style={styles.attendanceTimeItem}>
-            <Text style={styles.attendanceTimeLabel}>Check Out</Text>
-            <Text style={styles.attendanceTimeValue}>
+            <Text style={[theme.typography.caption, { color: colors.textMuted }]}>Check Out</Text>
+            <Text style={[theme.typography.h3, { color: todayAttendance?.checkOutTime ? colors.textSecondary : colors.textMuted }]}>
               {formatTime(todayAttendance?.checkOutTime)}
             </Text>
           </View>
         </View>
         <View style={styles.attendanceActions}>
           {!todayAttendance?.checkInTime ? (
-            <TouchableOpacity
-              style={[styles.attendanceButton, styles.checkInButton]}
+            <Button
+              title={attendanceLoading ? 'Processing...' : 'Check In'}
               onPress={handleCheckIn}
               disabled={attendanceLoading}
-            >
-              <Text style={styles.attendanceButtonText}>
-                {attendanceLoading ? 'Processing...' : 'Check In'}
-              </Text>
-            </TouchableOpacity>
+              variant="primary"
+              icon="login-variant"
+              fullWidth
+            />
           ) : !todayAttendance?.checkOutTime ? (
-            <TouchableOpacity
-              style={[styles.attendanceButton, styles.checkOutButton]}
+            <Button
+              title={attendanceLoading ? 'Processing...' : 'Check Out'}
               onPress={handleCheckOut}
               disabled={attendanceLoading}
-            >
-              <Text style={styles.attendanceButtonText}>
-                {attendanceLoading ? 'Processing...' : 'Check Out'}
-              </Text>
-            </TouchableOpacity>
+              variant="secondary"
+              icon="logout-variant"
+              fullWidth
+            />
           ) : (
             <View style={styles.attendanceComplete}>
-              <Text style={styles.attendanceCompleteText}>✓ Attendance Complete</Text>
+              <MaterialCommunityIcons name="check-circle" size={16} color={colors.success} />
+              <Text style={[theme.typography.bodySmall, { color: colors.success, marginLeft: theme.spacing.xs }]}>
+                Attendance Complete
+              </Text>
             </View>
           )}
         </View>
       </View>
 
       <View style={styles.statsRow}>
-        <View style={[styles.statCard, styles.statCardLeft, shadows.sm]}>
-          <Text style={styles.statLabel}>Today Revenue</Text>
-          <Text style={styles.statValue}>₹{totalRevenue.toFixed(0)}</Text>
+        <View style={[styles.statCard, shadows.sm]}>
+          <View style={styles.statIconContainer}>
+            <MaterialCommunityIcons name="currency-inr" size={20} color={colors.primary} />
+          </View>
+          <Text style={[theme.typography.caption, { color: colors.textMuted }]}>Today's Revenue</Text>
+          <Text style={[theme.typography.h2, { marginTop: theme.spacing.xs }]}>
+            ₹{totalRevenue.toFixed(0)}
+          </Text>
         </View>
-        <View style={[styles.statCard, styles.statCardRight, shadows.sm]}>
-          <Text style={styles.statLabel}>Customers</Text>
-          <Text style={styles.statValue}>{customerCount}</Text>
+        <View style={[styles.statCard, shadows.sm]}>
+          <View style={[styles.statIconContainer, { backgroundColor: colors.accentGreen }]}>
+            <MaterialCommunityIcons name="account-group" size={20} color={colors.success} />
+          </View>
+          <Text style={[theme.typography.caption, { color: colors.textMuted }]}>Customers</Text>
+          <Text style={[theme.typography.h2, { marginTop: theme.spacing.xs }]}>
+            {customerCount}
+          </Text>
         </View>
       </View>
 
-      <TouchableOpacity
-        style={styles.primaryButton}
+      <Button
+        title="New Customer Visit"
         onPress={() => navigation.navigate('StaffBilling')}
-      >
-        <Text style={styles.primaryButtonText}>Add New Customer Visit</Text>
-      </TouchableOpacity>
+        variant="primary"
+        icon="plus"
+        size="lg"
+        fullWidth
+      />
 
       <View style={styles.quickActions}>
         <TouchableOpacity
           style={[styles.quickActionButton, shadows.sm]}
           onPress={() => navigation.navigate('CustomerList')}
+          activeOpacity={0.8}
         >
-          <Text style={styles.quickActionText}>📋 Customers</Text>
+          <MaterialCommunityIcons name="account-group" size={24} color={colors.primary} />
+          <Text style={[theme.typography.bodySmall, { marginTop: theme.spacing.sm }]}>Customers</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.quickActionButton, shadows.sm]}
           onPress={() => navigation.navigate('InventoryView')}
+          activeOpacity={0.8}
         >
-          <Text style={styles.quickActionText}>📦 Inventory</Text>
+          <MaterialCommunityIcons name="package-variant" size={24} color={colors.accent} />
+          <Text style={[theme.typography.bodySmall, { marginTop: theme.spacing.sm }]}>Inventory</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.quickActionButton, shadows.sm]}
+          onPress={() => navigation.navigate('StaffAttendance')}
+          activeOpacity={0.8}
+        >
+          <MaterialCommunityIcons name="clock-check" size={24} color={colors.warning} />
+          <Text style={[theme.typography.bodySmall, { marginTop: theme.spacing.sm }]}>Attendance</Text>
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.sectionTitle}>Today&apos;s Customers</Text>
+      <View style={styles.sectionHeader}>
+        <Text style={theme.typography.h3}>Today's Customers</Text>
+        {visits.length > 0 && (
+          <Badge text={`${visits.length}`} variant="info" size="sm" />
+        )}
+      </View>
 
       {visits.length === 0 ? (
-        <Text style={styles.emptyText}>No customers recorded yet today.</Text>
+        <View style={styles.emptyState}>
+          <MaterialCommunityIcons name="account-off" size={40} color={colors.border} />
+          <Text style={[theme.typography.bodySmall, { color: colors.textMuted, marginTop: theme.spacing.md }]}>
+            No customers recorded yet today
+          </Text>
+        </View>
       ) : (
-        <View style={{ paddingBottom: 32 }}>
+        <View style={{ paddingBottom: theme.spacing.xxxl }}>
           {visits.map(item => (
             <View key={item.id}>{renderVisit({ item })}</View>
           ))}
@@ -226,7 +346,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    paddingTop: 16,
+    paddingTop: theme.spacing.lg,
     paddingHorizontal: theme.spacing.lg,
   },
   center: {
@@ -237,226 +357,179 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: theme.spacing.xl,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 4,
+  headerContent: {
+    flex: 1,
   },
-  headerSubtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   logoutButton: {
-    backgroundColor: colors.errorMuted,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radius.full,
-  },
-  logoutButtonText: {
-    color: colors.error,
-    fontSize: 14,
-    fontWeight: '600',
+    width: 40,
+    height: 40,
+    borderRadius: theme.radius.md,
+    backgroundColor: colors.errorLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   progressCard: {
-    backgroundColor: colors.accentLavender,
-    borderRadius: theme.radius.xxl,
-    padding: theme.spacing.xl,
+    backgroundColor: colors.primaryContainer,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.lg,
     marginBottom: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   progressHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: theme.spacing.md,
   },
-  progressIcon: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  progressTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.primary,
-  },
-  progressText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: 12,
+  progressRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
   },
   progressBarBg: {
-    height: 8,
-    backgroundColor: 'rgba(103, 80, 164, 0.2)',
-    borderRadius: 4,
+    height: 6,
+    backgroundColor: colors.border,
+    borderRadius: theme.radius.xs,
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
     backgroundColor: colors.primary,
-    borderRadius: 4,
-  },
-  primaryButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    borderRadius: theme.radius.full,
-    alignItems: 'center',
-    marginBottom: theme.spacing.lg,
-  },
-  primaryButtonText: {
-    color: colors.textInverse,
-    fontSize: 16,
-    fontWeight: '600',
+    borderRadius: theme.radius.xs,
   },
   attendanceCard: {
     backgroundColor: colors.surface,
-    borderRadius: theme.radius.xl,
-    padding: theme.spacing.xl,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.lg,
     marginBottom: theme.spacing.lg,
-    ...shadows.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  attendanceTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 12,
+  attendanceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
   },
   attendanceTimes: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: 16,
+    alignItems: 'center',
+    marginBottom: theme.spacing.lg,
   },
   attendanceTimeItem: {
     alignItems: 'center',
+    flex: 1,
   },
-  attendanceTimeLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginBottom: 4,
-  },
-  attendanceTimeValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.primary,
+  divider: {
+    width: 1,
+    height: 40,
+    backgroundColor: colors.border,
   },
   attendanceActions: {
-    marginTop: 8,
-  },
-  attendanceButton: {
-    paddingVertical: 14,
-    borderRadius: theme.radius.lg,
-    alignItems: 'center',
-  },
-  checkInButton: {
-    backgroundColor: colors.success,
-  },
-  checkOutButton: {
-    backgroundColor: colors.warning,
-  },
-  attendanceButtonText: {
-    color: colors.textInverse,
-    fontSize: 15,
-    fontWeight: '600',
+    marginTop: theme.spacing.sm,
   },
   attendanceComplete: {
-    paddingVertical: 14,
-    borderRadius: theme.radius.lg,
-    backgroundColor: colors.successMuted,
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  attendanceCompleteText: {
-    color: colors.success,
-    fontSize: 14,
-    fontWeight: '600',
+    justifyContent: 'center',
+    paddingVertical: theme.spacing.md,
+    backgroundColor: colors.successLight,
+    borderRadius: theme.radius.md,
   },
   statsRow: {
     flexDirection: 'row',
+    gap: theme.spacing.md,
     marginBottom: theme.spacing.lg,
   },
   statCard: {
     flex: 1,
     backgroundColor: colors.surface,
-    borderRadius: theme.radius.xl,
-    paddingVertical: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  statCardLeft: { marginRight: 6 },
-  statCardRight: { marginLeft: 6 },
-  statLabel: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginBottom: 6,
+  statIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.radius.sm,
+    backgroundColor: colors.primaryContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: theme.spacing.sm,
   },
-  statValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.primary,
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.md,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 10,
-  },
-  emptyText: {
-    color: colors.textMuted,
-    fontSize: 14,
-    marginTop: 8,
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: theme.spacing.xxl,
   },
   visitCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.radius.xl,
+    padding: theme.spacing.md,
+    borderRadius: theme.radius.md,
     backgroundColor: colors.surface,
-    marginBottom: 12,
+    marginBottom: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  visitIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.accentBlue,
+  visitAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  visitIconText: {
-    fontSize: 18,
-  },
-  visitCustomer: {
-    color: colors.text,
-    fontSize: 15,
+  visitAvatarText: {
+    color: colors.textInverse,
+    fontSize: 14,
     fontWeight: '600',
-    marginBottom: 2,
   },
-  visitServices: {
-    color: colors.textSecondary,
-    fontSize: 12,
+  visitContent: {
+    flex: 1,
+    marginLeft: theme.spacing.md,
+    marginRight: theme.spacing.sm,
   },
-  visitAmount: {
-    color: colors.primary,
-    fontSize: 16,
-    fontWeight: '700',
+  visitAmountContainer: {
+    alignItems: 'flex-end',
   },
   errorText: {
     color: colors.error,
   },
   quickActions: {
     flexDirection: 'row',
-    gap: 12,
+    gap: theme.spacing.md,
     marginBottom: theme.spacing.xl,
+    marginTop: theme.spacing.lg,
   },
   quickActionButton: {
     flex: 1,
     backgroundColor: colors.surface,
-    paddingVertical: 14,
-    borderRadius: theme.radius.xl,
+    paddingVertical: theme.spacing.lg,
+    borderRadius: theme.radius.md,
     alignItems: 'center',
-  },
-  quickActionText: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '500',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
 });

@@ -1,8 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useData } from '../context/DataContext';
 import type { Customer } from '../types';
 import { colors, theme, shadows } from '../theme';
+import { Button } from '../components/ui/Button';
 
 interface Props {
   navigation: any;
@@ -51,48 +53,84 @@ export const CustomerListScreen: React.FC<Props> = ({ navigation }) => {
     });
   };
 
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const getAvatarColor = (name: string) => {
+    const colors = ['#1e3a5f', '#0d9488', '#059669', '#2563eb', '#7c3aed'];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  };
+
   const renderCustomer = ({ item }: { item: Customer }) => {
     const stats = customerStats[item.id];
+    const balance = stats?.totalSpend || 0;
+    const isNegative = balance < 0;
+    
     return (
       <TouchableOpacity
         style={styles.customerCard}
         onPress={() => navigation.navigate('CustomerDetail', { customerId: item.id })}
+        activeOpacity={0.8}
       >
-        <View style={styles.customerInfo}>
-          <Text style={styles.customerName}>{item.name}</Text>
-          {item.phone && <Text style={styles.customerDetail}>📞 {item.phone}</Text>}
-          {item.dob && <Text style={styles.customerDetail}>🎂 {formatDate(item.dob)}</Text>}
-          {item.gender && <Text style={styles.customerDetail}>{item.gender}</Text>}
-          {stats && (
-            <Text style={styles.customerDetail}>
-              Total spend: ₹{stats.totalSpend.toFixed(0)} • Last visit: {formatDate(stats.lastVisitDate)}
-            </Text>
-          )}
+        <View style={[styles.avatar, { backgroundColor: getAvatarColor(item.name) }]}>
+          <Text style={styles.avatarText}>{getInitials(item.name)}</Text>
         </View>
+        <View style={styles.customerInfo}>
+          <Text style={theme.typography.body} numberOfLines={1}>{item.name}</Text>
+          <Text style={[theme.typography.caption, { color: colors.textMuted }]}>
+            {item.phone || 'No phone'}
+          </Text>
+        </View>
+        <View style={styles.balanceContainer}>
+          <Text style={[theme.typography.caption, { color: colors.textMuted }]}>Total Spend</Text>
+          <Text style={[theme.typography.h4, { color: isNegative ? colors.error : colors.success }]}>
+            ₹{Math.abs(balance).toFixed(0)}
+          </Text>
+        </View>
+        <TouchableOpacity style={styles.moreButton}>
+          <MaterialCommunityIcons name="dots-vertical" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
       </TouchableOpacity>
     );
   };
 
   return (
     <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={theme.typography.h2}>My Clients</Text>
+      </View>
+
       <View style={styles.searchContainer}>
+        <MaterialCommunityIcons name="magnify" size={20} color={colors.textMuted} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search customers by name, phone, or DOB..."
+          placeholder="Search clients..."
           placeholderTextColor={colors.textMuted}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
       </View>
 
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>All Customers</Text>
-        <Text style={styles.headerSubtitle}>{filteredCustomers.length} customer(s)</Text>
+      <View style={styles.statsRow}>
+        <Text style={[theme.typography.bodySmall, { color: colors.textMuted }]}>
+          Total Clients: <Text style={{ color: colors.text, fontWeight: '600' }}>{filteredCustomers.length}</Text>
+        </Text>
       </View>
 
       {filteredCustomers.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>
+          <MaterialCommunityIcons name="account-off" size={48} color={colors.border} />
+          <Text style={[theme.typography.bodySmall, { color: colors.textMuted, marginTop: theme.spacing.md }]}>
             {searchQuery ? 'No customers found matching your search.' : 'No customers yet.'}
           </Text>
         </View>
@@ -101,7 +139,8 @@ export const CustomerListScreen: React.FC<Props> = ({ navigation }) => {
           data={filteredCustomers}
           keyExtractor={item => item.id}
           renderItem={renderCustomer}
-          contentContainerStyle={{ paddingBottom: 20 }}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
         />
       )}
     </View>
@@ -112,35 +151,35 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    paddingTop: 16,
-  },
-  searchContainer: {
-    paddingHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
-  },
-  searchInput: {
-    backgroundColor: colors.surface,
-    borderRadius: theme.radius.full,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: 12,
-    color: colors.text,
-    fontSize: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   header: {
     paddingHorizontal: theme.spacing.lg,
-    marginBottom: 12,
+    paddingTop: theme.spacing.lg,
+    paddingBottom: theme.spacing.md,
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.lg,
+    marginHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  searchIcon: {
+    marginRight: theme.spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: theme.spacing.md,
     color: colors.text,
-    marginBottom: 4,
-  },
-  headerSubtitle: {
     fontSize: 14,
-    color: colors.textSecondary,
+  },
+  statsRow: {
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
   },
   emptyContainer: {
     flex: 1,
@@ -148,33 +187,42 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 40,
   },
-  emptyText: {
-    color: colors.textMuted,
-    fontSize: 14,
-    textAlign: 'center',
+  listContent: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.xxxl,
   },
   customerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.surface,
-    borderRadius: theme.radius.xl,
-    ...shadows.sm,
-    padding: theme.spacing.lg,
-    marginHorizontal: theme.spacing.lg,
-    marginBottom: 12,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+    ...shadows.sm,
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
+  },
+  avatarText: {
+    color: colors.textInverse,
+    fontSize: 14,
+    fontWeight: '600',
   },
   customerInfo: {
     flex: 1,
   },
-  customerName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 6,
+  balanceContainer: {
+    alignItems: 'flex-end',
+    marginRight: theme.spacing.sm,
   },
-  customerDetail: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginBottom: 4,
+  moreButton: {
+    padding: theme.spacing.xs,
   },
 });

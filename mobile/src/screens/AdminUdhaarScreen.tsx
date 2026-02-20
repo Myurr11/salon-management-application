@@ -9,9 +9,10 @@ import {
   Alert,
   Modal,
 } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
-import { colors, theme } from '../theme';
+import { colors, theme, shadows } from '../theme';
 import type { UdhaarBalance } from '../types';
 
 interface Props {
@@ -92,9 +93,15 @@ export const AdminUdhaarScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Udhaar (Credit)</Text>
-        <Text style={styles.totalOutstanding}>Total outstanding: ₹{totalOutstanding.toFixed(0)}</Text>
+        <View style={styles.headerIcon}>
+          <MaterialCommunityIcons name="credit-card" size={28} color={colors.primary} />
+        </View>
+        <View style={styles.headerContent}>
+          <Text style={styles.title}>Udhaar</Text>
+          <Text style={styles.totalOutstanding}>₹{totalOutstanding.toFixed(0)} outstanding</Text>
+        </View>
       </View>
 
       {branches.length > 1 && (
@@ -118,24 +125,49 @@ export const AdminUdhaarScreen: React.FC<Props> = ({ navigation }) => {
       )}
 
       {loading ? (
-        <Text style={styles.loadingText}>Loading...</Text>
+        <View style={styles.center}>
+          <MaterialCommunityIcons name="loading" size={32} color={colors.textMuted} />
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
       ) : balances.length === 0 ? (
-        <Text style={styles.emptyText}>No udhaar balances.</Text>
+        <View style={styles.center}>
+          <MaterialCommunityIcons name="check-circle" size={64} color={colors.success} />
+          <Text style={styles.emptyText}>No outstanding udhaar</Text>
+        </View>
       ) : (
         <ScrollView contentContainerStyle={styles.list}>
           {balances.map(b => (
-            <View key={b.id} style={styles.card}>
-              <View style={styles.cardRow}>
-                <Text style={styles.customerName}>{b.customerName || b.customerId}</Text>
-                <Text style={styles.amount}>₹{b.outstandingAmount.toFixed(0)}</Text>
+            <View key={b.id} style={[styles.card, shadows.sm]}>
+              <View style={styles.cardHeader}>
+                <View style={[styles.avatarCircle, { backgroundColor: colors.warningMuted }]}>
+                  <Text style={styles.avatarText}>
+                    {(b.customerName || 'U').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                  </Text>
+                </View>
+                <View style={styles.customerInfo}>
+                  <Text style={styles.customerName} numberOfLines={1}>{b.customerName || b.customerId}</Text>
+                  {b.branchName && (
+                    <View style={styles.branchChip}>
+                      <MaterialCommunityIcons name="office-building" size={12} color={colors.textMuted} />
+                      <Text style={styles.branchText}>{b.branchName}</Text>
+                    </View>
+                  )}
+                </View>
+                <View style={styles.amountContainer}>
+                  <Text style={styles.amountLabel}>Due</Text>
+                  <Text style={styles.amount}>₹{b.outstandingAmount.toFixed(0)}</Text>
+                </View>
               </View>
-              {b.branchName && (
-                <Text style={styles.branchName}>Branch: {b.branchName}</Text>
-              )}
+              
               {b.dueDate && (
-                <Text style={styles.dueDate}>Due: {new Date(b.dueDate).toLocaleDateString('en-IN')}</Text>
+                <View style={styles.dueRow}>
+                  <MaterialCommunityIcons name="calendar-clock" size={14} color={colors.warning} />
+                  <Text style={styles.dueDate}>Due: {new Date(b.dueDate).toLocaleDateString('en-IN')}</Text>
+                </View>
               )}
-              <TouchableOpacity style={styles.payButton} onPress={() => handlePay(b)}>
+              
+              <TouchableOpacity style={styles.payButton} onPress={() => handlePay(b)} activeOpacity={0.8}>
+                <MaterialCommunityIcons name="cash-check" size={18} color={colors.textInverse} />
                 <Text style={styles.payButtonText}>Record Payment</Text>
               </TouchableOpacity>
             </View>
@@ -187,46 +219,99 @@ export const AdminUdhaarScreen: React.FC<Props> = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background, paddingTop: 16 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  container: { flex: 1, backgroundColor: colors.background },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
   errorText: { color: colors.error, fontSize: 16 },
-  header: { paddingHorizontal: theme.spacing.lg, marginBottom: theme.spacing.lg },
-  title: { fontSize: 22, fontWeight: '700', color: colors.text, marginBottom: 4 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.lg,
+    paddingBottom: theme.spacing.md,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  headerIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: theme.radius.lg,
+    backgroundColor: colors.primaryContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
+  },
+  headerContent: { flex: 1 },
+  title: { fontSize: 20, fontWeight: '700', color: colors.text },
   totalOutstanding: { fontSize: 14, color: colors.warning, fontWeight: '600' },
-  filterRow: { flexDirection: 'row', paddingHorizontal: theme.spacing.lg, marginBottom: 12, gap: 8 },
+  filterRow: { flexDirection: 'row', paddingHorizontal: theme.spacing.lg, marginVertical: theme.spacing.md, gap: 8 },
   filterChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: theme.radius.full,
     borderWidth: 1,
     borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
   filterChipActive: { backgroundColor: colors.primaryMuted, borderColor: colors.primary },
   filterChipText: { color: colors.text, fontSize: 13 },
-  loadingText: { color: colors.textSecondary, textAlign: 'center', marginTop: 24 },
-  emptyText: { color: colors.textMuted, textAlign: 'center', marginTop: 24 },
-  list: { paddingHorizontal: theme.spacing.lg, paddingBottom: 32 },
+  loadingText: { color: colors.textSecondary, textAlign: 'center', marginTop: theme.spacing.md },
+  emptyText: { color: colors.textMuted, textAlign: 'center', marginTop: theme.spacing.md, fontSize: 14 },
+  list: { padding: theme.spacing.lg, paddingBottom: 32 },
   card: {
     backgroundColor: colors.surface,
     padding: theme.spacing.lg,
-    borderRadius: theme.radius.lg,
-    marginBottom: 12,
+    borderRadius: theme.radius.xl,
+    marginBottom: theme.spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  customerName: { fontSize: 16, fontWeight: '600', color: colors.text },
-  amount: { fontSize: 18, fontWeight: '700', color: colors.warning },
-  branchName: { fontSize: 12, color: colors.textSecondary, marginTop: 4 },
-  dueDate: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
-  payButton: {
-    marginTop: 12,
-    backgroundColor: colors.primary,
-    paddingVertical: 10,
-    borderRadius: theme.radius.md,
+  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: theme.spacing.md },
+  avatarCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
   },
-  payButtonText: { color: colors.textInverse, fontWeight: '600', fontSize: 14 },
+  avatarText: { fontSize: 16, fontWeight: '700', color: colors.warning },
+  customerInfo: { flex: 1 },
+  customerName: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 4 },
+  branchChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: colors.background,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: theme.radius.full,
+  },
+  branchText: { fontSize: 11, color: colors.textMuted, marginLeft: 4 },
+  amountContainer: { alignItems: 'flex-end' },
+  amountLabel: { fontSize: 11, color: colors.textMuted, marginBottom: 2 },
+  amount: { fontSize: 18, fontWeight: '700', color: colors.warning },
+  dueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+    backgroundColor: colors.warningMuted,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: theme.radius.md,
+    alignSelf: 'flex-start',
+  },
+  dueDate: { fontSize: 12, color: colors.warning, marginLeft: 6, fontWeight: '600' },
+  payButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    borderRadius: theme.radius.lg,
+    gap: 8,
+  },
+  payButtonText: { color: colors.textInverse, fontWeight: '700', fontSize: 14 },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',

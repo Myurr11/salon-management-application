@@ -10,10 +10,12 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useData } from '../context/DataContext';
 import type { InventoryItem } from '../types';
-import { colors, theme } from '../theme';
+import { colors, theme, shadows } from '../theme';
 
 interface Props {
   navigation: any;
@@ -128,59 +130,90 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
 
   const renderItem = ({ item }: { item: InventoryItem }) => {
     const status = getStockStatus(item);
+    const stockPercentage = Math.min((item.quantity / (item.minThreshold * 3)) * 100, 100);
+    
     return (
-      <View style={styles.itemCard}>
-        <View style={styles.itemHeader}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.itemName}>{item.name}</Text>
-            <View style={[styles.statusBadge, { backgroundColor: `${status.color}20` }]}>
+      <TouchableOpacity style={[styles.itemCard, shadows.sm]} activeOpacity={0.9}>
+        {/* Header with Icon and Actions */}
+        <View style={styles.cardHeader}>
+          <View style={[styles.iconCircle, { backgroundColor: `${status.color}15` }]}>
+            <MaterialCommunityIcons name="spray" size={24} color={status.color} />
+          </View>
+          <View style={styles.headerContent}>
+            <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
+            <View style={[styles.statusPill, { backgroundColor: `${status.color}15` }]}>
+              <View style={[styles.statusDot, { backgroundColor: status.color }]} />
               <Text style={[styles.statusText, { color: status.color }]}>{status.text}</Text>
             </View>
           </View>
           <View style={styles.itemActions}>
             <TouchableOpacity
-              style={[styles.actionButton, styles.editButton]}
+              style={[styles.iconButton, { backgroundColor: colors.infoMuted }]}
               onPress={() => openEditModal(item)}
             >
-              <Text style={styles.actionButtonText}>Edit</Text>
+              <MaterialCommunityIcons name="pencil" size={16} color={colors.info} />
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionButton, styles.deleteButton]}
+              style={[styles.iconButton, { backgroundColor: colors.errorMuted }]}
               onPress={() => handleDelete(item)}
             >
-              <Text style={styles.actionButtonText}>Delete</Text>
+              <MaterialCommunityIcons name="delete" size={16} color={colors.error} />
             </TouchableOpacity>
           </View>
         </View>
-        <View style={styles.itemDetails}>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Price:</Text>
-            <Text style={styles.detailValue}>₹{item.price}</Text>
+
+        {/* Stock Progress Bar */}
+        <View style={styles.stockBarContainer}>
+          <View style={styles.stockBarBackground}>
+            <View style={[styles.stockBarFill, { width: `${stockPercentage}%`, backgroundColor: status.color }]} />
           </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Quantity:</Text>
-            <Text style={styles.detailValue}>{item.quantity} units</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Min Threshold:</Text>
-            <Text style={styles.detailValue}>{item.minThreshold} units</Text>
+          <View style={styles.stockInfo}>
+            <Text style={styles.stockCurrent}>{item.quantity}</Text>
+            <Text style={styles.stockLabel}> / {item.minThreshold * 3} units</Text>
           </View>
         </View>
-      </View>
+
+        {/* Details Grid */}
+        <View style={styles.detailsGrid}>
+          <View style={styles.detailChip}>
+            <MaterialCommunityIcons name="currency-inr" size={14} color={colors.textMuted} />
+            <Text style={styles.detailChipText}>₹{item.price}</Text>
+          </View>
+          <View style={styles.detailChip}>
+            <MaterialCommunityIcons name="alert-circle-outline" size={14} color={colors.textMuted} />
+            <Text style={styles.detailChipText}>Min: {item.minThreshold}</Text>
+          </View>
+          {item.costPrice && (
+            <View style={styles.detailChip}>
+              <MaterialCommunityIcons name="tag-outline" size={14} color={colors.textMuted} />
+              <Text style={styles.detailChipText}>Cost: ₹{item.costPrice}</Text>
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
     );
   };
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Inventory Management</Text>
-        <TouchableOpacity style={styles.addButton} onPress={openAddModal}>
-          <Text style={styles.addButtonText}>+ Add Item</Text>
+        <View style={styles.headerIcon}>
+          <MaterialCommunityIcons name="package-variant" size={28} color={colors.primary} />
+        </View>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Inventory</Text>
+          <Text style={styles.headerSubtitle}>{inventory.length} items</Text>
+        </View>
+        <TouchableOpacity style={styles.addButton} onPress={openAddModal} activeOpacity={0.8}>
+          <MaterialCommunityIcons name="plus" size={20} color={colors.textInverse} />
+          <Text style={styles.addButtonText}>Add</Text>
         </TouchableOpacity>
       </View>
 
       {inventory.length === 0 ? (
         <View style={styles.emptyContainer}>
+          <MaterialCommunityIcons name="package-variant-closed" size={64} color={colors.border} />
           <Text style={styles.emptyText}>No inventory items. Add your first item!</Text>
         </View>
       ) : (
@@ -188,7 +221,7 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
           data={inventory}
           keyExtractor={item => item.id}
           renderItem={renderItem}
-          contentContainerStyle={{ paddingBottom: 20 }}
+          contentContainerStyle={styles.listContent}
         />
       )}
 
@@ -266,25 +299,46 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    paddingTop: 16,
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
+    paddingTop: theme.spacing.lg,
+    paddingBottom: theme.spacing.md,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  headerIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: theme.radius.lg,
+    backgroundColor: colors.primaryContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
+  },
+  headerContent: {
+    flex: 1,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: colors.text,
   },
+  headerSubtitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
   addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.primary,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 999,
+    paddingVertical: 10,
+    borderRadius: theme.radius.full,
+    gap: 6,
   },
   addButtonText: {
     color: colors.textInverse,
@@ -301,72 +355,115 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 14,
     textAlign: 'center',
+    marginTop: theme.spacing.md,
+  },
+  listContent: {
+    padding: theme.spacing.lg,
+    paddingBottom: 20,
   },
   itemCard: {
     backgroundColor: colors.surface,
-    borderRadius: theme.radius.lg,
+    borderRadius: theme.radius.xl,
     padding: theme.spacing.lg,
-    marginHorizontal: theme.spacing.lg,
-    marginBottom: 12,
+    marginBottom: theme.spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  itemHeader: {
+  cardHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  iconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
   },
   itemName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.text,
-    marginBottom: 6,
+    marginBottom: 4,
   },
-  statusBadge: {
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
     alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: theme.radius.full,
+  },
+  statusDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    marginRight: 5,
   },
   statusText: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 10,
+    fontWeight: '700',
   },
   itemActions: {
     flexDirection: 'row',
     gap: 8,
   },
-  actionButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
+  iconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: theme.radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  editButton: {
-    backgroundColor: colors.chartBlue,
+  stockBarContainer: {
+    marginBottom: theme.spacing.md,
   },
-  deleteButton: {
-    backgroundColor: colors.error,
+  stockBarBackground: {
+    height: 6,
+    backgroundColor: colors.borderLight,
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: 8,
   },
-  actionButtonText: {
-    color: colors.textInverse,
-    fontSize: 12,
-    fontWeight: '600',
+  stockBarFill: {
+    height: '100%',
+    borderRadius: 3,
   },
-  itemDetails: {
-    gap: 6,
-  },
-  detailRow: {
+  stockInfo: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'baseline',
   },
-  detailLabel: {
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  detailValue: {
-    fontSize: 13,
+  stockCurrent: {
+    fontSize: 18,
+    fontWeight: '700',
     color: colors.text,
+  },
+  stockLabel: {
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  detailsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.sm,
+    paddingTop: theme.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  detailChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: theme.radius.full,
+  },
+  detailChipText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginLeft: 4,
     fontWeight: '500',
   },
   modalOverlay: {

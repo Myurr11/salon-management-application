@@ -23,7 +23,7 @@ const DEFAULT_COLORS = [
   colors.chartAmber,
   colors.chartRed,
   colors.chartPurple,
-  colors.chartPink,
+  colors.chartTeal,
 ];
 
 export const BarChartCard: React.FC<BarChartCardProps> = ({
