@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { colors, theme, shadows } from '../theme';
 
 interface RevenueBarChartProps {
   today: number;
@@ -12,26 +13,41 @@ export const RevenueBarChart: React.FC<RevenueBarChartProps> = ({ today, monthly
   const toPct = (v: number) => (v / max) * 100;
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.title}>Revenue overview</Text>
+    <View style={[styles.card, shadows.sm]}>
+      <Text style={styles.title}>Revenue Overview</Text>
       <View style={styles.row}>
         <Text style={styles.label}>Today</Text>
         <View style={styles.track}>
-          <View style={[styles.fill, { width: `${toPct(today)}%`, backgroundColor: '#22c55e' }]} />
+          <View
+            style={[
+              styles.fill,
+              { width: `${toPct(today)}%`, backgroundColor: colors.chartGreen },
+            ]}
+          />
         </View>
         <Text style={styles.value}>₹{today.toFixed(0)}</Text>
       </View>
       <View style={styles.row}>
         <Text style={styles.label}>Monthly</Text>
         <View style={styles.track}>
-          <View style={[styles.fill, { width: `${toPct(monthly)}%`, backgroundColor: '#3b82f6' }]} />
+          <View
+            style={[
+              styles.fill,
+              { width: `${toPct(monthly)}%`, backgroundColor: colors.chartBlue },
+            ]}
+          />
         </View>
         <Text style={styles.value}>₹{monthly.toFixed(0)}</Text>
       </View>
       <View style={styles.row}>
         <Text style={styles.label}>Yearly</Text>
         <View style={styles.track}>
-          <View style={[styles.fill, { width: `${toPct(yearly)}%`, backgroundColor: '#8b5cf6' }]} />
+          <View
+            style={[
+              styles.fill,
+              { width: `${toPct(yearly)}%`, backgroundColor: colors.chartPurple },
+            ]}
+          />
         </View>
         <Text style={styles.value}>₹{yearly.toFixed(0)}</Text>
       </View>
@@ -41,46 +57,44 @@ export const RevenueBarChart: React.FC<RevenueBarChartProps> = ({ today, monthly
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#111827',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#1f2937',
+    backgroundColor: colors.accentLavender,
+    borderRadius: theme.radius.xl,
+    padding: theme.spacing.xl,
+    marginBottom: theme.spacing.lg,
   },
   title: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#e5e7eb',
-    marginBottom: 12,
+    color: colors.primary,
+    marginBottom: 16,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   label: {
     width: 56,
-    fontSize: 12,
-    color: '#9ca3af',
+    fontSize: 13,
+    color: colors.textSecondary,
   },
   track: {
     flex: 1,
-    height: 24,
-    backgroundColor: '#1f2937',
-    borderRadius: 6,
-    marginHorizontal: 8,
+    height: 10,
+    backgroundColor: 'rgba(103, 80, 164, 0.2)',
+    borderRadius: 5,
+    marginHorizontal: 12,
     overflow: 'hidden',
   },
   fill: {
     height: '100%',
-    borderRadius: 6,
+    borderRadius: 5,
   },
   value: {
     width: 72,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#e5e7eb',
+    color: colors.text,
     textAlign: 'right',
   },
 });

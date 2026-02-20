@@ -202,10 +202,10 @@ export const getServices = async (): Promise<Service[]> => {
     .eq('is_active', true)
     .order('name');
   if (error) throw error;
-  return data.map(item => ({
+  return (data || []).map((item: { id: string; name: string; price: string | number }) => ({
     id: item.id,
     name: item.name,
-    price: parseFloat(item.price),
+    price: Number(parseFloat(String(item.price))) || 0,
   }));
 };
 

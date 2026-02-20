@@ -8,9 +8,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
+import { colors, theme, shadows } from '../theme';
 
 interface Props {
   navigation: any;
@@ -26,7 +27,6 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
     setSubmitting(true);
     try {
       await login(username, password);
-      // Navigation is handled by App.tsx based on user role
     } finally {
       setSubmitting(false);
     }
@@ -38,169 +38,144 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.bgAccent} />
         <View style={styles.content}>
-        <View style={styles.logoSection}>
-          <View style={styles.logoCircle}>
-            <Text style={styles.logoIcon}>✂</Text>
-          </View>
-          <Text style={styles.title}>Salon Manager</Text>
-          <Text style={styles.subtitle}>Sign in to continue</Text>
-        </View>
-
-        <View style={styles.card}>
-          <TextInput
-            style={styles.input}
-            placeholder="Username"
-            placeholderTextColor="#94a3b8"
-            value={username}
-            onChangeText={setUsername}
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!submitting}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            placeholderTextColor="#94a3b8"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            editable={!submitting}
-          />
-          {loginError ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{loginError}</Text>
+          <View style={styles.logoSection}>
+            <View style={[styles.logoCircle, shadows.md]}>
+              <Text style={styles.logoIcon}>✂</Text>
             </View>
-          ) : null}
-          <TouchableOpacity
-            style={[styles.loginButton, submitting && styles.loginButtonDisabled]}
-            onPress={handleLogin}
-            disabled={submitting}
-            activeOpacity={0.85}
-          >
-            {submitting ? (
-              <ActivityIndicator color="#0f172a" size="small" />
-            ) : (
-              <Text style={styles.loginButtonText}>Sign In</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+            <Text style={styles.title}>Welcome Back!</Text>
+            <Text style={styles.subtitle}>Sign in to continue to Salon Manager</Text>
+          </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Admin: use your admin credentials</Text>
-          <Text style={styles.footerText}>Staff: use the username & password provided to you</Text>
+          <View style={[styles.card, shadows.md]}>
+            <TextInput
+              style={styles.input}
+              placeholder="Username"
+              placeholderTextColor={colors.textMuted}
+              value={username}
+              onChangeText={setUsername}
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!submitting}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor={colors.textMuted}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              editable={!submitting}
+            />
+            {loginError ? (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorText}>{loginError}</Text>
+              </View>
+            ) : null}
+            <TouchableOpacity
+              style={[styles.loginButton, submitting && styles.loginButtonDisabled]}
+              onPress={handleLogin}
+              disabled={submitting}
+              activeOpacity={0.85}
+            >
+              {submitting ? (
+                <ActivityIndicator color={colors.textInverse} size="small" />
+              ) : (
+                <Text style={styles.loginButtonText}>Sign In</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Admin: use your admin credentials</Text>
+            <Text style={styles.footerText}>Staff: use the username & password provided to you</Text>
+          </View>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#0f172a' },
-  container: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-  },
-  bgAccent: {
-    position: 'absolute',
-    top: -120,
-    right: -120,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: 'rgba(34, 197, 94, 0.08)',
-  },
+  safe: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: colors.background },
   content: {
     flex: 1,
-    paddingHorizontal: 28,
-    paddingTop: 80,
+    paddingHorizontal: theme.spacing.xl,
+    paddingTop: 60,
     paddingBottom: 40,
   },
   logoSection: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 40,
   },
   logoCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: 'rgba(34, 197, 94, 0.2)',
-    borderWidth: 2,
-    borderColor: 'rgba(34, 197, 94, 0.5)',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.accentLavender,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   logoIcon: {
     fontSize: 40,
   },
   title: {
     fontSize: 28,
-    fontWeight: '800',
-    color: '#f8fafc',
-    letterSpacing: 0.5,
-    marginBottom: 6,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: 0.2,
+    marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 15,
-    color: '#94a3b8',
+    color: colors.textSecondary,
     fontWeight: '500',
+    textAlign: 'center',
   },
   card: {
-    backgroundColor: 'rgba(30, 41, 59, 0.8)',
-    borderRadius: 24,
-    padding: 28,
-    borderWidth: 1,
-    borderColor: 'rgba(51, 65, 85, 0.6)',
-    marginBottom: 32,
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.xxl,
+    padding: theme.spacing.xl + 4,
+    marginBottom: theme.spacing.xxl,
   },
   input: {
-    backgroundColor: 'rgba(15, 23, 42, 0.9)',
-    borderRadius: 14,
-    paddingHorizontal: 18,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: theme.radius.lg,
+    paddingHorizontal: theme.spacing.lg,
     paddingVertical: 16,
     fontSize: 16,
-    color: '#f8fafc',
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(71, 85, 105, 0.4)',
+    color: colors.text,
+    marginBottom: theme.spacing.md,
   },
   errorBox: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    backgroundColor: colors.errorMuted,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
   },
   errorText: {
-    color: '#fca5a5',
+    color: colors.error,
     fontSize: 14,
     textAlign: 'center',
   },
   loginButton: {
-    backgroundColor: '#22c55e',
-    borderRadius: 14,
+    backgroundColor: colors.primary,
+    borderRadius: theme.radius.full,
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 52,
-    shadowColor: '#22c55e',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
   },
   loginButtonDisabled: {
     opacity: 0.8,
   },
   loginButtonText: {
-    color: '#0f172a',
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: 0.3,
+    color: colors.textInverse,
+    fontSize: 16,
+    fontWeight: '600',
   },
   footer: {
     alignItems: 'center',
@@ -208,7 +183,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 12,
-    color: '#64748b',
+    color: colors.textMuted,
     marginBottom: 4,
     textAlign: 'center',
   },

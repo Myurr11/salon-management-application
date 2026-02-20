@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput } from 'react-native';
 import { useData } from '../context/DataContext';
 import type { InventoryItem } from '../types';
+import { colors, theme } from '../theme';
 
 interface Props {
   navigation: any;
@@ -18,9 +19,9 @@ export const InventoryViewScreen: React.FC<Props> = ({ navigation }) => {
   }, [inventory, searchQuery]);
 
   const getStockStatus = (item: InventoryItem) => {
-    if (item.quantity === 0) return { text: 'Out of Stock', color: '#ef4444' };
-    if (item.quantity <= item.minThreshold) return { text: 'Low Stock', color: '#f97316' };
-    return { text: 'In Stock', color: '#22c55e' };
+    if (item.quantity === 0) return { text: 'Out of Stock', color: colors.error };
+    if (item.quantity <= item.minThreshold) return { text: 'Low Stock', color: colors.warning };
+    return { text: 'In Stock', color: colors.success };
   };
 
   const renderItem = ({ item }: { item: InventoryItem }) => {
@@ -57,7 +58,7 @@ export const InventoryViewScreen: React.FC<Props> = ({ navigation }) => {
         <TextInput
           style={styles.searchInput}
           placeholder="Search inventory..."
-          placeholderTextColor="#6b7280"
+          placeholderTextColor={colors.textMuted}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
@@ -89,36 +90,36 @@ export const InventoryViewScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
-    paddingTop: 60,
+    backgroundColor: colors.background,
+    paddingTop: 16,
   },
   searchContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 16,
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
   },
   searchInput: {
-    backgroundColor: '#111827',
-    borderRadius: 999,
-    paddingHorizontal: 16,
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.full,
+    paddingHorizontal: theme.spacing.lg,
     paddingVertical: 12,
-    color: 'white',
+    color: colors.text,
     fontSize: 14,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
   },
   header: {
-    paddingHorizontal: 20,
+    paddingHorizontal: theme.spacing.lg,
     marginBottom: 12,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: 'white',
+    color: colors.text,
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: colors.textSecondary,
   },
   emptyContainer: {
     flex: 1,
@@ -127,18 +128,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   emptyText: {
-    color: '#6b7280',
+    color: colors.textMuted,
     fontSize: 14,
     textAlign: 'center',
   },
   itemCard: {
-    backgroundColor: '#111827',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 20,
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.lg,
+    marginHorizontal: theme.spacing.lg,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
   },
   itemHeader: {
     flexDirection: 'row',
@@ -149,13 +150,13 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#e5e7eb',
+    color: colors.text,
     flex: 1,
   },
   statusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 999,
+    borderRadius: theme.radius.full,
   },
   statusText: {
     fontSize: 11,
@@ -170,11 +171,11 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: colors.textSecondary,
   },
   detailValue: {
     fontSize: 13,
-    color: '#e5e7eb',
+    color: colors.text,
     fontWeight: '500',
   },
 });

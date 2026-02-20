@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { colors, theme } from '../theme';
 
 interface Props {
   navigation: any;
@@ -76,20 +77,20 @@ export const AdminStaffPerformanceScreen: React.FC<Props> = ({ navigation }) => 
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#020617', paddingTop: 60, paddingHorizontal: 20 },
+  container: { flex: 1, backgroundColor: colors.background, paddingTop: 16, paddingHorizontal: theme.spacing.lg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorText: { color: '#ef4444', fontSize: 16 },
-  title: { fontSize: 22, fontWeight: '700', color: 'white', marginBottom: 16 },
+  errorText: { color: colors.error, fontSize: 16 },
+  title: { fontSize: 22, fontWeight: '700', color: colors.text, marginBottom: 16 },
   card: {
-    backgroundColor: '#111827',
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: colors.surface,
+    padding: theme.spacing.lg,
+    borderRadius: theme.radius.lg,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
   },
-  staffName: { fontSize: 18, fontWeight: '700', color: 'white', marginBottom: 12 },
+  staffName: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 12 },
   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  label: { fontSize: 14, color: '#9ca3af' },
-  value: { fontSize: 14, fontWeight: '600', color: 'white' },
+  label: { fontSize: 14, color: colors.textSecondary },
+  value: { fontSize: 14, fontWeight: '600', color: colors.text },
 });

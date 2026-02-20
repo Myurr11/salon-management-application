@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useData } from '../context/DataContext';
 import type { Visit } from '../types';
+import { colors, theme } from '../theme';
 
 interface Props {
   navigation: any;
@@ -170,13 +171,15 @@ export const BillViewScreen: React.FC<Props> = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: colors.background,
   },
   billContainer: {
-    backgroundColor: 'white',
-    margin: 20,
-    padding: 20,
-    borderRadius: 8,
+    backgroundColor: colors.surface,
+    margin: theme.spacing.lg,
+    padding: theme.spacing.lg,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   header: {
     alignItems: 'center',
@@ -185,21 +188,21 @@ const styles = StyleSheet.create({
   salonName: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#020617',
+    color: colors.text,
     marginBottom: 4,
   },
   address: {
     fontSize: 12,
-    color: '#6b7280',
+    color: colors.textSecondary,
     marginBottom: 2,
   },
   phone: {
     fontSize: 12,
-    color: '#6b7280',
+    color: colors.textSecondary,
   },
   divider: {
     height: 1,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: colors.border,
     marginVertical: 12,
   },
   section: {
@@ -209,18 +212,18 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: '#6b7280',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   value: {
     fontSize: 14,
-    color: '#020617',
+    color: colors.text,
     fontWeight: '600',
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#020617',
+    color: colors.text,
     marginTop: 8,
     marginBottom: 12,
   },
@@ -234,22 +237,22 @@ const styles = StyleSheet.create({
   },
   itemName: {
     fontSize: 14,
-    color: '#020617',
+    color: colors.text,
     fontWeight: '500',
   },
   itemSubtext: {
     fontSize: 12,
-    color: '#6b7280',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   itemDiscount: {
     fontSize: 11,
-    color: '#f97316',
+    color: colors.warning,
     marginTop: 2,
   },
   itemPrice: {
     fontSize: 14,
-    color: '#020617',
+    color: colors.text,
     fontWeight: '600',
   },
   totalRow: {
@@ -258,17 +261,17 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 12,
     borderTopWidth: 2,
-    borderTopColor: '#020617',
+    borderTopColor: colors.border,
   },
   totalLabel: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#020617',
+    color: colors.text,
   },
   totalAmount: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#020617',
+    color: colors.text,
   },
   footer: {
     alignItems: 'center',
@@ -276,7 +279,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 12,
-    color: '#6b7280',
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   actions: {
@@ -287,30 +290,30 @@ const styles = StyleSheet.create({
   },
   printButton: {
     flex: 1,
-    backgroundColor: '#22c55e',
+    backgroundColor: colors.primary,
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',
   },
   printButtonText: {
-    color: 'white',
+    color: colors.textInverse,
     fontSize: 16,
     fontWeight: '600',
   },
   closeButton: {
     flex: 1,
-    backgroundColor: '#1f2937',
+    backgroundColor: colors.backgroundSecondary,
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',
   },
   closeButtonText: {
-    color: '#e5e7eb',
+    color: colors.text,
     fontSize: 16,
     fontWeight: '600',
   },
   errorText: {
-    color: 'red',
+    color: colors.error,
     fontSize: 16,
     textAlign: 'center',
     marginTop: 50,

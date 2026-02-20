@@ -1,8 +1,15 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+} from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import type { Attendance, Visit } from '../types';
+import { colors, theme, shadows } from '../theme';
 
 interface Props {
   navigation: any;
@@ -30,8 +37,6 @@ export const StaffDashboardScreen: React.FC<Props> = ({ navigation }) => {
       await refreshData();
       const next = await getTodayAttendance(user.id);
       setTodayAttendance(next);
-    } catch (_e) {
-      // Loading cleared in finally
     } finally {
       setAttendanceLoading(false);
     }
@@ -45,15 +50,9 @@ export const StaffDashboardScreen: React.FC<Props> = ({ navigation }) => {
       await refreshData();
       const next = await getTodayAttendance(user.id);
       setTodayAttendance(next);
-    } catch (_e) {
-      // Loading cleared in finally
     } finally {
       setAttendanceLoading(false);
     }
-  };
-
-  const handleLogout = () => {
-    logout();
   };
 
   if (!user || user.role !== 'staff') {
@@ -77,32 +76,57 @@ export const StaffDashboardScreen: React.FC<Props> = ({ navigation }) => {
     });
   };
 
+  const progressPercent = visits.length > 0 ? Math.min(100, (visits.length / 12) * 100) : 0;
+
   const renderVisit = ({ item }: { item: Visit }) => (
     <TouchableOpacity
-      style={styles.visitCard}
+      style={[styles.visitCard, shadows.sm]}
       onPress={() => navigation.navigate('BillView', { visitId: item.id })}
     >
-      <View style={{ flex: 1 }}>
+      <View style={styles.visitIcon}>
+        <Text style={styles.visitIconText}>👤</Text>
+      </View>
+      <View style={{ flex: 1, marginLeft: 12 }}>
         <Text style={styles.visitCustomer}>{item.customerName}</Text>
         <Text style={styles.visitServices} numberOfLines={1}>
           {item.services.map(s => s.serviceName).join(', ')}
           {item.products.length > 0 && ` + ${item.products.length} product(s)`}
         </Text>
       </View>
-      <Text style={styles.visitAmount}>₹ {item.total.toFixed(0)}</Text>
+      <Text style={styles.visitAmount}>₹{item.total.toFixed(0)}</Text>
     </TouchableOpacity>
   );
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.headerRow}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Hi, {user.name}</Text>
+          <Text style={styles.headerTitle}>Welcome Back,</Text>
+          <Text style={styles.headerTitle}>{user.name}!</Text>
           <Text style={styles.headerSubtitle}>Here is your performance for today</Text>
         </View>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <TouchableOpacity style={[styles.logoutButton, shadows.sm]} onPress={logout}>
           <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Progress card - Material U style */}
+      <View style={[styles.progressCard, shadows.md]}>
+        <View style={styles.progressHeader}>
+          <Text style={styles.progressIcon}>📊</Text>
+          <Text style={styles.progressTitle}>Your progress now</Text>
+        </View>
+        <Text style={styles.progressText}>
+          {visits.length}/12 Task Complete · {Math.round(progressPercent)}%
+        </Text>
+        <View style={styles.progressBarBg}>
+          <View
+            style={[
+              styles.progressBarFill,
+              { width: `${Math.min(progressPercent, 100)}%` },
+            ]}
+          />
+        </View>
       </View>
 
       <View style={styles.attendanceCard}>
@@ -150,12 +174,12 @@ export const StaffDashboardScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       </View>
 
-        <View style={styles.statsRow}>
-        <View style={[styles.statCard, { marginRight: 6 }]}>
+      <View style={styles.statsRow}>
+        <View style={[styles.statCard, styles.statCardLeft, shadows.sm]}>
           <Text style={styles.statLabel}>Today Revenue</Text>
-          <Text style={styles.statValue}>₹ {totalRevenue.toFixed(0)}</Text>
+          <Text style={styles.statValue}>₹{totalRevenue.toFixed(0)}</Text>
         </View>
-        <View style={[styles.statCard, { marginLeft: 6 }]}>
+        <View style={[styles.statCard, styles.statCardRight, shadows.sm]}>
           <Text style={styles.statLabel}>Customers</Text>
           <Text style={styles.statValue}>{customerCount}</Text>
         </View>
@@ -170,13 +194,13 @@ export const StaffDashboardScreen: React.FC<Props> = ({ navigation }) => {
 
       <View style={styles.quickActions}>
         <TouchableOpacity
-          style={styles.quickActionButton}
+          style={[styles.quickActionButton, shadows.sm]}
           onPress={() => navigation.navigate('CustomerList')}
         >
           <Text style={styles.quickActionText}>📋 Customers</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={styles.quickActionButton}
+          style={[styles.quickActionButton, shadows.sm]}
           onPress={() => navigation.navigate('InventoryView')}
         >
           <Text style={styles.quickActionText}>📦 Inventory</Text>
@@ -188,23 +212,22 @@ export const StaffDashboardScreen: React.FC<Props> = ({ navigation }) => {
       {visits.length === 0 ? (
         <Text style={styles.emptyText}>No customers recorded yet today.</Text>
       ) : (
-        <FlatList
-          data={visits}
-          keyExtractor={item => item.id}
-          renderItem={renderVisit}
-          contentContainerStyle={{ paddingBottom: 32 }}
-        />
+        <View style={{ paddingBottom: 32 }}>
+          {visits.map(item => (
+            <View key={item.id}>{renderVisit({ item })}</View>
+          ))}
+        </View>
       )}
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
-    paddingTop: 60,
-    paddingHorizontal: 20,
+    backgroundColor: colors.background,
+    paddingTop: 16,
+    paddingHorizontal: theme.spacing.lg,
   },
   center: {
     flex: 1,
@@ -215,135 +238,88 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 24,
+    marginBottom: theme.spacing.xl,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: 'white',
+    color: colors.text,
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: colors.textSecondary,
   },
   logoutButton: {
-    backgroundColor: '#ef4444',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    backgroundColor: colors.errorMuted,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radius.full,
   },
   logoutButtonText: {
-    color: 'white',
+    color: colors.error,
     fontSize: 14,
     fontWeight: '600',
   },
-  statsRow: {
+  progressCard: {
+    backgroundColor: colors.accentLavender,
+    borderRadius: theme.radius.xxl,
+    padding: theme.spacing.xl,
+    marginBottom: theme.spacing.lg,
+  },
+  progressHeader: {
     flexDirection: 'row',
-    marginBottom: 20,
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#020617',
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#1f2937',
+  progressIcon: {
+    fontSize: 20,
+    marginRight: 8,
   },
-  statLabel: {
-    fontSize: 13,
-    color: '#9ca3af',
-    marginBottom: 6,
+  progressTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.primary,
   },
-  statValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#22c55e',
+  progressText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 12,
+  },
+  progressBarBg: {
+    height: 8,
+    backgroundColor: 'rgba(103, 80, 164, 0.2)',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: 4,
   },
   primaryButton: {
-    backgroundColor: '#22c55e',
+    backgroundColor: colors.primary,
     paddingVertical: 14,
-    borderRadius: 999,
+    borderRadius: theme.radius.full,
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: theme.spacing.lg,
   },
   primaryButtonText: {
-    color: 'white',
+    color: colors.textInverse,
     fontSize: 16,
     fontWeight: '600',
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#e5e7eb',
-    marginBottom: 10,
-  },
-  emptyText: {
-    color: '#6b7280',
-    fontSize: 14,
-  },
-  visitCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    backgroundColor: '#020617',
-    borderWidth: 1,
-    borderColor: '#1f2937',
-    marginBottom: 10,
-  },
-  visitCustomer: {
-    color: '#e5e7eb',
-    fontSize: 15,
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  visitServices: {
-    color: '#6b7280',
-    fontSize: 12,
-  },
-  visitAmount: {
-    color: '#f97316',
-    fontSize: 16,
-    fontWeight: '700',
-    marginLeft: 12,
-  },
-  errorText: {
-    color: 'red',
-  },
-  quickActions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
-  },
-  quickActionButton: {
-    flex: 1,
-    backgroundColor: '#111827',
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#1f2937',
-  },
-  quickActionText: {
-    color: '#e5e7eb',
-    fontSize: 14,
-    fontWeight: '500',
   },
   attendanceCard: {
-    backgroundColor: '#111827',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#1f2937',
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.xl,
+    padding: theme.spacing.xl,
+    marginBottom: theme.spacing.lg,
+    ...shadows.sm,
   },
   attendanceTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#e5e7eb',
+    color: colors.text,
     marginBottom: 12,
   },
   attendanceTimes: {
@@ -356,43 +332,131 @@ const styles = StyleSheet.create({
   },
   attendanceTimeLabel: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   attendanceTimeValue: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#22c55e',
+    color: colors.primary,
   },
   attendanceActions: {
     marginTop: 8,
   },
   attendanceButton: {
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 14,
+    borderRadius: theme.radius.lg,
     alignItems: 'center',
   },
   checkInButton: {
-    backgroundColor: '#22c55e',
+    backgroundColor: colors.success,
   },
   checkOutButton: {
-    backgroundColor: '#f97316',
+    backgroundColor: colors.warning,
   },
   attendanceButtonText: {
-    color: 'white',
+    color: colors.textInverse,
     fontSize: 15,
     fontWeight: '600',
   },
   attendanceComplete: {
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: '#1f2937',
+    paddingVertical: 14,
+    borderRadius: theme.radius.lg,
+    backgroundColor: colors.successMuted,
     alignItems: 'center',
   },
   attendanceCompleteText: {
-    color: '#22c55e',
+    color: colors.success,
     fontSize: 14,
     fontWeight: '600',
   },
+  statsRow: {
+    flexDirection: 'row',
+    marginBottom: theme.spacing.lg,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.xl,
+    paddingVertical: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
+  },
+  statCardLeft: { marginRight: 6 },
+  statCardRight: { marginLeft: 6 },
+  statLabel: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: 6,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 10,
+  },
+  emptyText: {
+    color: colors.textMuted,
+    fontSize: 14,
+    marginTop: 8,
+  },
+  visitCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: theme.radius.xl,
+    backgroundColor: colors.surface,
+    marginBottom: 12,
+  },
+  visitIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.accentBlue,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  visitIconText: {
+    fontSize: 18,
+  },
+  visitCustomer: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  visitServices: {
+    color: colors.textSecondary,
+    fontSize: 12,
+  },
+  visitAmount: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  errorText: {
+    color: colors.error,
+  },
+  quickActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: theme.spacing.xl,
+  },
+  quickActionButton: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    paddingVertical: 14,
+    borderRadius: theme.radius.xl,
+    alignItems: 'center',
+  },
+  quickActionText: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '500',
+  },
 });
-

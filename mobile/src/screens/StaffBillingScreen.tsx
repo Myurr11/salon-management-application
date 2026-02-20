@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,8 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import type { InventoryItem, PaymentMode, Service, VisitProductLine, VisitServiceLine } from '../types';
+import { colors, theme, shadows } from '../theme';
+import { DatePickerField } from '../components/DatePickerField';
 
 interface Props {
   navigation: any;
@@ -47,12 +49,14 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
     if (existing) {
       setSelectedLines(prev => prev.filter(l => l.serviceId !== service.id));
     } else {
+      const price = Number(service.price);
+      const safePrice = Number.isFinite(price) ? price : 0;
       const line: VisitServiceLine = {
         id: `${service.id}-${Date.now()}`,
         serviceId: service.id,
         serviceName: service.name,
-        basePrice: service.price,
-        finalPrice: service.price,
+        basePrice: safePrice,
+        finalPrice: safePrice,
       };
       setSelectedLines(prev => [...prev, line]);
     }
@@ -144,12 +148,25 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
 
   const total = useMemo(() => {
     let t = subtotal;
-    const pct = Number(discountPercent.replace(/[^0-9.]/g, ''));
-    const amt = Number(discountAmount.replace(/[^0-9.]/g, ''));
-    if (Number.isFinite(pct) && pct > 0) t = t * (1 - pct / 100);
-    if (Number.isFinite(amt) && amt > 0) t = Math.max(0, t - amt);
-    const override = Number(amountOverride.replace(/[^0-9.]/g, ''));
-    if (Number.isFinite(override) && override >= 0) t = override;
+    
+    // Apply percentage discount
+    const pct = parseFloat(discountPercent) || 0;
+    if (pct > 0 && pct <= 100) {
+      t = t * (1 - pct / 100);
+    }
+    
+    // Apply fixed amount discount
+    const amt = parseFloat(discountAmount) || 0;
+    if (amt > 0) {
+      t = Math.max(0, t - amt);
+    }
+    
+    // Apply override if set
+    const override = parseFloat(amountOverride);
+    if (!isNaN(override) && override >= 0) {
+      t = override;
+    }
+    
     return t;
   }, [subtotal, discountPercent, discountAmount, amountOverride]);
 
@@ -200,9 +217,10 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
       const today = new Date();
       const dateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
 
-      const discountPctNum = Number(discountPercent.replace(/[^0-9.]/g, ''));
-      const discountAmtNum = Number(discountAmount.replace(/[^0-9.]/g, ''));
-      const overrideNum = amountOverride.trim() ? Number(amountOverride.replace(/[^0-9.]/g, '')) : undefined;
+      const discountPctNum = parseFloat(discountPercent) || 0;
+      const discountAmtNum = parseFloat(discountAmount) || 0;
+      const overrideNum = amountOverride.trim() ? parseFloat(amountOverride) : undefined;
+      
       if (overrideNum !== undefined && !overrideReason.trim()) {
         Alert.alert('Reason required', 'Please enter a reason for overriding the amount.');
         return;
@@ -219,8 +237,8 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
         products: selectedProducts,
         total,
         paymentMode,
-        discountPercent: Number.isFinite(discountPctNum) ? discountPctNum : 0,
-        discountAmount: Number.isFinite(discountAmtNum) ? discountAmtNum : 0,
+        discountPercent: discountPctNum,
+        discountAmount: discountAmtNum,
         amountOverride: overrideNum,
         overrideReason: overrideReason.trim() || undefined,
       });
@@ -243,21 +261,21 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
-  const renderService = ({ item }: { item: Service }) => {
+  const renderService = useCallback(({ item }: { item: Service }) => {
     const selected = selectedLines.some(l => l.serviceId === item.id);
     return (
       <TouchableOpacity
-        style={[styles.serviceChip, selected ? styles.serviceChipSelected : null]}
+        style={[styles.serviceChip, selected && styles.serviceChipSelected]}
         onPress={() => toggleService(item)}
       >
-        <Text style={[styles.serviceChipLabel, selected ? styles.serviceChipLabelSelected : null]}>
+        <Text style={[styles.serviceChipLabel, selected && styles.serviceChipLabelSelected]}>
           {item.name} • ₹{item.price}
         </Text>
       </TouchableOpacity>
     );
-  };
+  }, [selectedLines]);
 
-  const renderLine = ({ item }: { item: VisitServiceLine }) => (
+  const renderLine = useCallback(({ item }: { item: VisitServiceLine }) => (
     <View style={styles.lineRow}>
       <View style={{ flex: 1 }}>
         <Text style={styles.lineTitle}>{item.serviceName}</Text>
@@ -273,7 +291,241 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
         />
       </View>
     </View>
-  );
+  ), []);
+
+  const renderHeader = useCallback(() => (
+    <View style={styles.headerContainer}>
+      <Text style={styles.title}>New Customer Visit</Text>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Customer details</Text>
+        <View style={styles.modeRow}>
+          <TouchableOpacity
+            style={[styles.modePill, { marginRight: 4 }, customerMode === 'new' && styles.modePillActive]}
+            onPress={() => setCustomerMode('new')}
+          >
+            <Text style={[styles.modePillText, customerMode === 'new' && styles.modePillTextActive]}>New</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.modePill, { marginLeft: 4 }, customerMode === 'existing' && styles.modePillActive]}
+            onPress={() => setCustomerMode('existing')}
+          >
+            <Text style={[styles.modePillText, customerMode === 'existing' && styles.modePillTextActive]}>
+              Existing
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {customerMode === 'existing' ? (
+          <View style={{ marginTop: 12 }}>
+            {customers.length === 0 ? (
+              <Text style={{ color: colors.textMuted, fontSize: 13 }}>No customers yet. Add a new one.</Text>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {customers.map(item => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[
+                      styles.customerChip,
+                      selectedCustomerId === item.id && styles.customerChipSelected,
+                    ]}
+                    onPress={() => setSelectedCustomerId(item.id)}
+                  >
+                    <Text
+                      style={[
+                        styles.customerChipText,
+                        selectedCustomerId === item.id && styles.customerChipTextSelected,
+                      ]}
+                    >
+                      {item.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        ) : (
+          <View style={{ marginTop: 12 }}>
+            <TextInput
+              placeholder="Customer name"
+              placeholderTextColor={colors.textMuted}
+              style={styles.input}
+              value={customerName}
+              onChangeText={setCustomerName}
+            />
+            <DatePickerField
+  value={customerDob}
+  onChange={setCustomerDob}
+  placeholder="DOB (optional)"
+  style={[styles.input, { marginTop: 10 }]}
+  maximumDate={new Date()}
+/>
+            <TextInput
+              placeholder="Phone (optional)"
+              placeholderTextColor={colors.textMuted}
+              style={styles.input}
+              keyboardType="phone-pad"
+              value={customerPhone}
+              onChangeText={setCustomerPhone}
+            />
+            <TextInput
+              placeholder="Email (optional)"
+              placeholderTextColor={colors.textMuted}
+              style={styles.input}
+              keyboardType="email-address"
+              value={customerEmail}
+              onChangeText={setCustomerEmail}
+            />
+            <View style={styles.modeRow}>
+              {(['male', 'female', 'other'] as const).map(g => (
+                <TouchableOpacity
+                  key={g}
+                  style={[styles.modePill, customerGender === g && styles.modePillActive]}
+                  onPress={() => setCustomerGender(customerGender === g ? '' : g)}
+                >
+                  <Text style={[styles.modePillText, customerGender === g && styles.modePillTextActive]}>
+                    {g.charAt(0).toUpperCase() + g.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TextInput
+              placeholder="Address (optional)"
+              placeholderTextColor={colors.textMuted}
+              style={styles.input}
+              value={customerAddress}
+              onChangeText={setCustomerAddress}
+            />
+          </View>
+        )}
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Services taken</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 4 }}>
+          {services.map(item => renderService({ item }))}
+        </ScrollView>
+
+        {selectedLines.length > 0 && (
+          <View style={{ marginTop: 12 }}>
+            {selectedLines.map(item => (
+              <View key={item.id}>{renderLine({ item })}</View>
+            ))}
+          </View>
+        )}
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Products</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 4 }}>
+          {inventory.filter(item => item.quantity > 0).map(item => (
+            <TouchableOpacity
+              key={item.id}
+              style={styles.productChip}
+              onPress={() => addProduct(item)}
+            >
+              <Text style={styles.productChipText}>
+                {item.name} • ₹{item.price} • Qty: {item.quantity}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {selectedProducts.length > 0 && (
+          <View style={{ marginTop: 12 }}>
+            {selectedProducts.map(product => (
+              <View key={product.id} style={styles.productRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.productRowTitle}>{product.productName}</Text>
+                  <Text style={styles.productRowSubtitle}>₹{product.unitPrice} per unit</Text>
+                </View>
+                <View style={styles.productQuantityContainer}>
+                  <TouchableOpacity
+                    style={styles.quantityButton}
+                    onPress={() => updateProductQuantity(product.productId, product.quantity - 1)}
+                  >
+                    <Text style={styles.quantityButtonText}>-</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.quantityText}>{product.quantity}</Text>
+                  <TouchableOpacity
+                    style={styles.quantityButton}
+                    onPress={() => updateProductQuantity(product.productId, product.quantity + 1)}
+                  >
+                    <Text style={styles.quantityButtonText}>+</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.productTotal}>₹{product.totalPrice.toFixed(0)}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Payment</Text>
+        <View style={styles.modeRow}>
+          {(['cash', 'upi', 'card', 'udhaar'] as PaymentMode[]).map(mode => (
+            <TouchableOpacity
+              key={mode}
+              style={[styles.modePill, paymentMode === mode && styles.modePillActive]}
+              onPress={() => setPaymentMode(mode)}
+            >
+              <Text style={[styles.modePillText, paymentMode === mode && styles.modePillTextActive]}>
+                {mode.charAt(0).toUpperCase() + mode.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <View style={{ flexDirection: 'row', gap: 12, marginTop: 10 }}>
+          <TextInput
+            placeholder="Discount %"
+            placeholderTextColor={colors.textMuted}
+            style={[styles.input, { flex: 1 }]}
+            keyboardType="numeric"
+            value={discountPercent}
+            onChangeText={setDiscountPercent}
+          />
+          <TextInput
+            placeholder="Discount ₹"
+            placeholderTextColor={colors.textMuted}
+            style={[styles.input, { flex: 1 }]}
+            keyboardType="numeric"
+            value={discountAmount}
+            onChangeText={setDiscountAmount}
+          />
+        </View>
+        <TextInput
+          placeholder="Override final amount (₹) - reason required"
+          placeholderTextColor={colors.textMuted}
+          style={[styles.input, { marginTop: 8 }]}
+          keyboardType="numeric"
+          value={amountOverride}
+          onChangeText={setAmountOverride}
+        />
+        {amountOverride.trim() ? (
+          <TextInput
+            placeholder="Reason for override (required)"
+            placeholderTextColor={colors.textMuted}
+            style={[styles.input, { marginTop: 6 }]}
+            value={overrideReason}
+            onChangeText={setOverrideReason}
+          />
+        ) : null}
+      </View>
+    </View>
+  ), [customerMode, selectedCustomerId, customers, customerName, customerDob, customerPhone, customerEmail, customerGender, customerAddress, services, selectedLines, selectedProducts, inventory, paymentMode, discountPercent, discountAmount, amountOverride, overrideReason, total]);
+
+  const renderFooter = useCallback(() => (
+    <View style={styles.footer}>
+      <View>
+        <Text style={styles.totalLabel}>Total</Text>
+        <Text style={styles.totalValue}>₹ {total.toFixed(0)}</Text>
+      </View>
+      <TouchableOpacity style={styles.saveButton} onPress={handleSubmit}>
+        <Text style={styles.saveButtonText}>Save Visit</Text>
+      </TouchableOpacity>
+    </View>
+  ), [total]);
 
   return (
     <KeyboardAvoidingView
@@ -282,254 +534,13 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
       keyboardVerticalOffset={80}
     >
       <ScrollView
-        style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="none"
       >
-        <View style={styles.container}>
-          <Text style={styles.title}>New Customer Visit</Text>
-
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Customer details</Text>
-          <View style={styles.modeRow}>
-            <TouchableOpacity
-              style={[styles.modePill, { marginRight: 4 }, customerMode === 'new' ? styles.modePillActive : null]}
-              onPress={() => setCustomerMode('new')}
-            >
-              <Text style={[styles.modePillText, customerMode === 'new' ? styles.modePillTextActive : null]}>New</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modePill, { marginLeft: 4 }, customerMode === 'existing' ? styles.modePillActive : null]}
-              onPress={() => setCustomerMode('existing')}
-            >
-              <Text
-                style={[styles.modePillText, customerMode === 'existing' ? styles.modePillTextActive : null]}
-              >
-                Existing
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {customerMode === 'existing' ? (
-            <View style={{ marginTop: 12 }}>
-              <FlatList
-                data={customers}
-                keyExtractor={item => item.id}
-                horizontal={true}
-                showsHorizontalScrollIndicator={false}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={[
-                      styles.customerChip,
-                      selectedCustomerId === item.id ? styles.customerChipSelected : null,
-                    ]}
-                    onPress={() => setSelectedCustomerId(item.id)}
-                  >
-                    <Text
-                      style={[
-                        styles.customerChipText,
-                        selectedCustomerId === item.id ? styles.customerChipTextSelected : null,
-                      ]}
-                    >
-                      {item.name}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                ListEmptyComponent={
-                  <Text style={{ color: '#6b7280', fontSize: 13 }}>No customers yet. Add a new one.</Text>
-                }
-              />
-            </View>
-          ) : (
-            <View style={{ marginTop: 12 }}>
-              <TextInput
-                placeholder="Customer name"
-                placeholderTextColor="#6b7280"
-                style={styles.input}
-                value={customerName}
-                onChangeText={setCustomerName}
-              />
-              <TextInput
-                placeholder="DOB (optional, e.g. 1995-08-12)"
-                placeholderTextColor="#6b7280"
-                style={styles.input}
-                value={customerDob}
-                onChangeText={setCustomerDob}
-              />
-              <TextInput
-                placeholder="Phone (optional)"
-                placeholderTextColor="#6b7280"
-                style={styles.input}
-                keyboardType="phone-pad"
-                value={customerPhone}
-                onChangeText={setCustomerPhone}
-              />
-              <TextInput
-                placeholder="Email (optional)"
-                placeholderTextColor="#6b7280"
-                style={styles.input}
-                keyboardType="email-address"
-                value={customerEmail}
-                onChangeText={setCustomerEmail}
-              />
-              <View style={styles.modeRow}>
-                {(['male', 'female', 'other'] as const).map(g => (
-                  <TouchableOpacity
-                    key={g}
-                    style={[styles.modePill, customerGender === g ? styles.modePillActive : null]}
-                    onPress={() => setCustomerGender(customerGender === g ? '' : g)}
-                  >
-                    <Text style={[styles.modePillText, customerGender === g ? styles.modePillTextActive : null]}>
-                      {g.charAt(0).toUpperCase() + g.slice(1)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <TextInput
-                placeholder="Address (optional)"
-                placeholderTextColor="#6b7280"
-                style={styles.input}
-                value={customerAddress}
-                onChangeText={setCustomerAddress}
-              />
-            </View>
-          )}
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Services taken</Text>
-          <FlatList
-            data={services}
-            keyExtractor={item => item.id}
-            renderItem={renderService}
-            horizontal={true}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingVertical: 4 }}
-          />
-
-          {selectedLines.length > 0 && (
-            <FlatList
-              style={{ marginTop: 12 }}
-              data={selectedLines}
-              keyExtractor={item => item.id}
-              renderItem={renderLine}
-            />
-          )}
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Products</Text>
-          <FlatList
-            data={inventory.filter(item => item.quantity > 0)}
-            keyExtractor={item => item.id}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.productChip}
-                onPress={() => addProduct(item)}
-              >
-                <Text style={styles.productChipText}>
-                  {item.name} • ₹{item.price} • Qty: {item.quantity}
-                </Text>
-              </TouchableOpacity>
-            )}
-            horizontal={true}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingVertical: 4 }}
-          />
-
-          {selectedProducts.length > 0 && (
-            <View style={{ marginTop: 12 }}>
-              {selectedProducts.map(product => (
-                <View key={product.id} style={styles.productRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.productRowTitle}>{product.productName}</Text>
-                    <Text style={styles.productRowSubtitle}>₹{product.unitPrice} per unit</Text>
-                  </View>
-                  <View style={styles.productQuantityContainer}>
-                    <TouchableOpacity
-                      style={styles.quantityButton}
-                      onPress={() => updateProductQuantity(product.productId, product.quantity - 1)}
-                    >
-                      <Text style={styles.quantityButtonText}>-</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.quantityText}>{product.quantity}</Text>
-                    <TouchableOpacity
-                      style={styles.quantityButton}
-                      onPress={() => updateProductQuantity(product.productId, product.quantity + 1)}
-                    >
-                      <Text style={styles.quantityButtonText}>+</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.productTotal}>₹{product.totalPrice.toFixed(0)}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Payment</Text>
-          <View style={styles.modeRow}>
-            {(['cash', 'upi', 'card', 'udhaar'] as PaymentMode[]).map(mode => (
-              <TouchableOpacity
-                key={mode}
-                style={[styles.modePill, paymentMode === mode ? styles.modePillActive : null]}
-                onPress={() => setPaymentMode(mode)}
-              >
-                <Text style={[styles.modePillText, paymentMode === mode ? styles.modePillTextActive : null]}>
-                  {mode.charAt(0).toUpperCase() + mode.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <View style={{ flexDirection: 'row', gap: 12, marginTop: 10 }}>
-            <TextInput
-              placeholder="Discount %"
-              placeholderTextColor="#6b7280"
-              style={[styles.input, { flex: 1 }]}
-              keyboardType="numeric"
-              value={discountPercent}
-              onChangeText={setDiscountPercent}
-            />
-            <TextInput
-              placeholder="Discount ₹"
-              placeholderTextColor="#6b7280"
-              style={[styles.input, { flex: 1 }]}
-              keyboardType="numeric"
-              value={discountAmount}
-              onChangeText={setDiscountAmount}
-            />
-          </View>
-          <TextInput
-            placeholder="Override final amount (₹) - reason required"
-            placeholderTextColor="#6b7280"
-            style={[styles.input, { marginTop: 8 }]}
-            keyboardType="numeric"
-            value={amountOverride}
-            onChangeText={setAmountOverride}
-          />
-          {amountOverride.trim() ? (
-            <TextInput
-              placeholder="Reason for override (required)"
-              placeholderTextColor="#6b7280"
-              style={[styles.input, { marginTop: 6 }]}
-              value={overrideReason}
-              onChangeText={setOverrideReason}
-            />
-          ) : null}
-        </View>
-
-        <View style={styles.footer}>
-          <View>
-            <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>₹ {total.toFixed(0)}</Text>
-          </View>
-          <TouchableOpacity style={styles.saveButton} onPress={handleSubmit}>
-            <Text style={styles.saveButtonText}>Save Visit</Text>
-          </TouchableOpacity>
-        </View>
-        </View>
+        {renderHeader()}
+        {renderFooter()}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -538,89 +549,93 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   wrapper: {
     flex: 1,
-    backgroundColor: '#020617',
-  },
-  scrollView: {
-    flex: 1,
+    backgroundColor: colors.background,
   },
   scrollContent: {
     paddingBottom: 32,
+    paddingHorizontal: theme.spacing.lg,
+  },
+  headerContainer: {
+    paddingTop: 16,
   },
   container: {
-    paddingTop: 56,
-    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingHorizontal: theme.spacing.lg,
   },
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: 'white',
+    color: colors.text,
     marginBottom: 16,
   },
   card: {
-    backgroundColor: '#020617',
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.xl,
+    ...shadows.sm,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
     marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#e5e7eb',
+    color: colors.text,
   },
   modeRow: {
     flexDirection: 'row',
     marginTop: 10,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   modePill: {
     paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 999,
+    borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
   },
   modePillActive: {
-    backgroundColor: '#22c55e33',
-    borderColor: '#22c55e',
+    backgroundColor: colors.primaryMuted,
+    borderColor: colors.primary,
   },
   modePillText: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: colors.textSecondary,
   },
   modePillTextActive: {
-    color: '#bbf7d0',
+    color: colors.primary,
     fontWeight: '600',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#1f2937',
-    borderRadius: 999,
+    borderColor: colors.border,
+    borderRadius: theme.radius.full,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    color: 'white',
+    color: colors.text,
     fontSize: 14,
     marginTop: 10,
-    backgroundColor: '#020617',
+    backgroundColor: colors.background,
   },
   serviceChip: {
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 999,
+    borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
     marginRight: 8,
   },
   serviceChipSelected: {
-    backgroundColor: '#22c55e33',
-    borderColor: '#22c55e',
+    backgroundColor: colors.primaryMuted,
+    borderColor: colors.primary,
   },
   serviceChipLabel: {
     fontSize: 13,
-    color: '#e5e7eb',
+    color: colors.text,
   },
   serviceChipLabelSelected: {
-    color: '#bbf7d0',
+    color: colors.primary,
     fontWeight: '600',
   },
   lineRow: {
@@ -628,15 +643,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#0f172a',
+    borderBottomColor: colors.borderLight,
   },
   lineTitle: {
-    color: '#e5e7eb',
+    color: colors.text,
     fontSize: 14,
     fontWeight: '500',
   },
   lineSubtitle: {
-    color: '#6b7280',
+    color: colors.textSecondary,
     fontSize: 12,
   },
   linePriceContainer: {
@@ -645,38 +660,38 @@ const styles = StyleSheet.create({
   },
   linePriceLabel: {
     fontSize: 11,
-    color: '#9ca3af',
+    color: colors.textSecondary,
     marginBottom: 2,
   },
   linePriceInput: {
     minWidth: 80,
-    borderRadius: 999,
+    borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    color: 'white',
+    color: colors.text,
     fontSize: 14,
     textAlign: 'right',
   },
   customerChip: {
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 999,
+    borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
     marginRight: 8,
   },
   customerChipSelected: {
-    backgroundColor: '#22c55e33',
-    borderColor: '#22c55e',
+    backgroundColor: colors.primaryMuted,
+    borderColor: colors.primary,
   },
   customerChipText: {
     fontSize: 13,
-    color: '#e5e7eb',
+    color: colors.text,
   },
   customerChipTextSelected: {
-    color: '#bbf7d0',
+    color: colors.primary,
     fontWeight: '600',
   },
   footer: {
@@ -685,55 +700,56 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: '#0f172a',
+    borderTopColor: colors.border,
+    marginTop: 8,
   },
   totalLabel: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: colors.textSecondary,
   },
   totalValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#22c55e',
+    color: colors.success,
   },
   saveButton: {
-    backgroundColor: '#22c55e',
+    backgroundColor: colors.primary,
     paddingHorizontal: 20,
     paddingVertical: 12,
-    borderRadius: 999,
+    borderRadius: theme.radius.full,
   },
   saveButtonText: {
-    color: 'white',
+    color: colors.textInverse,
     fontSize: 15,
     fontWeight: '600',
   },
   productChip: {
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 999,
+    borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
     marginRight: 8,
-    backgroundColor: '#111827',
+    backgroundColor: colors.background,
   },
   productChipText: {
     fontSize: 13,
-    color: '#e5e7eb',
+    color: colors.text,
   },
   productRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#0f172a',
+    borderBottomColor: colors.borderLight,
   },
   productRowTitle: {
-    color: '#e5e7eb',
+    color: colors.text,
     fontSize: 14,
     fontWeight: '500',
   },
   productRowSubtitle: {
-    color: '#6b7280',
+    color: colors.textSecondary,
     fontSize: 12,
   },
   productQuantityContainer: {
@@ -746,18 +762,18 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#111827',
+    backgroundColor: colors.background,
   },
   quantityButtonText: {
-    color: '#e5e7eb',
+    color: colors.text,
     fontSize: 16,
     fontWeight: '600',
   },
   quantityText: {
-    color: '#e5e7eb',
+    color: colors.text,
     fontSize: 14,
     fontWeight: '500',
     marginHorizontal: 12,
@@ -765,12 +781,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   productTotal: {
-    color: '#f97316',
+    color: colors.success,
     fontSize: 14,
     fontWeight: '700',
     marginLeft: 12,
     minWidth: 60,
     textAlign: 'right',
   },
-})
-
+});

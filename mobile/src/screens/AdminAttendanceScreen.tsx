@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { DatePickerField } from '../components/DatePickerField';
 import { useData } from '../context/DataContext';
+import { colors, theme } from '../theme';
 import type { Attendance } from '../types';
 
 interface Props {
@@ -96,15 +98,15 @@ export const AdminAttendanceScreen: React.FC<Props> = ({ navigation }) => {
   const getStatusStyle = (status: string) => {
     switch (status) {
       case 'present':
-        return { backgroundColor: '#22c55e20', borderColor: '#22c55e' };
+        return { backgroundColor: `${colors.success}20`, borderColor: colors.success };
       case 'late':
-        return { backgroundColor: '#f9731620', borderColor: '#f97316' };
+        return { backgroundColor: `${colors.warning}20`, borderColor: colors.warning };
       case 'half_day':
-        return { backgroundColor: '#3b82f620', borderColor: '#3b82f6' };
+        return { backgroundColor: `${colors.chartBlue}20`, borderColor: colors.chartBlue };
       case 'absent':
-        return { backgroundColor: '#ef444420', borderColor: '#ef4444' };
+        return { backgroundColor: `${colors.error}20`, borderColor: colors.error };
       default:
-        return { backgroundColor: '#6b728020', borderColor: '#6b7280' };
+        return { backgroundColor: `${colors.textMuted}20`, borderColor: colors.textMuted };
     }
   };
 
@@ -121,12 +123,11 @@ export const AdminAttendanceScreen: React.FC<Props> = ({ navigation }) => {
       <View style={styles.filters}>
         <View style={styles.filterRow}>
           <Text style={styles.filterLabel}>Date:</Text>
-          <TextInput
-            style={styles.dateInput}
+          <DatePickerField
             value={selectedDate}
-            onChangeText={setSelectedDate}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor="#6b7280"
+            onChange={setSelectedDate}
+            placeholder="Select date"
+            style={styles.dateInput}
           />
         </View>
         <View style={styles.filterRow}>
@@ -196,8 +197,8 @@ export const AdminAttendanceScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
-    paddingTop: 60,
+    backgroundColor: colors.background,
+    paddingTop: 16,
   },
   center: {
     flex: 1,
@@ -205,26 +206,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   filters: {
-    paddingHorizontal: 20,
-    marginBottom: 16,
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
   },
   filterRow: {
     marginBottom: 12,
   },
   filterLabel: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: colors.textSecondary,
     marginBottom: 8,
   },
   dateInput: {
-    backgroundColor: '#111827',
-    borderRadius: 8,
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.md,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    color: 'white',
+    color: colors.text,
     fontSize: 14,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
   },
   staffFilter: {
     flexDirection: 'row',
@@ -234,36 +235,36 @@ const styles = StyleSheet.create({
   filterChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 999,
+    borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: '#1f2937',
-    backgroundColor: '#111827',
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
   filterChipActive: {
-    backgroundColor: '#22c55e33',
-    borderColor: '#22c55e',
+    backgroundColor: colors.primaryMuted,
+    borderColor: colors.primary,
   },
   filterChipText: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: colors.textSecondary,
   },
   filterChipTextActive: {
-    color: '#bbf7d0',
+    color: colors.primary,
     fontWeight: '600',
   },
   header: {
-    paddingHorizontal: 20,
+    paddingHorizontal: theme.spacing.lg,
     marginBottom: 12,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: 'white',
+    color: colors.text,
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: colors.textSecondary,
   },
   emptyContainer: {
     flex: 1,
@@ -272,22 +273,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   emptyText: {
-    color: '#6b7280',
+    color: colors.textMuted,
     fontSize: 14,
     textAlign: 'center',
   },
   loadingText: {
-    color: '#9ca3af',
+    color: colors.textSecondary,
     fontSize: 14,
   },
   attendanceCard: {
-    backgroundColor: '#111827',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 20,
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.lg,
+    marginHorizontal: theme.spacing.lg,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
   },
   attendanceHeader: {
     flexDirection: 'row',
@@ -298,12 +299,12 @@ const styles = StyleSheet.create({
   staffName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#e5e7eb',
+    color: colors.text,
   },
   statusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 999,
+    borderRadius: theme.radius.full,
     borderWidth: 1,
   },
   statusText: {
@@ -319,15 +320,15 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: colors.textSecondary,
   },
   detailValue: {
     fontSize: 13,
-    color: '#e5e7eb',
+    color: colors.text,
     fontWeight: '500',
   },
   errorText: {
-    color: 'red',
+    color: colors.error,
     fontSize: 16,
   },
 });

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { colors, theme, shadows } from '../theme';
 
 export interface BarChartItem {
   label: string;
@@ -16,7 +17,14 @@ interface BarChartCardProps {
   TouchableWrapper?: React.ComponentType<{ onPress: () => void; children: React.ReactNode }>;
 }
 
-const DEFAULT_COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+const DEFAULT_COLORS = [
+  colors.chartGreen,
+  colors.chartBlue,
+  colors.chartAmber,
+  colors.chartRed,
+  colors.chartPurple,
+  colors.chartPink,
+];
 
 export const BarChartCard: React.FC<BarChartCardProps> = ({
   title,
@@ -30,7 +38,7 @@ export const BarChartCard: React.FC<BarChartCardProps> = ({
   const maxWidth = 100;
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, shadows.sm]}>
       <Text style={styles.title}>{title}</Text>
       {items.map((item, index) => {
         const widthPct = maxVal > 0 ? (item.value / maxVal) * maxWidth : 0;
@@ -66,46 +74,44 @@ export const BarChartCard: React.FC<BarChartCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#111827',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#1f2937',
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.xl,
+    padding: theme.spacing.xl,
+    marginBottom: theme.spacing.lg,
   },
   title: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#e5e7eb',
-    marginBottom: 12,
+    color: colors.text,
+    marginBottom: 16,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   label: {
     width: 80,
-    fontSize: 12,
-    color: '#9ca3af',
+    fontSize: 14,
+    color: colors.textSecondary,
   },
   barContainer: {
     flex: 1,
-    height: 20,
-    backgroundColor: '#1f2937',
-    borderRadius: 4,
-    marginHorizontal: 8,
+    height: 12,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: 6,
+    marginHorizontal: 12,
     overflow: 'hidden',
   },
   bar: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: 6,
   },
   value: {
-    width: 56,
-    fontSize: 12,
+    width: 72,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#e5e7eb',
+    color: colors.text,
     textAlign: 'right',
   },
 });

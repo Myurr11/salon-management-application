@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useData } from '../context/DataContext';
 import type { InventoryItem } from '../types';
+import { colors, theme } from '../theme';
 
 interface Props {
   navigation: any;
@@ -120,9 +121,9 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const getStockStatus = (item: InventoryItem) => {
-    if (item.quantity === 0) return { text: 'Out of Stock', color: '#ef4444' };
-    if (item.quantity <= item.minThreshold) return { text: 'Low Stock', color: '#f97316' };
-    return { text: 'In Stock', color: '#22c55e' };
+    if (item.quantity === 0) return { text: 'Out of Stock', color: colors.error };
+    if (item.quantity <= item.minThreshold) return { text: 'Low Stock', color: colors.warning };
+    return { text: 'In Stock', color: colors.success };
   };
 
   const renderItem = ({ item }: { item: InventoryItem }) => {
@@ -202,7 +203,7 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
             <TextInput
               style={styles.input}
               placeholder="Item Name"
-              placeholderTextColor="#6b7280"
+              placeholderTextColor={colors.textMuted}
               value={formData.name}
               onChangeText={text => setFormData({ ...formData, name: text })}
             />
@@ -210,7 +211,7 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
             <TextInput
               style={styles.input}
               placeholder="Selling Price (₹)"
-              placeholderTextColor="#6b7280"
+              placeholderTextColor={colors.textMuted}
               keyboardType="numeric"
               value={formData.price}
               onChangeText={text => setFormData({ ...formData, price: text })}
@@ -219,7 +220,7 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
             <TextInput
               style={styles.input}
               placeholder="Cost Price (₹, optional)"
-              placeholderTextColor="#6b7280"
+              placeholderTextColor={colors.textMuted}
               keyboardType="numeric"
               value={formData.costPrice}
               onChangeText={text => setFormData({ ...formData, costPrice: text })}
@@ -228,7 +229,7 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
             <TextInput
               style={styles.input}
               placeholder="Quantity"
-              placeholderTextColor="#6b7280"
+              placeholderTextColor={colors.textMuted}
               keyboardType="numeric"
               value={formData.quantity}
               onChangeText={text => setFormData({ ...formData, quantity: text })}
@@ -237,7 +238,7 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
             <TextInput
               style={styles.input}
               placeholder="Minimum Threshold"
-              placeholderTextColor="#6b7280"
+              placeholderTextColor={colors.textMuted}
               keyboardType="numeric"
               value={formData.minThreshold}
               onChangeText={text => setFormData({ ...formData, minThreshold: text })}
@@ -264,29 +265,29 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
-    paddingTop: 60,
+    backgroundColor: colors.background,
+    paddingTop: 16,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 16,
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: 'white',
+    color: colors.text,
   },
   addButton: {
-    backgroundColor: '#22c55e',
+    backgroundColor: colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 999,
   },
   addButtonText: {
-    color: 'white',
+    color: colors.textInverse,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -297,18 +298,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   emptyText: {
-    color: '#6b7280',
+    color: colors.textMuted,
     fontSize: 14,
     textAlign: 'center',
   },
   itemCard: {
-    backgroundColor: '#111827',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 20,
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.lg,
+    marginHorizontal: theme.spacing.lg,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
   },
   itemHeader: {
     flexDirection: 'row',
@@ -319,7 +320,7 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#e5e7eb',
+    color: colors.text,
     marginBottom: 6,
   },
   statusBadge: {
@@ -342,13 +343,13 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   editButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: colors.chartBlue,
   },
   deleteButton: {
-    backgroundColor: '#ef4444',
+    backgroundColor: colors.error,
   },
   actionButtonText: {
-    color: 'white',
+    color: colors.textInverse,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -361,11 +362,11 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: colors.textSecondary,
   },
   detailValue: {
     fontSize: 13,
-    color: '#e5e7eb',
+    color: colors.text,
     fontWeight: '500',
   },
   modalOverlay: {
@@ -374,7 +375,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#111827',
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
@@ -383,18 +384,18 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: 'white',
+    color: colors.text,
     marginBottom: 20,
   },
   input: {
-    backgroundColor: '#020617',
-    borderRadius: 999,
-    paddingHorizontal: 16,
+    backgroundColor: colors.background,
+    borderRadius: theme.radius.full,
+    paddingHorizontal: theme.spacing.lg,
     paddingVertical: 12,
-    color: 'white',
+    color: colors.text,
     fontSize: 14,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
     marginBottom: 12,
   },
   modalActions: {
@@ -409,18 +410,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: '#1f2937',
+    backgroundColor: colors.backgroundSecondary,
   },
   cancelButtonText: {
-    color: '#e5e7eb',
+    color: colors.text,
     fontSize: 16,
     fontWeight: '600',
   },
   saveButton: {
-    backgroundColor: '#22c55e',
+    backgroundColor: colors.primary,
   },
   saveButtonText: {
-    color: 'white',
+    color: colors.textInverse,
     fontSize: 16,
     fontWeight: '600',
   },

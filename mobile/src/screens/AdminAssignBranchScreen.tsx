@@ -12,6 +12,7 @@ import {
 import bcrypt from 'bcryptjs';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { colors, theme } from '../theme';
 import * as supabaseService from '../services/supabaseService';
 import type { Branch, StaffMember } from '../types';
 
@@ -92,7 +93,7 @@ export const AdminAssignBranchScreen: React.FC<{ navigation: any }> = ({ navigat
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#22c55e" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -160,7 +161,7 @@ export const AdminAssignBranchScreen: React.FC<{ navigation: any }> = ({ navigat
             disabled={savingId === staff.id}
           >
             {savingId === staff.id ? (
-              <ActivityIndicator color="#0f172a" size="small" />
+              <ActivityIndicator color={colors.textInverse} size="small" />
             ) : (
               <Text style={styles.saveBtnText}>Save</Text>
             )}
@@ -172,51 +173,51 @@ export const AdminAssignBranchScreen: React.FC<{ navigation: any }> = ({ navigat
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#020617', paddingTop: 60, paddingHorizontal: 20 },
+  container: { flex: 1, backgroundColor: colors.background, paddingTop: 16, paddingHorizontal: theme.spacing.lg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorText: { color: '#ef4444', fontSize: 16 },
-  title: { fontSize: 22, fontWeight: '700', color: '#f8fafc', marginBottom: 6 },
-  subtitle: { fontSize: 14, color: '#94a3b8', marginBottom: 20 },
+  errorText: { color: colors.error, fontSize: 16 },
+  title: { fontSize: 22, fontWeight: '700', color: colors.text, marginBottom: 6 },
+  subtitle: { fontSize: 14, color: colors.textSecondary, marginBottom: 20 },
   card: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.xl,
     padding: 18,
-    marginBottom: 16,
+    marginBottom: theme.spacing.lg,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
   },
-  staffName: { fontSize: 18, fontWeight: '700', color: '#f8fafc', marginBottom: 4 },
-  username: { fontSize: 13, color: '#94a3b8', marginBottom: 12 },
-  label: { fontSize: 13, color: '#94a3b8', marginBottom: 8, fontWeight: '600' },
+  staffName: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 4 },
+  username: { fontSize: 13, color: colors.textSecondary, marginBottom: 12 },
+  label: { fontSize: 13, color: colors.textSecondary, marginBottom: 8, fontWeight: '600' },
   branchRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
   branchChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 999,
+    borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: colors.border,
   },
-  branchChipActive: { backgroundColor: '#22c55e', borderColor: '#22c55e' },
-  branchChipText: { fontSize: 13, color: '#94a3b8' },
-  branchChipTextActive: { color: '#0f172a', fontWeight: '600' },
+  branchChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  branchChipText: { fontSize: 13, color: colors.textSecondary },
+  branchChipTextActive: { color: colors.textInverse, fontWeight: '600' },
   input: {
-    backgroundColor: '#0f172a',
+    backgroundColor: colors.background,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 14,
-    color: '#f8fafc',
+    color: colors.text,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: colors.border,
   },
   saveBtn: {
-    backgroundColor: '#22c55e',
+    backgroundColor: colors.primary,
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
     minHeight: 44,
     justifyContent: 'center',
   },
-  saveBtnText: { color: '#0f172a', fontWeight: '700', fontSize: 15 },
+  saveBtnText: { color: colors.textInverse, fontWeight: '700', fontSize: 15 },
 });

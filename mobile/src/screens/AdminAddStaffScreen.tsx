@@ -14,6 +14,7 @@ import {
 import bcrypt from 'bcryptjs';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { colors, theme } from '../theme';
 import * as supabaseService from '../services/supabaseService';
 
 const MIN_PASSWORD_LENGTH = 6;
@@ -176,7 +177,7 @@ export const AdminAddStaffScreen: React.FC<{ navigation: any }> = ({ navigation 
           disabled={saving}
         >
           {saving ? (
-            <ActivityIndicator color="#0f172a" size="small" />
+            <ActivityIndicator color={colors.textInverse} size="small" />
           ) : (
             <Text style={styles.submitBtnText}>Add staff</Text>
           )}
@@ -187,37 +188,37 @@ export const AdminAddStaffScreen: React.FC<{ navigation: any }> = ({ navigation 
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#020617' },
+  container: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorText: { color: '#ef4444', fontSize: 16 },
-  scroll: { padding: 20, paddingTop: 24, paddingBottom: 40 },
-  title: { fontSize: 22, fontWeight: '700', color: '#f8fafc', marginBottom: 6 },
-  hint: { fontSize: 14, color: '#94a3b8', marginBottom: 24 },
-  label: { fontSize: 14, fontWeight: '600', color: '#e2e8f0', marginBottom: 8 },
+  errorText: { color: colors.error, fontSize: 16 },
+  scroll: { padding: theme.spacing.lg, paddingTop: 24, paddingBottom: 40 },
+  title: { fontSize: 22, fontWeight: '700', color: colors.text, marginBottom: 6 },
+  hint: { fontSize: 14, color: colors.textSecondary, marginBottom: 24 },
+  label: { fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 8 },
   input: {
-    backgroundColor: '#111827',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.lg,
+    paddingHorizontal: theme.spacing.lg,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#f8fafc',
+    color: colors.text,
     marginBottom: 18,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
   },
   branchRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 24 },
   chip: {
-    paddingHorizontal: 16,
+    paddingHorizontal: theme.spacing.lg,
     paddingVertical: 10,
-    borderRadius: 999,
+    borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: colors.border,
   },
-  chipActive: { backgroundColor: '#22c55e', borderColor: '#22c55e' },
-  chipText: { fontSize: 14, color: '#94a3b8' },
-  chipTextActive: { color: '#0f172a', fontWeight: '600' },
+  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { fontSize: 14, color: colors.textSecondary },
+  chipTextActive: { color: colors.textInverse, fontWeight: '600' },
   submitBtn: {
-    backgroundColor: '#22c55e',
+    backgroundColor: colors.primary,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -225,5 +226,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   submitBtnDisabled: { opacity: 0.7 },
-  submitBtnText: { color: '#0f172a', fontWeight: '700', fontSize: 16 },
+  submitBtnText: { color: colors.textInverse, fontWeight: '700', fontSize: 16 },
 });

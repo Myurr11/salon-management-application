@@ -10,6 +10,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { BarChartCard } from '../components/BarChartCard';
+import { colors, theme } from '../theme';
 import { RevenueBarChart } from '../components/RevenueBarChart';
 import type { ProductSale } from '../types';
 
@@ -106,10 +107,10 @@ export const BranchDetailScreen: React.FC<Props> = ({ navigation, route }) => {
       <BarChartCard
         title="Today's Payment Breakdown"
         items={[
-          { label: 'Cash', value: summary.paymentBreakdown.cash || 0, color: '#22c55e' },
-          { label: 'UPI', value: summary.paymentBreakdown.upi || 0, color: '#3b82f6' },
-          { label: 'Card', value: summary.paymentBreakdown.card || 0, color: '#f59e0b' },
-          { label: 'Udhaar', value: summary.paymentBreakdown.udhaar || 0, color: '#ef4444' },
+          { label: 'Cash', value: summary.paymentBreakdown.cash || 0, color: colors.chartGreen },
+          { label: 'UPI', value: summary.paymentBreakdown.upi || 0, color: colors.chartBlue },
+          { label: 'Card', value: summary.paymentBreakdown.card || 0, color: colors.chartAmber },
+          { label: 'Udhaar', value: summary.paymentBreakdown.udhaar || 0, color: colors.chartRed },
         ]}
         formatValue={(v) => `₹${v.toFixed(0)}`}
       />
@@ -153,7 +154,7 @@ export const BranchDetailScreen: React.FC<Props> = ({ navigation, route }) => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Recent Product Sales (this branch)</Text>
         {salesLoading ? (
-          <ActivityIndicator size="small" color="#22c55e" style={{ marginVertical: 12 }} />
+          <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 12 }} />
         ) : recentSales.length === 0 ? (
           <Text style={styles.emptyText}>No product sales yet.</Text>
         ) : (
@@ -177,9 +178,9 @@ export const BranchDetailScreen: React.FC<Props> = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
-    paddingTop: 60,
-    paddingHorizontal: 20,
+    backgroundColor: colors.background,
+    paddingTop: 16,
+    paddingHorizontal: theme.spacing.lg,
   },
   center: {
     flex: 1,
@@ -187,7 +188,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorText: {
-    color: '#ef4444',
+    color: colors.error,
     fontSize: 16,
   },
   header: {
@@ -198,18 +199,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   backButtonText: {
-    color: '#22c55e',
+    color: colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: 'white',
+    color: colors.text,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: colors.textSecondary,
     marginTop: 4,
   },
   statsGrid: {
@@ -221,21 +222,21 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     minWidth: '30%',
-    backgroundColor: '#111827',
-    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.lg,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
   },
   statLabel: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   statValue: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#22c55e',
+    color: colors.success,
   },
   section: {
     marginBottom: 24,
@@ -249,12 +250,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#e5e7eb',
+    color: colors.text,
     marginBottom: 12,
   },
   manageLink: {
     fontSize: 14,
-    color: '#22c55e',
+    color: colors.primary,
     fontWeight: '600',
   },
   row: {
@@ -262,44 +263,44 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 10,
     paddingHorizontal: 12,
-    backgroundColor: '#111827',
-    borderRadius: 8,
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.md,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
   },
-  rowLabel: { fontSize: 14, color: '#e5e7eb', fontWeight: '500' },
-  rowValue: { fontSize: 14, color: '#22c55e', fontWeight: '600' },
+  rowLabel: { fontSize: 14, color: colors.text, fontWeight: '500' },
+  rowValue: { fontSize: 14, color: colors.success, fontWeight: '600' },
   lowStockRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 10,
     paddingHorizontal: 12,
-    backgroundColor: '#7f1d1d',
-    borderRadius: 8,
+    backgroundColor: colors.errorMuted,
+    borderRadius: theme.radius.md,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#991b1b',
+    borderColor: colors.error,
   },
-  lowStockName: { fontSize: 14, color: '#fca5a5', fontWeight: '500' },
-  lowStockQty: { fontSize: 14, color: '#fca5a5', fontWeight: '600' },
+  lowStockName: { fontSize: 14, color: colors.error, fontWeight: '500' },
+  lowStockQty: { fontSize: 14, color: colors.error, fontWeight: '600' },
   saleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 12,
-    backgroundColor: '#111827',
-    borderRadius: 8,
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.md,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
   },
-  saleProduct: { fontSize: 14, fontWeight: '600', color: '#e5e7eb' },
-  saleMeta: { fontSize: 12, color: '#9ca3af', marginTop: 2 },
-  saleAmount: { fontSize: 14, fontWeight: '700', color: '#22c55e' },
+  saleProduct: { fontSize: 14, fontWeight: '600', color: colors.text },
+  saleMeta: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  saleAmount: { fontSize: 14, fontWeight: '700', color: colors.success },
   emptyText: {
-    color: '#6b7280',
+    color: colors.textMuted,
     fontSize: 14,
     fontStyle: 'italic',
   },

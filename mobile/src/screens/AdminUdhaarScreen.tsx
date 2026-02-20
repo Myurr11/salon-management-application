@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { colors, theme } from '../theme';
 import type { UdhaarBalance } from '../types';
 
 interface Props {
@@ -151,7 +152,7 @@ export const AdminUdhaarScreen: React.FC<Props> = ({ navigation }) => {
             )}
             <TextInput
               placeholder="Amount (₹)"
-              placeholderTextColor="#6b7280"
+              placeholderTextColor={colors.textMuted}
               style={styles.input}
               keyboardType="numeric"
               value={paymentAmount}
@@ -159,7 +160,7 @@ export const AdminUdhaarScreen: React.FC<Props> = ({ navigation }) => {
             />
             <TextInput
               placeholder="Notes (optional)"
-              placeholderTextColor="#6b7280"
+              placeholderTextColor={colors.textMuted}
               style={styles.input}
               value={paymentNotes}
               onChangeText={setPaymentNotes}
@@ -186,69 +187,69 @@ export const AdminUdhaarScreen: React.FC<Props> = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#020617', paddingTop: 60 },
+  container: { flex: 1, backgroundColor: colors.background, paddingTop: 16 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorText: { color: '#ef4444', fontSize: 16 },
-  header: { paddingHorizontal: 20, marginBottom: 16 },
-  title: { fontSize: 22, fontWeight: '700', color: 'white', marginBottom: 4 },
-  totalOutstanding: { fontSize: 14, color: '#f97316', fontWeight: '600' },
-  filterRow: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 12, gap: 8 },
+  errorText: { color: colors.error, fontSize: 16 },
+  header: { paddingHorizontal: theme.spacing.lg, marginBottom: theme.spacing.lg },
+  title: { fontSize: 22, fontWeight: '700', color: colors.text, marginBottom: 4 },
+  totalOutstanding: { fontSize: 14, color: colors.warning, fontWeight: '600' },
+  filterRow: { flexDirection: 'row', paddingHorizontal: theme.spacing.lg, marginBottom: 12, gap: 8 },
   filterChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 999,
+    borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
   },
-  filterChipActive: { backgroundColor: '#22c55e33', borderColor: '#22c55e' },
-  filterChipText: { color: '#e5e7eb', fontSize: 13 },
-  loadingText: { color: '#9ca3af', textAlign: 'center', marginTop: 24 },
-  emptyText: { color: '#6b7280', textAlign: 'center', marginTop: 24 },
-  list: { paddingHorizontal: 20, paddingBottom: 32 },
+  filterChipActive: { backgroundColor: colors.primaryMuted, borderColor: colors.primary },
+  filterChipText: { color: colors.text, fontSize: 13 },
+  loadingText: { color: colors.textSecondary, textAlign: 'center', marginTop: 24 },
+  emptyText: { color: colors.textMuted, textAlign: 'center', marginTop: 24 },
+  list: { paddingHorizontal: theme.spacing.lg, paddingBottom: 32 },
   card: {
-    backgroundColor: '#111827',
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: colors.surface,
+    padding: theme.spacing.lg,
+    borderRadius: theme.radius.lg,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
   },
   cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  customerName: { fontSize: 16, fontWeight: '600', color: 'white' },
-  amount: { fontSize: 18, fontWeight: '700', color: '#f97316' },
-  branchName: { fontSize: 12, color: '#9ca3af', marginTop: 4 },
-  dueDate: { fontSize: 12, color: '#9ca3af', marginTop: 2 },
+  customerName: { fontSize: 16, fontWeight: '600', color: colors.text },
+  amount: { fontSize: 18, fontWeight: '700', color: colors.warning },
+  branchName: { fontSize: 12, color: colors.textSecondary, marginTop: 4 },
+  dueDate: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
   payButton: {
     marginTop: 12,
-    backgroundColor: '#22c55e',
+    backgroundColor: colors.primary,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: theme.radius.md,
     alignItems: 'center',
   },
-  payButtonText: { color: 'white', fontWeight: '600', fontSize: 14 },
+  payButtonText: { color: colors.textInverse, fontWeight: '600', fontSize: 14 },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     padding: 24,
   },
-  modalContent: { backgroundColor: '#111827', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: '#1f2937' },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: 'white', marginBottom: 4 },
-  modalCustomer: { fontSize: 14, color: '#9ca3af', marginBottom: 16 },
+  modalContent: { backgroundColor: colors.surface, borderRadius: theme.radius.xl, padding: 20, borderWidth: 1, borderColor: colors.border },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 4 },
+  modalCustomer: { fontSize: 14, color: colors.textSecondary, marginBottom: 16 },
   input: {
-    backgroundColor: '#020617',
-    borderRadius: 8,
+    backgroundColor: colors.background,
+    borderRadius: theme.radius.md,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: 'white',
+    color: colors.text,
     fontSize: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
   },
   modalButtons: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  cancelButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center', backgroundColor: '#1f2937' },
-  cancelButtonText: { color: '#9ca3af', fontWeight: '600' },
-  submitButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center', backgroundColor: '#22c55e' },
-  submitButtonText: { color: 'white', fontWeight: '600' },
+  cancelButton: { flex: 1, paddingVertical: 12, borderRadius: theme.radius.md, alignItems: 'center', backgroundColor: colors.backgroundSecondary },
+  cancelButtonText: { color: colors.textSecondary, fontWeight: '600' },
+  submitButton: { flex: 1, paddingVertical: 12, borderRadius: theme.radius.md, alignItems: 'center', backgroundColor: colors.primary },
+  submitButtonText: { color: colors.textInverse, fontWeight: '600' },
 });

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity } from 'react-native';
 import { useData } from '../context/DataContext';
 import type { Customer } from '../types';
+import { colors, theme, shadows } from '../theme';
 
 interface Props {
   navigation: any;
@@ -78,7 +79,7 @@ export const CustomerListScreen: React.FC<Props> = ({ navigation }) => {
         <TextInput
           style={styles.searchInput}
           placeholder="Search customers by name, phone, or DOB..."
-          placeholderTextColor="#6b7280"
+          placeholderTextColor={colors.textMuted}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
@@ -110,36 +111,36 @@ export const CustomerListScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
-    paddingTop: 60,
+    backgroundColor: colors.background,
+    paddingTop: 16,
   },
   searchContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 16,
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
   },
   searchInput: {
-    backgroundColor: '#111827',
-    borderRadius: 999,
-    paddingHorizontal: 16,
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.full,
+    paddingHorizontal: theme.spacing.lg,
     paddingVertical: 12,
-    color: 'white',
+    color: colors.text,
     fontSize: 14,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
   },
   header: {
-    paddingHorizontal: 20,
+    paddingHorizontal: theme.spacing.lg,
     marginBottom: 12,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: 'white',
+    color: colors.text,
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: colors.textSecondary,
   },
   emptyContainer: {
     flex: 1,
@@ -148,18 +149,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   emptyText: {
-    color: '#6b7280',
+    color: colors.textMuted,
     fontSize: 14,
     textAlign: 'center',
   },
   customerCard: {
-    backgroundColor: '#111827',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 20,
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.xl,
+    ...shadows.sm,
+    padding: theme.spacing.lg,
+    marginHorizontal: theme.spacing.lg,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
   },
   customerInfo: {
     flex: 1,
@@ -167,12 +169,12 @@ const styles = StyleSheet.create({
   customerName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#e5e7eb',
+    color: colors.text,
     marginBottom: 6,
   },
   customerDetail: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: colors.textSecondary,
     marginBottom: 4,
   },
 });

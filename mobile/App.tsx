@@ -1,8 +1,10 @@
 import React from 'react';
+import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { colors } from './src/theme/colors';
 import { DataProvider } from './src/context/DataContext';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { StaffDashboardScreen } from './src/screens/StaffDashboardScreen';
@@ -28,8 +30,10 @@ const AdminStack = createNativeStackNavigator();
 const StaffStackNavigator = () => (
   <StaffStack.Navigator
     screenOptions={{
-      headerStyle: { backgroundColor: '#020617' },
-      headerTintColor: '#e5e7eb',
+      headerStyle: { backgroundColor: colors.surface },
+      headerTintColor: colors.text,
+      headerShadowVisible: false,
+      contentStyle: { backgroundColor: colors.background },
     }}
   >
     <StaffStack.Screen
@@ -68,8 +72,10 @@ const StaffStackNavigator = () => (
 const AdminStackNavigator = () => (
   <AdminStack.Navigator
     screenOptions={{
-      headerStyle: { backgroundColor: '#020617' },
-      headerTintColor: '#e5e7eb',
+      headerStyle: { backgroundColor: colors.surface },
+      headerTintColor: colors.text,
+      headerShadowVisible: false,
+      contentStyle: { backgroundColor: colors.background },
     }}
   >
     <AdminStack.Screen
@@ -151,12 +157,15 @@ function AppContent() {
 
 export default function App() {
   return (
-    <SafeAreaProvider>
+    <>
+      <StatusBar style="dark" />
+      <SafeAreaProvider>
       <AuthProvider>
         <DataProvider>
           <AppContent />
         </DataProvider>
       </AuthProvider>
     </SafeAreaProvider>
+    </>
   );
 }

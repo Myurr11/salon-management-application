@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity } from 'react-native';
 import { useData } from '../context/DataContext';
+import { colors, theme } from '../theme';
 import { useAuth } from '../context/AuthContext';
 import type { ProductSale } from '../types';
 
@@ -140,8 +141,8 @@ export const AdminProductSalesScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
-    paddingTop: 60,
+    backgroundColor: colors.background,
+    paddingTop: 16,
   },
   center: {
     flex: 1,
@@ -149,12 +150,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   filterContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: theme.spacing.lg,
     marginBottom: 16,
   },
   filterLabel: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: colors.textSecondary,
     marginBottom: 8,
   },
   staffFilter: {
@@ -165,59 +166,59 @@ const styles = StyleSheet.create({
   filterChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 999,
+    borderRadius: theme.radius.full,
     borderWidth: 1,
-    borderColor: '#1f2937',
-    backgroundColor: '#111827',
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
   filterChipActive: {
-    backgroundColor: '#22c55e33',
-    borderColor: '#22c55e',
+    backgroundColor: colors.primaryMuted,
+    borderColor: colors.primary,
   },
   filterChipText: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: colors.textSecondary,
   },
   filterChipTextActive: {
-    color: '#bbf7d0',
+    color: colors.primary,
     fontWeight: '600',
   },
   summary: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#111827',
-    marginHorizontal: 20,
-    borderRadius: 12,
-    marginBottom: 16,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.lg,
+    backgroundColor: colors.surface,
+    marginHorizontal: theme.spacing.lg,
+    borderRadius: theme.radius.lg,
+    marginBottom: theme.spacing.lg,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
   },
   summaryLabel: {
     fontSize: 16,
-    color: '#9ca3af',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   summaryValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#22c55e',
+    color: colors.success,
   },
   header: {
-    paddingHorizontal: 20,
+    paddingHorizontal: theme.spacing.lg,
     marginBottom: 12,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: 'white',
+    color: colors.text,
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: colors.textSecondary,
   },
   emptyContainer: {
     flex: 1,
@@ -226,18 +227,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   emptyText: {
-    color: '#6b7280',
+    color: colors.textMuted,
     fontSize: 14,
     textAlign: 'center',
   },
   saleCard: {
-    backgroundColor: '#111827',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 20,
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.lg,
+    marginHorizontal: theme.spacing.lg,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
   },
   saleHeader: {
     flexDirection: 'row',
@@ -247,22 +248,22 @@ const styles = StyleSheet.create({
   saleProduct: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#e5e7eb',
+    color: colors.text,
   },
   saleAmount: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#22c55e',
+    color: colors.success,
   },
   saleDetails: {
     gap: 6,
   },
   saleDetail: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: colors.textSecondary,
   },
   errorText: {
-    color: 'red',
+    color: colors.error,
     fontSize: 16,
   },
 });

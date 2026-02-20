@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useData } from '../context/DataContext';
 import type { Customer, Visit } from '../types';
+import { colors, theme } from '../theme';
 
 interface Props {
   navigation: any;
@@ -91,35 +92,35 @@ export const CustomerDetailScreen: React.FC<Props> = ({ navigation, route }) => 
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#020617' },
+  container: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorText: { color: '#ef4444', fontSize: 16 },
+  errorText: { color: colors.error, fontSize: 16 },
   card: {
-    backgroundColor: '#111827',
-    marginHorizontal: 20,
-    marginBottom: 16,
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: colors.surface,
+    marginHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+    padding: theme.spacing.lg,
+    borderRadius: theme.radius.lg,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: colors.border,
   },
-  name: { fontSize: 20, fontWeight: '700', color: 'white', marginBottom: 8 },
-  detail: { fontSize: 14, color: '#9ca3af', marginBottom: 4 },
-  sectionTitle: { fontSize: 16, fontWeight: '600', color: '#e5e7eb', marginBottom: 12 },
+  name: { fontSize: 20, fontWeight: '700', color: colors.text, marginBottom: 8 },
+  detail: { fontSize: 14, color: colors.textSecondary, marginBottom: 4 },
+  sectionTitle: { fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 12 },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  label: { fontSize: 14, color: '#9ca3af' },
-  value: { fontSize: 14, fontWeight: '600', color: 'white' },
+  label: { fontSize: 14, color: colors.textSecondary },
+  value: { fontSize: 14, fontWeight: '600', color: colors.text },
   visitRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#1f2937',
+    borderBottomColor: colors.border,
   },
-  visitDate: { fontSize: 14, fontWeight: '600', color: 'white' },
-  visitStaff: { fontSize: 12, color: '#9ca3af', marginTop: 2 },
-  visitServices: { fontSize: 12, color: '#6b7280', marginTop: 2 },
-  visitAmount: { fontSize: 16, fontWeight: '700', color: '#22c55e' },
-  emptyText: { color: '#6b7280', fontSize: 14 },
+  visitDate: { fontSize: 14, fontWeight: '600', color: colors.text },
+  visitStaff: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  visitServices: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  visitAmount: { fontSize: 16, fontWeight: '700', color: colors.success },
+  emptyText: { color: colors.textMuted, fontSize: 14 },
 });
