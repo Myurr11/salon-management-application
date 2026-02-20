@@ -1,5 +1,6 @@
 import { supabase } from '../config/supabase';
 import type {
+  Appointment,
   Attendance,
   Branch,
   Customer,
@@ -908,4 +909,176 @@ export const addUdhaarPayment = async (
     payment_date: today,
     notes: notes || null,
   });
+};
+
+// Appointments
+export const getAppointments = async (filters?: {
+  staffId?: string;
+  customerId?: string;
+  startDate?: string;
+  endDate?: string;
+  status?: string;
+}): Promise<Appointment[]> => {
+  let query = supabase
+    .from('appointments')
+    .select(`
+      *,
+      customers(name),
+      staff_members(name),
+      appointment_services(service_id, services(name))
+    `)
+    .order('appointment_time', { ascending: true });
+
+  if (filters?.staffId) {
+    query = query.eq('staff_id', filters.staffId);
+  }
+  if (filters?.customerId) {
+    query = query.eq('customer_id', filters.customerId);
+  }
+  if (filters?.status) {
+    query = query.eq('status', filters.status);
+  }
+  if (filters?.startDate) {
+    query = query.gte('appointment_time', filters.startDate);
+  }
+  if (filters?.endDate) {
+    query = query.lte('appointment_time', filters.endDate);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return (data || []).map((item: any) => {
+    const serviceIds: string[] = [];
+    const serviceNames: string[] = [];
+    item.appointment_services?.forEach((s: any) => {
+      serviceIds.push(s.service_id);
+      if (s.services?.name) serviceNames.push(s.services.name);
+    });
+
+    return {
+      id: item.id,
+      customerId: item.customer_id,
+      customerName: item.customers?.name || 'Unknown',
+      staffId: item.staff_id,
+      staffName: item.staff_members?.name || 'Unknown',
+      appointmentTime: item.appointment_time,
+      status: item.status,
+      serviceIds,
+      serviceNames,
+      notes: item.notes || undefined,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
+    };
+  });
+};
+
+export const createAppointment = async (appointment: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'>): Promise<Appointment> => {
+  const { data, error } = await supabase
+    .from('appointments')
+    .insert({
+      customer_id: appointment.customerId,
+      staff_id: appointment.staffId,
+      appointment_time: appointment.appointmentTime,
+      status: appointment.status,
+      notes: appointment.notes || null,
+    })
+    .select(`
+      *,
+      customers(name),
+      staff_members(name)
+    `)
+    .single();
+
+  if (error) throw error;
+
+  // Insert appointment services
+  if (appointment.serviceIds && appointment.serviceIds.length > 0) {
+    const servicesToInsert = appointment.serviceIds.map(serviceId => ({
+      appointment_id: data.id,
+      service_id: serviceId,
+    }));
+    await supabase.from('appointment_services').insert(servicesToInsert);
+  }
+
+  return {
+    id: data.id,
+    customerId: data.customer_id,
+    customerName: data.customers?.name || 'Unknown',
+    staffId: data.staff_id,
+    staffName: data.staff_members?.name || 'Unknown',
+    appointmentTime: data.appointment_time,
+    status: data.status,
+    serviceIds: appointment.serviceIds || [],
+    notes: data.notes || undefined,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
+};
+
+export const updateAppointment = async (
+  id: string,
+  updates: Partial<Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'>>,
+): Promise<Appointment> => {
+  const updateData: any = {};
+  if (updates.customerId !== undefined) updateData.customer_id = updates.customerId;
+  if (updates.staffId !== undefined) updateData.staff_id = updates.staffId;
+  if (updates.appointmentTime !== undefined) updateData.appointment_time = updates.appointmentTime;
+  if (updates.status !== undefined) updateData.status = updates.status;
+  if (updates.notes !== undefined) updateData.notes = updates.notes;
+
+  const { data, error } = await supabase
+    .from('appointments')
+    .update(updateData)
+    .eq('id', id)
+    .select(`
+      *,
+      customers(name),
+      staff_members(name),
+      appointment_services(service_id, services(name))
+    `)
+    .single();
+
+  if (error) throw error;
+
+  // Update services if provided
+  if (updates.serviceIds !== undefined) {
+    // Delete existing services
+    await supabase.from('appointment_services').delete().eq('appointment_id', id);
+    // Insert new services
+    if (updates.serviceIds.length > 0) {
+      const servicesToInsert = updates.serviceIds.map(serviceId => ({
+        appointment_id: id,
+        service_id: serviceId,
+      }));
+      await supabase.from('appointment_services').insert(servicesToInsert);
+    }
+  }
+
+  const serviceIds: string[] = [];
+  const serviceNames: string[] = [];
+  data.appointment_services?.forEach((s: any) => {
+    serviceIds.push(s.service_id);
+    if (s.services?.name) serviceNames.push(s.services.name);
+  });
+
+  return {
+    id: data.id,
+    customerId: data.customer_id,
+    customerName: data.customers?.name || 'Unknown',
+    staffId: data.staff_id,
+    staffName: data.staff_members?.name || 'Unknown',
+    appointmentTime: data.appointment_time,
+    status: data.status,
+    serviceIds,
+    serviceNames,
+    notes: data.notes || undefined,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
+};
+
+export const deleteAppointment = async (id: string): Promise<void> => {
+  const { error } = await supabase.from('appointments').delete().eq('id', id);
+  if (error) throw error;
 };

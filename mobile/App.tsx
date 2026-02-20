@@ -25,6 +25,8 @@ import { AdminAddStaffScreen } from './src/screens/AdminAddStaffScreen';
 import { StaffSelectionScreen } from './src/screens/StaffSelectionScreen';
 import { StaffAttendanceScreen } from './src/screens/StaffAttendanceScreen';
 import { StaffPasswordScreen } from './src/screens/StaffPasswordScreen';
+import { BookAppointmentScreen } from './src/screens/BookAppointmentScreen';
+import { AppointmentsListScreen } from './src/screens/AppointmentsListScreen';
 
 const RootStack = createNativeStackNavigator();
 const StaffStack = createNativeStackNavigator();
@@ -103,6 +105,16 @@ const StaffStackNavigator = () => (
       component={StaffAttendanceScreen}
       options={{ title: 'Mark Attendance' }}
     />
+    <StaffStack.Screen
+      name="BookAppointment"
+      component={BookAppointmentScreen}
+      options={{ title: 'Book Appointment' }}
+    />
+    <StaffStack.Screen
+      name="AppointmentsList"
+      component={AppointmentsListScreen}
+      options={{ title: 'Appointments' }}
+    />
   </StaffStack.Navigator>
 );
 
@@ -169,6 +181,16 @@ const AdminStackNavigator = () => (
       name="CustomerDetail"
       component={CustomerDetailScreen}
       options={{ title: 'Customer' }}
+    />
+    <AdminStack.Screen
+      name="BookAppointment"
+      component={BookAppointmentScreen}
+      options={{ title: 'Book Appointment' }}
+    />
+    <AdminStack.Screen
+      name="AppointmentsList"
+      component={AppointmentsListScreen}
+      options={{ title: 'Appointments' }}
     />
   </AdminStack.Navigator>
 );

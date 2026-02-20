@@ -105,9 +105,13 @@ export interface Appointment {
   customerName: string;
   staffId: string;
   staffName: string;
-  time: string;
+  appointmentTime: string;
   status: AppointmentStatus;
   serviceIds: string[];
+  serviceNames?: string[];
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'half_day';

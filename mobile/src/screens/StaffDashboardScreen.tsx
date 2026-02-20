@@ -315,6 +315,14 @@ export const StaffDashboardScreen: React.FC<Props> = ({ navigation }) => {
           <MaterialCommunityIcons name="clock-check" size={24} color={colors.warning} />
           <Text style={[theme.typography.bodySmall, { marginTop: theme.spacing.sm }]}>Attendance</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.quickActionButton, shadows.sm]}
+          onPress={() => navigation.navigate('AppointmentsList')}
+          activeOpacity={0.8}
+        >
+          <MaterialCommunityIcons name="calendar-clock" size={24} color={colors.success} />
+          <Text style={[theme.typography.bodySmall, { marginTop: theme.spacing.sm }]}>Appointments</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.sectionHeader}>

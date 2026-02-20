@@ -65,6 +65,11 @@ interface DataContextValue {
   getUdhaarBalances: (filters?: { branchId?: string; customerId?: string }) => Promise<UdhaarBalance[]>;
   getUdhaarTransactions: (filters: { customerId: string; branchId?: string }) => Promise<UdhaarTransaction[]>;
   addUdhaarPayment: (customerId: string, branchId: string, amount: number, notes?: string) => Promise<void>;
+  // Appointments
+  getAppointments: (filters?: { staffId?: string; customerId?: string; startDate?: string; endDate?: string; status?: string }) => Promise<Appointment[]>;
+  createAppointment: (appointment: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Appointment>;
+  updateAppointment: (id: string, updates: Partial<Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<Appointment>;
+  deleteAppointment: (id: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextValue | undefined>(undefined);
@@ -102,6 +107,7 @@ export const DataProvider = ({ children }: DataProviderProps) => {
         productSalesData,
         attendanceData,
         branchesData,
+        appointmentsData,
       ] = await Promise.all([
         supabaseService.getServices(),
         supabaseService.getCustomers(),
@@ -110,6 +116,7 @@ export const DataProvider = ({ children }: DataProviderProps) => {
         supabaseService.getProductSales(),
         supabaseService.getAttendance(),
         supabaseService.getBranches().catch(() => []),
+        supabaseService.getAppointments().catch(() => []),
       ]);
 
       setServices(servicesData);
@@ -119,6 +126,7 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       setProductSales(productSalesData);
       setAttendance(attendanceData);
       setBranches(branchesData);
+      setAppointments(appointmentsData);
     } catch (err: any) {
       console.error('Error loading data:', err);
       setError(err.message || 'Failed to load data');
@@ -128,6 +136,7 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       setInventory([]);
       setProductSales([]);
       setAttendance([]);
+      setAppointments([]);
     } finally {
       setLoading(false);
     }
@@ -343,6 +352,64 @@ export const DataProvider = ({ children }: DataProviderProps) => {
     [],
   );
 
+  // Appointment functions
+  const getAppointments = useCallback(
+    async (filters?: { staffId?: string; customerId?: string; startDate?: string; endDate?: string; status?: string }) => {
+      try {
+        const data = await supabaseService.getAppointments(filters);
+        if (!filters) {
+          setAppointments(data);
+        }
+        return data;
+      } catch (err: any) {
+        console.error('Error fetching appointments:', err);
+        return [];
+      }
+    },
+    [],
+  );
+
+  const createAppointment = useCallback(
+    async (appointment: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'>): Promise<Appointment> => {
+      try {
+        const result = await supabaseService.createAppointment(appointment);
+        await refreshData();
+        return result;
+      } catch (err: any) {
+        console.error('Error creating appointment:', err);
+        throw err;
+      }
+    },
+    [refreshData],
+  );
+
+  const updateAppointment = useCallback(
+    async (id: string, updates: Partial<Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Appointment> => {
+      try {
+        const result = await supabaseService.updateAppointment(id, updates);
+        await refreshData();
+        return result;
+      } catch (err: any) {
+        console.error('Error updating appointment:', err);
+        throw err;
+      }
+    },
+    [refreshData],
+  );
+
+  const deleteAppointment = useCallback(
+    async (id: string): Promise<void> => {
+      try {
+        await supabaseService.deleteAppointment(id);
+        await refreshData();
+      } catch (err: any) {
+        console.error('Error deleting appointment:', err);
+        throw err;
+      }
+    },
+    [refreshData],
+  );
+
   const getStaffTodayStats = useCallback(
     (staffId: string, branchId?: string | null) => {
       const today = startOfDay(new Date());
@@ -505,6 +572,10 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       getUdhaarBalances,
       getUdhaarTransactions,
       addUdhaarPayment,
+      getAppointments,
+      createAppointment,
+      updateAppointment,
+      deleteAppointment,
     }),
     [
       services,
@@ -536,6 +607,10 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       getUdhaarBalances,
       getUdhaarTransactions,
       addUdhaarPayment,
+      getAppointments,
+      createAppointment,
+      updateAppointment,
+      deleteAppointment,
     ],
   );
 

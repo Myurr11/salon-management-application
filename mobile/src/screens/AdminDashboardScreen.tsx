@@ -271,7 +271,14 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
             <MaterialCommunityIcons name="account-plus-outline" size={28} color={colors.success} style={styles.actionWidgetIcon} />
             <Text style={styles.actionWidgetText}>Add Staff</Text>
           </TouchableOpacity>
-          <View style={styles.actionWidgetPlaceholder} />
+          <TouchableOpacity
+            style={[styles.actionWidget, styles.widgetBlue, shadows.sm]}
+            onPress={() => navigation.navigate('AppointmentsList')}
+            activeOpacity={0.8}
+          >
+            <MaterialCommunityIcons name="calendar-clock" size={28} color={colors.chartBlue} style={styles.actionWidgetIcon} />
+            <Text style={styles.actionWidgetText}>Appointments</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </ScrollView>
