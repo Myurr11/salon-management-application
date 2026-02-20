@@ -5,19 +5,20 @@ import type { Customer, Visit } from '../types';
 import { colors, theme } from '../theme';
 
 interface Props {
-  navigation: any;
-  route: { params: { customerId: string } };
+  navigation?: any;
+  route?: { params?: { customerId?: string } };
 }
 
 export const CustomerDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   const { customers, visits } = useData();
+  const customerId = route?.params?.customerId;
   const customer = useMemo(
-    () => customers.find(c => c.id === route.params.customerId),
-    [customers, route.params.customerId],
+    () => customerId ? customers.find(c => c.id === customerId) : undefined,
+    [customers, customerId],
   );
   const customerVisits = useMemo(
-    () => visits.filter(v => v.customerId === route.params.customerId).sort((a, b) => (b.date > a.date ? 1 : -1)),
-    [visits, route.params.customerId],
+    () => customerId ? visits.filter(v => v.customerId === customerId).sort((a, b) => (b.date > a.date ? 1 : -1)) : [],
+    [visits, customerId],
   );
   const totalSpend = useMemo(
     () => customerVisits.reduce((sum, v) => sum + v.total, 0),

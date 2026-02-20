@@ -15,8 +15,8 @@ import { useAuth } from '../context/AuthContext';
 import { colors, theme, shadows } from '../theme';
 
 interface Props {
-  navigation: any;
-  route: {
+  navigation?: any;
+  route?: {
     params: {
       staffId: string;
       staffName: string;
@@ -25,7 +25,8 @@ interface Props {
 }
 
 export const StaffPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { staffId, staffName } = route.params;
+  const staffId = route?.params?.staffId ?? '';
+  const staffName = route?.params?.staffName ?? '';
   const { verifyStaffPassword, staffMembers } = useAuth();
   
   const [password, setPassword] = useState('');

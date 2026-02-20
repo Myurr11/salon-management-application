@@ -17,14 +17,15 @@ import type { ProductSale } from '../types';
 const DEFAULT_BRANCH_ID = '00000000-0000-0000-0000-000000000001';
 
 interface Props {
-  navigation: any;
-  route: { params: { branchId: string; branchName: string } };
+  navigation?: any;
+  route?: { params?: { branchId?: string; branchName?: string } };
 }
 
 export const BranchDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   const { user } = useAuth();
   const { inventory, getBranchSummary, getProductSales } = useData();
-  const { branchId, branchName } = route.params;
+  const branchId = route?.params?.branchId ?? '';
+  const branchName = route?.params?.branchName ?? '';
 
   const [productSales, setProductSales] = useState<ProductSale[]>([]);
   const [salesLoading, setSalesLoading] = useState(true);

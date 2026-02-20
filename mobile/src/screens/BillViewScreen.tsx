@@ -7,13 +7,14 @@ import { colors, theme, shadows } from '../theme';
 import { Button } from '../components/ui/Button';
 
 interface Props {
-  navigation: any;
-  route: { params: { visitId: string } };
+  navigation?: any;
+  route?: { params?: { visitId?: string } };
 }
 
 export const BillViewScreen: React.FC<Props> = ({ navigation, route }) => {
   const { visits, branches } = useData();
-  const visit = visits.find(v => v.id === route.params.visitId);
+  const visitId = route?.params?.visitId;
+  const visit = visitId ? visits.find(v => v.id === visitId) : undefined;
   const branchName = visit?.branchId ? branches.find(b => b.id === visit.branchId)?.name : undefined;
 
   if (!visit) {
