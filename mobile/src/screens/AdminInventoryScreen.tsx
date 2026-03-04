@@ -18,12 +18,127 @@ import type { InventoryItem, InventoryItemType } from '../types';
 import { colors, theme, shadows } from '../theme';
 import * as supabaseService from '../services/supabaseService';
 
-interface Props {
-  navigation: any;
-}
+// ─── Design Tokens ────────────────────────────────────────────────────────────
+const D = {
+  bg: '#F7F5F2',
+  surface: '#FFFFFF',
+  surfaceWarm: '#FFFDF9',
+  border: '#E8E3DB',
+  borderFocus: '#C9A84C',
+  gold: '#C9A84C',
+  goldLight: '#E8C96A',
+  goldMuted: '#C9A84C18',
+  goldBorder: '#C9A84C44',
+  text: '#1A1814',
+  textSub: '#6B6560',
+  textMuted: '#A09A8F',
+  green: '#2D9A5F',
+  greenMuted: '#2D9A5F15',
+  greenBorder: '#2D9A5F33',
+  red: '#D94F4F',
+  redMuted: '#D94F4F15',
+  redBorder: '#D94F4F33',
+  amber: '#D4872A',
+  amberMuted: '#D4872A15',
+  amberBorder: '#D4872A33',
+  blue: '#3A7EC8',
+  blueMuted: '#3A7EC815',
+  blueBorder: '#3A7EC833',
+  purple: '#7C5CBF',
+  purpleMuted: '#7C5CBF15',
+  shadow: 'rgba(0,0,0,0.06)',
+  radius: { sm: 8, md: 12, lg: 16, xl: 20, pill: 999 },
+};
 
+interface Props { navigation: any; }
 type InventoryTab = 'retail' | 'consumable';
 
+// ─── Section Label ────────────────────────────────────────────────────────────
+const SectionLabel = ({ children }: { children: string }) => (
+  <View style={sl.row}>
+    <View style={sl.dash} />
+    <Text style={sl.text}>{children}</Text>
+    <View style={sl.line} />
+  </View>
+);
+const sl = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14, marginTop: 4 },
+  dash: { width: 16, height: 2, backgroundColor: D.gold, borderRadius: 1 },
+  line: { flex: 1, height: 1, backgroundColor: D.border },
+  text: { color: D.gold, fontSize: 10, fontWeight: '700', letterSpacing: 2.5 },
+});
+
+// ─── Modal Input ──────────────────────────────────────────────────────────────
+const MInput: React.FC<{
+  label: string;
+  icon: string;
+  value: string;
+  onChange: (t: string) => void;
+  placeholder: string;
+  keyboard?: 'default' | 'numeric';
+  hint?: string;
+}> = ({ label, icon, value, onChange, placeholder, keyboard = 'default', hint }) => {
+  const [focused, setFocused] = useState(false);
+  return (
+    <View style={mi.group}>
+      <View style={mi.labelRow}>
+        <Text style={mi.label}>{label}</Text>
+        {hint && <Text style={mi.hint}>{hint}</Text>}
+      </View>
+      <View style={[mi.box, focused && mi.boxFocused]}>
+        <View style={[mi.iconBox, focused && mi.iconFocused]}>
+          <MaterialCommunityIcons name={icon as any} size={18} color={focused ? D.gold : D.textMuted} />
+        </View>
+        <TextInput
+          style={mi.input}
+          placeholder={placeholder}
+          placeholderTextColor={D.textMuted}
+          value={value}
+          onChangeText={onChange}
+          keyboardType={keyboard}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+        />
+      </View>
+    </View>
+  );
+};
+const mi = StyleSheet.create({
+  group: { marginBottom: 14 },
+  labelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  label: { fontSize: 12, fontWeight: '700', color: D.text, letterSpacing: 0.2 },
+  hint: { fontSize: 11, color: D.textMuted },
+  box: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: D.bg,
+    borderRadius: D.radius.md,
+    borderWidth: 1.5,
+    borderColor: D.border,
+    overflow: 'hidden',
+  },
+  boxFocused: { borderColor: D.gold },
+  iconBox: {
+    width: 42,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: D.surface,
+    borderRightWidth: 1,
+    borderRightColor: D.border,
+  },
+  iconFocused: { backgroundColor: D.goldMuted, borderRightColor: D.goldBorder },
+  input: {
+    flex: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    fontSize: 15,
+    color: D.text,
+    fontWeight: '500',
+  },
+});
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
   const { inventory, addInventoryItem, updateInventoryItem, deleteInventoryItem, refreshData } = useData();
   const [activeTab, setActiveTab] = useState<InventoryTab>('retail');
@@ -32,42 +147,27 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [selectedItemForPurchase, setSelectedItemForPurchase] = useState<InventoryItem | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
-    quantity: '',
-    minThreshold: '',
-    price: '',
-    costPrice: '',
-    itemType: 'retail' as InventoryItemType,
-    supplier: '',
-    sku: '',
-    unit: 'units',
+    name: '', quantity: '', minThreshold: '', price: '', costPrice: '',
+    itemType: 'retail' as InventoryItemType, supplier: '', sku: '', unit: 'units',
   });
   const [purchaseData, setPurchaseData] = useState({
-    quantity: '',
-    unitCost: '',
-    supplier: '',
-    invoiceNumber: '',
-    notes: '',
+    quantity: '', unitCost: '', supplier: '', invoiceNumber: '', notes: '',
   });
 
-  const filteredInventory = useMemo(() => {
-    return inventory.filter(item => (item.itemType || 'retail') === activeTab);
-  }, [inventory, activeTab]);
+  const filteredInventory = useMemo(
+    () => inventory.filter(item => (item.itemType || 'retail') === activeTab),
+    [inventory, activeTab],
+  );
 
   const analytics = useMemo(() => {
-    const retailItems = inventory.filter(i => (i.itemType || 'retail') === 'retail');
-    const consumableItems = inventory.filter(i => (i.itemType || 'retail') === 'consumable');
-    
-    const totalRetailValue = retailItems.reduce((sum, item) => sum + (item.quantity * item.price), 0);
-    const totalRetailCost = retailItems.reduce((sum, item) => sum + (item.quantity * (item.costPrice || 0)), 0);
-    const totalConsumableValue = consumableItems.reduce((sum, item) => sum + (item.quantity * (item.costPrice || 0)), 0);
-    
+    const retail = inventory.filter(i => (i.itemType || 'retail') === 'retail');
+    const consumable = inventory.filter(i => (i.itemType || 'retail') === 'consumable');
     return {
-      retailCount: retailItems.length,
-      consumableCount: consumableItems.length,
-      retailStockValue: totalRetailValue,
-      retailProfitPotential: totalRetailValue - totalRetailCost,
-      consumableStockValue: totalConsumableValue,
+      retailCount: retail.length,
+      consumableCount: consumable.length,
+      retailStockValue: retail.reduce((s, i) => s + i.quantity * i.price, 0),
+      retailProfitPotential: retail.reduce((s, i) => s + i.quantity * (i.price - (i.costPrice || 0)), 0),
+      lowStock: inventory.filter(i => i.quantity <= i.minThreshold).length,
     };
   }, [inventory]);
 
@@ -80,15 +180,9 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
   const openEditModal = (item: InventoryItem) => {
     setEditingItem(item);
     setFormData({
-      name: item.name,
-      quantity: String(item.quantity),
-      minThreshold: String(item.minThreshold),
-      price: String(item.price),
-      costPrice: item.costPrice != null ? String(item.costPrice) : '',
-      itemType: item.itemType || 'retail',
-      supplier: item.supplier || '',
-      sku: item.sku || '',
-      unit: item.unit || 'units',
+      name: item.name, quantity: String(item.quantity), minThreshold: String(item.minThreshold),
+      price: String(item.price), costPrice: item.costPrice != null ? String(item.costPrice) : '',
+      itemType: item.itemType || 'retail', supplier: item.supplier || '', sku: item.sku || '', unit: item.unit || 'units',
     });
     setModalVisible(true);
   };
@@ -100,430 +194,343 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const handleSave = async () => {
-    if (!formData.name.trim()) {
-      Alert.alert('Error', 'Please enter item name.');
-      return;
-    }
+    if (!formData.name.trim()) { Alert.alert('Error', 'Please enter item name.'); return; }
     const quantity = parseInt(formData.quantity, 10);
     const minThreshold = parseInt(formData.minThreshold, 10);
     const price = parseFloat(formData.price);
     const costPrice = formData.costPrice.trim() ? parseFloat(formData.costPrice) : undefined;
-
-    if (isNaN(quantity) || quantity < 0) {
-      Alert.alert('Error', 'Please enter a valid quantity.');
-      return;
-    }
-    if (isNaN(minThreshold) || minThreshold < 0) {
-      Alert.alert('Error', 'Please enter a valid minimum threshold.');
-      return;
-    }
-    if (isNaN(price) || price < 0) {
-      Alert.alert('Error', 'Please enter a valid selling price.');
-      return;
-    }
-    if (costPrice !== undefined && (isNaN(costPrice) || costPrice < 0)) {
-      Alert.alert('Error', 'Please enter a valid cost price.');
-      return;
-    }
-
+    if (isNaN(quantity) || quantity < 0) { Alert.alert('Error', 'Enter a valid quantity.'); return; }
+    if (isNaN(minThreshold) || minThreshold < 0) { Alert.alert('Error', 'Enter a valid minimum threshold.'); return; }
+    if (isNaN(price) || price < 0) { Alert.alert('Error', 'Enter a valid selling price.'); return; }
     try {
+      const payload = {
+        name: formData.name.trim(), quantity, minThreshold, price,
+        costPrice: costPrice ?? undefined, itemType: formData.itemType,
+        supplier: formData.supplier.trim() || undefined, sku: formData.sku.trim() || undefined,
+        unit: formData.unit.trim() || 'units',
+      };
       if (editingItem) {
-        await updateInventoryItem(editingItem.id, {
-          name: formData.name.trim(),
-          quantity,
-          minThreshold,
-          price,
-          costPrice: costPrice ?? undefined,
-          itemType: formData.itemType,
-          supplier: formData.supplier.trim() || undefined,
-          sku: formData.sku.trim() || undefined,
-          unit: formData.unit.trim() || 'units',
-        });
-        Alert.alert('Success', 'Item updated successfully.');
+        await updateInventoryItem(editingItem.id, payload);
+        Alert.alert('Updated', 'Item updated successfully.');
       } else {
-        await addInventoryItem({
-          name: formData.name.trim(),
-          quantity,
-          minThreshold,
-          price,
-          costPrice: costPrice ?? undefined,
-          itemType: formData.itemType,
-          supplier: formData.supplier.trim() || undefined,
-          sku: formData.sku.trim() || undefined,
-          unit: formData.unit.trim() || 'units',
-        });
-        Alert.alert('Success', 'Item added successfully.');
+        await addInventoryItem(payload);
+        Alert.alert('Added', 'Item added successfully.');
       }
       setModalVisible(false);
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to save item. Please try again.');
-    }
+    } catch (e: any) { Alert.alert('Error', e.message || 'Failed to save.'); }
   };
 
   const handlePurchase = async () => {
     if (!selectedItemForPurchase) return;
-    
     const quantity = parseInt(purchaseData.quantity, 10);
     const unitCost = parseFloat(purchaseData.unitCost);
-    
-    if (isNaN(quantity) || quantity <= 0) {
-      Alert.alert('Error', 'Please enter a valid quantity.');
-      return;
-    }
-    if (isNaN(unitCost) || unitCost < 0) {
-      Alert.alert('Error', 'Please enter a valid unit cost.');
-      return;
-    }
-
+    if (isNaN(quantity) || quantity <= 0) { Alert.alert('Error', 'Enter a valid quantity.'); return; }
+    if (isNaN(unitCost) || unitCost < 0) { Alert.alert('Error', 'Enter a valid unit cost.'); return; }
     try {
       await supabaseService.addStockPurchase({
-        itemId: selectedItemForPurchase.id,
-        quantity,
-        unitCost,
-        totalCost: quantity * unitCost,
+        itemId: selectedItemForPurchase.id, quantity, unitCost, totalCost: quantity * unitCost,
         supplier: purchaseData.supplier.trim() || undefined,
         invoiceNumber: purchaseData.invoiceNumber.trim() || undefined,
         purchaseDate: new Date().toISOString().split('T')[0],
         notes: purchaseData.notes.trim() || undefined,
       });
-      
       await refreshData();
-      Alert.alert('Success', 'Stock purchase recorded successfully.');
+      Alert.alert('Done', 'Stock purchase recorded.');
       setPurchaseModalVisible(false);
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to record purchase. Please try again.');
-    }
+    } catch (e: any) { Alert.alert('Error', e.message || 'Failed to record purchase.'); }
   };
 
   const handleDelete = (item: InventoryItem) => {
-    Alert.alert('Delete Item', `Are you sure you want to delete "${item.name}"?`, [
+    Alert.alert('Delete Item', `Delete "${item.name}"?`, [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteInventoryItem(item.id);
-            Alert.alert('Success', 'Item deleted successfully.');
-          } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to delete item. Please try again.');
-          }
-        },
-      },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        try { await deleteInventoryItem(item.id); }
+        catch (e: any) { Alert.alert('Error', e.message || 'Failed to delete.'); }
+      }},
     ]);
   };
 
   const getStockStatus = (item: InventoryItem) => {
-    if (item.quantity === 0) return { text: 'Out of Stock', color: colors.error };
-    if (item.quantity <= item.minThreshold) return { text: 'Low Stock', color: colors.warning };
-    return { text: 'In Stock', color: colors.success };
+    if (item.quantity === 0) return { text: 'Out of Stock', color: D.red, bg: D.redMuted, border: D.redBorder };
+    if (item.quantity <= item.minThreshold) return { text: 'Low Stock', color: D.amber, bg: D.amberMuted, border: D.amberBorder };
+    return { text: 'In Stock', color: D.green, bg: D.greenMuted, border: D.greenBorder };
   };
 
   const renderItem = ({ item }: { item: InventoryItem }) => {
     const status = getStockStatus(item);
-    const stockPercentage = Math.min((item.quantity / (item.minThreshold * 3)) * 100, 100);
+    const stockPct = Math.min((item.quantity / Math.max(item.minThreshold * 3, 1)) * 100, 100);
     const isRetail = (item.itemType || 'retail') === 'retail';
-    const profit = item.costPrice ? item.price - item.costPrice : 0;
-    const margin = item.costPrice ? ((profit / item.price) * 100).toFixed(0) : 0;
-    
+    const margin = item.costPrice && item.price ? (((item.price - item.costPrice) / item.price) * 100).toFixed(0) : null;
+
     return (
-      <TouchableOpacity style={[styles.itemCard, shadows.sm]} activeOpacity={0.9}>
-        {/* Header with Icon and Actions */}
-        <View style={styles.cardHeader}>
-          <View style={[styles.iconCircle, { backgroundColor: `${status.color}15` }]}>
-            <MaterialCommunityIcons 
-              name={isRetail ? "package-variant" : "spray"} 
-              size={24} 
-              color={status.color} 
-            />
-          </View>
-          <View style={styles.headerContent}>
-            <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
-            <View style={styles.itemTypeRow}>
-              <View style={[styles.typePill, { backgroundColor: isRetail ? colors.accentBlue : colors.accentGreen }]}>
-                <Text style={styles.typePillText}>{isRetail ? 'Retail' : 'Consumable'}</Text>
-              </View>
-              <View style={[styles.statusPill, { backgroundColor: `${status.color}15` }]}>
-                <View style={[styles.statusDot, { backgroundColor: status.color }]} />
-                <Text style={[styles.statusText, { color: status.color }]}>{status.text}</Text>
-              </View>
-            </View>
-          </View>
-          <View style={styles.itemActions}>
-            <TouchableOpacity
-              style={[styles.iconButton, { backgroundColor: colors.successMuted }]}
-              onPress={() => openPurchaseModal(item)}
-            >
-              <MaterialCommunityIcons name="plus-circle" size={16} color={colors.success} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.iconButton, { backgroundColor: colors.infoMuted }]}
-              onPress={() => openEditModal(item)}
-            >
-              <MaterialCommunityIcons name="pencil" size={16} color={colors.info} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.iconButton, { backgroundColor: colors.errorMuted }]}
-              onPress={() => handleDelete(item)}
-            >
-              <MaterialCommunityIcons name="delete" size={16} color={colors.error} />
-            </TouchableOpacity>
-          </View>
-        </View>
+      <View style={s.card}>
+        {/* Status stripe */}
+        <View style={[s.cardStripe, { backgroundColor: status.color }]} />
 
-        {/* Stock Progress Bar */}
-        <View style={styles.stockBarContainer}>
-          <View style={styles.stockBarBackground}>
-            <View style={[styles.stockBarFill, { width: `${stockPercentage}%`, backgroundColor: status.color }]} />
-          </View>
-          <View style={styles.stockInfo}>
-            <Text style={styles.stockCurrent}>{item.quantity}</Text>
-            <Text style={styles.stockLabel}> / {item.minThreshold * 3} {item.unit || 'units'}</Text>
-          </View>
-        </View>
+        <View style={s.cardInner}>
+          {/* Top Row */}
+          <View style={s.cardTop}>
+            <View style={[s.cardIconBox, { backgroundColor: status.bg, borderColor: status.border }]}>
+              <MaterialCommunityIcons
+                name={isRetail ? 'package-variant' : 'spray'}
+                size={22}
+                color={status.color}
+              />
+            </View>
 
-        {/* Details Grid */}
-        <View style={styles.detailsGrid}>
-          <View style={styles.detailChip}>
-            <MaterialCommunityIcons name="currency-inr" size={14} color={colors.textMuted} />
-            <Text style={styles.detailChipText}>₹{item.price}</Text>
-          </View>
-          {isRetail && item.costPrice && (
-            <View style={styles.detailChip}>
-              <MaterialCommunityIcons name="tag-outline" size={14} color={colors.success} />
-              <Text style={[styles.detailChipText, { color: colors.success }]}>+{margin}%</Text>
+            <View style={s.cardNameWrap}>
+              <Text style={s.cardName} numberOfLines={1}>{item.name}</Text>
+              <View style={s.cardPillRow}>
+                <View style={[s.typePill, { backgroundColor: isRetail ? D.blueMuted : D.greenMuted, borderColor: isRetail ? D.blueBorder : D.greenBorder }]}>
+                  <Text style={[s.typePillText, { color: isRetail ? D.blue : D.green }]}>
+                    {isRetail ? 'Retail' : 'Consumable'}
+                  </Text>
+                </View>
+                <View style={[s.statusPill, { backgroundColor: status.bg, borderColor: status.border }]}>
+                  <View style={[s.statusDot, { backgroundColor: status.color }]} />
+                  <Text style={[s.statusPillText, { color: status.color }]}>{status.text}</Text>
+                </View>
+              </View>
             </View>
-          )}
-          <View style={styles.detailChip}>
-            <MaterialCommunityIcons name="alert-circle-outline" size={14} color={colors.textMuted} />
-            <Text style={styles.detailChipText}>Min: {item.minThreshold}</Text>
-          </View>
-          {item.sku && (
-            <View style={styles.detailChip}>
-              <MaterialCommunityIcons name="barcode" size={14} color={colors.textMuted} />
-              <Text style={styles.detailChipText}>{item.sku}</Text>
+
+            {/* Action Buttons */}
+            <View style={s.cardActions}>
+              <TouchableOpacity style={[s.actionBtn, { backgroundColor: D.greenMuted, borderColor: D.greenBorder }]} onPress={() => openPurchaseModal(item)}>
+                <MaterialCommunityIcons name="plus" size={15} color={D.green} />
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.actionBtn, { backgroundColor: D.blueMuted, borderColor: D.blueBorder }]} onPress={() => openEditModal(item)}>
+                <MaterialCommunityIcons name="pencil-outline" size={15} color={D.blue} />
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.actionBtn, { backgroundColor: D.redMuted, borderColor: D.redBorder }]} onPress={() => handleDelete(item)}>
+                <MaterialCommunityIcons name="delete-outline" size={15} color={D.red} />
+              </TouchableOpacity>
             </View>
-          )}
+          </View>
+
+          {/* Stock Bar */}
+          <View style={s.stockRow}>
+            <View style={s.stockBarBg}>
+              <View style={[s.stockBarFill, { width: `${stockPct}%` as any, backgroundColor: status.color }]} />
+            </View>
+            <Text style={s.stockQty}>
+              <Text style={{ color: D.text, fontWeight: '700' }}>{item.quantity}</Text>
+              <Text style={{ color: D.textMuted }}> / {item.minThreshold * 3} {item.unit || 'units'}</Text>
+            </Text>
+          </View>
+
+          {/* Detail Chips */}
+          <View style={s.chipRow}>
+            <View style={s.detailChip}>
+              <MaterialCommunityIcons name="currency-inr" size={13} color={D.textMuted} />
+              <Text style={s.detailChipText}>₹{item.price}</Text>
+            </View>
+            {margin && (
+              <View style={[s.detailChip, { backgroundColor: D.greenMuted, borderColor: D.greenBorder }]}>
+                <MaterialCommunityIcons name="trending-up" size={13} color={D.green} />
+                <Text style={[s.detailChipText, { color: D.green }]}>{margin}% margin</Text>
+              </View>
+            )}
+            <View style={s.detailChip}>
+              <MaterialCommunityIcons name="alert-outline" size={13} color={D.textMuted} />
+              <Text style={s.detailChipText}>Min {item.minThreshold}</Text>
+            </View>
+            {item.sku && (
+              <View style={s.detailChip}>
+                <MaterialCommunityIcons name="barcode" size={13} color={D.textMuted} />
+                <Text style={s.detailChipText}>{item.sku}</Text>
+              </View>
+            )}
+          </View>
         </View>
-      </TouchableOpacity>
+      </View>
     );
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerIcon}>
-          <MaterialCommunityIcons name="package-variant" size={28} color={colors.primary} />
+    <View style={s.container}>
+      {/* ── Header ── */}
+      <View style={s.header}>
+        <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
+          <MaterialCommunityIcons name="arrow-left" size={22} color={D.text} />
+        </TouchableOpacity>
+        <View style={s.headerIconBox}>
+          <MaterialCommunityIcons name="package-variant" size={22} color={D.gold} />
         </View>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Inventory</Text>
-          <Text style={styles.headerSubtitle}>{inventory.length} items</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={s.headerTitle}>Inventory</Text>
+          <Text style={s.headerSub}>{inventory.length} items total</Text>
         </View>
-        <View style={styles.headerActions}>
-          <TouchableOpacity 
-            style={[styles.headerIconButton, { marginRight: 8 }]} 
-            onPress={() => navigation.navigate('InventoryReport')}
-            activeOpacity={0.8}
+        <TouchableOpacity style={s.reportBtn} onPress={() => navigation.navigate('InventoryReport')} activeOpacity={0.8}>
+          <MaterialCommunityIcons name="chart-bar" size={18} color={D.textSub} />
+        </TouchableOpacity>
+        <TouchableOpacity style={s.addBtn} onPress={openAddModal} activeOpacity={0.85}>
+          <MaterialCommunityIcons name="plus" size={18} color="#FFF" />
+          <Text style={s.addBtnText}>Add</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ── Analytics Row ── */}
+      <View style={s.analyticsRow}>
+        <View style={[s.statCard, { borderColor: D.blueBorder }]}>
+          <View style={[s.statIconBox, { backgroundColor: D.blueMuted }]}>
+            <MaterialCommunityIcons name="store-outline" size={18} color={D.blue} />
+          </View>
+          <Text style={s.statValue}>{analytics.retailCount}</Text>
+          <Text style={s.statLabel}>Retail</Text>
+        </View>
+        <View style={[s.statCard, { borderColor: D.greenBorder }]}>
+          <View style={[s.statIconBox, { backgroundColor: D.greenMuted }]}>
+            <MaterialCommunityIcons name="spray" size={18} color={D.green} />
+          </View>
+          <Text style={s.statValue}>{analytics.consumableCount}</Text>
+          <Text style={s.statLabel}>Consumable</Text>
+        </View>
+        <View style={[s.statCard, { borderColor: D.goldBorder, flex: 1.4 }]}>
+          <View style={[s.statIconBox, { backgroundColor: D.goldMuted }]}>
+            <MaterialCommunityIcons name="currency-inr" size={18} color={D.gold} />
+          </View>
+          <Text style={s.statValue}>₹{(analytics.retailStockValue / 1000).toFixed(1)}k</Text>
+          <Text style={s.statLabel}>Stock Value</Text>
+        </View>
+        {analytics.lowStock > 0 && (
+          <View style={[s.statCard, { borderColor: D.redBorder }]}>
+            <View style={[s.statIconBox, { backgroundColor: D.redMuted }]}>
+              <MaterialCommunityIcons name="alert-circle-outline" size={18} color={D.red} />
+            </View>
+            <Text style={[s.statValue, { color: D.red }]}>{analytics.lowStock}</Text>
+            <Text style={s.statLabel}>Low Stock</Text>
+          </View>
+        )}
+      </View>
+
+      {/* ── Tabs ── */}
+      <View style={s.tabRow}>
+        {(['retail', 'consumable'] as InventoryTab[]).map(tab => (
+          <TouchableOpacity
+            key={tab}
+            style={[s.tab, activeTab === tab && s.tabActive]}
+            onPress={() => setActiveTab(tab)}
+            activeOpacity={0.75}
           >
-            <MaterialCommunityIcons name="chart-bar" size={20} color={colors.primary} />
+            <MaterialCommunityIcons
+              name={tab === 'retail' ? 'store-outline' : 'spray'}
+              size={17}
+              color={activeTab === tab ? D.gold : D.textMuted}
+            />
+            <Text style={[s.tabText, activeTab === tab && s.tabTextActive]}>
+              {tab === 'retail' ? 'Retail Products' : 'Salon Consumables'}
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.addButton} onPress={openAddModal} activeOpacity={0.8}>
-            <MaterialCommunityIcons name="plus" size={20} color={colors.textInverse} />
-            <Text style={styles.addButtonText}>Add</Text>
-          </TouchableOpacity>
-        </View>
+        ))}
       </View>
 
-      {/* Analytics Summary */}
-      <View style={styles.analyticsContainer}>
-        <View style={[styles.analyticsCard, { backgroundColor: colors.accentBlue }]}>
-          <MaterialCommunityIcons name="store" size={20} color={colors.textInverse} />
-          <Text style={styles.analyticsValue}>{analytics.retailCount}</Text>
-          <Text style={styles.analyticsLabel}>Retail Items</Text>
-        </View>
-        <View style={[styles.analyticsCard, { backgroundColor: colors.accentGreen }]}>
-          <MaterialCommunityIcons name="spray" size={20} color={colors.textInverse} />
-          <Text style={styles.analyticsValue}>{analytics.consumableCount}</Text>
-          <Text style={styles.analyticsLabel}>Consumables</Text>
-        </View>
-        <View style={[styles.analyticsCard, { backgroundColor: colors.accentPurple }]}>
-          <MaterialCommunityIcons name="currency-inr" size={20} color={colors.textInverse} />
-          <Text style={styles.analyticsValue}>₹{(analytics.retailStockValue / 1000).toFixed(1)}k</Text>
-          <Text style={styles.analyticsLabel}>Stock Value</Text>
-        </View>
-      </View>
-
-      {/* Tabs */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'retail' && styles.tabActive]}
-          onPress={() => setActiveTab('retail')}
-        >
-          <MaterialCommunityIcons 
-            name="store" 
-            size={18} 
-            color={activeTab === 'retail' ? colors.primary : colors.textMuted} 
-          />
-          <Text style={[styles.tabText, activeTab === 'retail' && styles.tabTextActive]}>
-            Retail Products
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'consumable' && styles.tabActive]}
-          onPress={() => setActiveTab('consumable')}
-        >
-          <MaterialCommunityIcons 
-            name="spray" 
-            size={18} 
-            color={activeTab === 'consumable' ? colors.primary : colors.textMuted} 
-          />
-          <Text style={[styles.tabText, activeTab === 'consumable' && styles.tabTextActive]}>
-            Salon Consumables
-          </Text>
-        </TouchableOpacity>
-      </View>
-
+      {/* ── List ── */}
       {filteredInventory.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <MaterialCommunityIcons name="package-variant-closed" size={64} color={colors.border} />
-          <Text style={styles.emptyText}>
-            No {activeTab} items. Add your first {activeTab} item!
-          </Text>
+        <View style={s.emptyWrap}>
+          <View style={s.emptyIconBox}>
+            <MaterialCommunityIcons name="package-variant-closed" size={36} color={D.textMuted} />
+          </View>
+          <Text style={s.emptyTitle}>No {activeTab} items yet</Text>
+          <Text style={s.emptyHint}>Tap "Add" to add your first item</Text>
         </View>
       ) : (
         <FlatList
           data={filteredInventory}
           keyExtractor={item => item.id}
           renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={{ padding: 20, paddingBottom: 32 }}
+          showsVerticalScrollIndicator={false}
         />
       )}
 
-      {/* Add/Edit Modal */}
-      <Modal visible={modalVisible} animationType="slide" transparent={true}>
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <ScrollView contentContainerStyle={styles.modalScroll}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>{editingItem ? 'Edit Item' : 'Add New Item'}</Text>
+      {/* ── Add / Edit Modal ── */}
+      <Modal visible={modalVisible} animationType="slide" transparent>
+        <KeyboardAvoidingView style={s.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-end' }} keyboardShouldPersistTaps="handled">
+            <View style={s.modalSheet}>
+              {/* Handle */}
+              <View style={s.sheetHandle} />
 
-              {/* Item Type Selector */}
-              {!editingItem && (
-                <View style={styles.typeSelector}>
-                  <TouchableOpacity
-                    style={[styles.typeOption, formData.itemType === 'retail' && styles.typeOptionActive]}
-                    onPress={() => setFormData({ ...formData, itemType: 'retail' })}
-                  >
-                    <MaterialCommunityIcons 
-                      name="store" 
-                      size={20} 
-                      color={formData.itemType === 'retail' ? colors.primary : colors.textMuted} 
-                    />
-                    <Text style={[styles.typeOptionText, formData.itemType === 'retail' && styles.typeOptionTextActive]}>
-                      Retail Product
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.typeOption, formData.itemType === 'consumable' && styles.typeOptionActive]}
-                    onPress={() => setFormData({ ...formData, itemType: 'consumable' })}
-                  >
-                    <MaterialCommunityIcons 
-                      name="spray" 
-                      size={20} 
-                      color={formData.itemType === 'consumable' ? colors.primary : colors.textMuted} 
-                    />
-                    <Text style={[styles.typeOptionText, formData.itemType === 'consumable' && styles.typeOptionTextActive]}>
-                      Salon Consumable
-                    </Text>
-                  </TouchableOpacity>
+              <View style={s.modalHeaderRow}>
+                <View style={s.modalTitleIconBox}>
+                  <MaterialCommunityIcons name={editingItem ? 'pencil-outline' : 'plus-circle-outline'} size={20} color={D.gold} />
                 </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.modalTitle}>{editingItem ? 'Edit Item' : 'Add New Item'}</Text>
+                  <Text style={s.modalSub}>{editingItem ? 'Update item details' : 'Fill in the details below'}</Text>
+                </View>
+                <TouchableOpacity style={s.modalCloseBtn} onPress={() => setModalVisible(false)}>
+                  <MaterialCommunityIcons name="close" size={20} color={D.textSub} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Type Selector */}
+              {!editingItem && (
+                <>
+                  <SectionLabel>ITEM TYPE</SectionLabel>
+                  <View style={s.typeRow}>
+                    {(['retail', 'consumable'] as InventoryItemType[]).map(type => (
+                      <TouchableOpacity
+                        key={type}
+                        style={[s.typeChip, formData.itemType === type && s.typeChipActive]}
+                        onPress={() => setFormData({ ...formData, itemType: type })}
+                        activeOpacity={0.75}
+                      >
+                        <View style={[s.typeChipIcon, formData.itemType === type && s.typeChipIconActive]}>
+                          <MaterialCommunityIcons
+                            name={type === 'retail' ? 'store-outline' : 'spray'}
+                            size={18}
+                            color={formData.itemType === type ? '#FFF' : D.textMuted}
+                          />
+                        </View>
+                        <Text style={[s.typeChipText, formData.itemType === type && s.typeChipTextActive]}>
+                          {type === 'retail' ? 'Retail Product' : 'Salon Consumable'}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
               )}
 
-              <TextInput
-                style={styles.input}
-                placeholder="Item Name"
-                placeholderTextColor={colors.textMuted}
-                value={formData.name}
-                onChangeText={text => setFormData({ ...formData, name: text })}
-              />
+              <SectionLabel>ITEM DETAILS</SectionLabel>
+              <MInput label="Item Name" icon="package-outline" value={formData.name} onChange={t => setFormData({ ...formData, name: t })} placeholder="e.g. Shampoo 200ml" />
+              <MInput label="SKU / Product Code" hint="Optional" icon="barcode" value={formData.sku} onChange={t => setFormData({ ...formData, sku: t })} placeholder="e.g. SH-001" />
 
-              <TextInput
-                style={styles.input}
-                placeholder="SKU / Product Code (optional)"
-                placeholderTextColor={colors.textMuted}
-                value={formData.sku}
-                onChangeText={text => setFormData({ ...formData, sku: text })}
-              />
-
-              <View style={styles.inputRow}>
-                <TextInput
-                  style={[styles.input, styles.inputHalf]}
-                  placeholder={formData.itemType === 'retail' ? 'Selling Price (₹)' : 'Unit Cost (₹)'}
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="numeric"
-                  value={formData.price}
-                  onChangeText={text => setFormData({ ...formData, price: text })}
-                />
-                <TextInput
-                  style={[styles.input, styles.inputHalf]}
-                  placeholder={formData.itemType === 'retail' ? 'Cost Price (₹)' : 'Current Stock'}
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="numeric"
-                  value={formData.itemType === 'retail' ? formData.costPrice : formData.quantity}
-                  onChangeText={text => formData.itemType === 'retail' 
-                    ? setFormData({ ...formData, costPrice: text })
-                    : setFormData({ ...formData, quantity: text })
-                  }
-                />
+              <SectionLabel>PRICING & STOCK</SectionLabel>
+              <View style={s.rowInputs}>
+                <View style={{ flex: 1 }}>
+                  <MInput label="Selling Price (₹)" icon="currency-inr" value={formData.price} onChange={t => setFormData({ ...formData, price: t })} placeholder="0" keyboard="numeric" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <MInput label="Cost Price (₹)" hint="Optional" icon="tag-outline" value={formData.costPrice} onChange={t => setFormData({ ...formData, costPrice: t })} placeholder="0" keyboard="numeric" />
+                </View>
+              </View>
+              <View style={s.rowInputs}>
+                <View style={{ flex: 1 }}>
+                  <MInput label="Current Quantity" icon="counter" value={formData.quantity} onChange={t => setFormData({ ...formData, quantity: t })} placeholder="0" keyboard="numeric" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <MInput label="Min Threshold" icon="alert-outline" value={formData.minThreshold} onChange={t => setFormData({ ...formData, minThreshold: t })} placeholder="5" keyboard="numeric" />
+                </View>
               </View>
 
-              <View style={styles.inputRow}>
-                <TextInput
-                  style={[styles.input, styles.inputHalf]}
-                  placeholder="Current Quantity"
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="numeric"
-                  value={formData.quantity}
-                  onChangeText={text => setFormData({ ...formData, quantity: text })}
-                />
-                <TextInput
-                  style={[styles.input, styles.inputHalf]}
-                  placeholder="Min Threshold"
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="numeric"
-                  value={formData.minThreshold}
-                  onChangeText={text => setFormData({ ...formData, minThreshold: text })}
-                />
+              <SectionLabel>EXTRA INFO</SectionLabel>
+              <View style={s.rowInputs}>
+                <View style={{ flex: 1 }}>
+                  <MInput label="Unit" icon="scale-outline" value={formData.unit} onChange={t => setFormData({ ...formData, unit: t })} placeholder="units / bottles / kg" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <MInput label="Supplier" hint="Optional" icon="truck-outline" value={formData.supplier} onChange={t => setFormData({ ...formData, supplier: t })} placeholder="Supplier name" />
+                </View>
               </View>
 
-              <TextInput
-                style={styles.input}
-                placeholder="Unit (e.g., bottles, kg, units)"
-                placeholderTextColor={colors.textMuted}
-                value={formData.unit}
-                onChangeText={text => setFormData({ ...formData, unit: text })}
-              />
-
-              <TextInput
-                style={styles.input}
-                placeholder="Supplier (optional)"
-                placeholderTextColor={colors.textMuted}
-                value={formData.supplier}
-                onChangeText={text => setFormData({ ...formData, supplier: text })}
-              />
-
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.cancelButton]}
-                  onPress={() => setModalVisible(false)}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+              <View style={s.modalBtnRow}>
+                <TouchableOpacity style={s.cancelBtn} onPress={() => setModalVisible(false)}>
+                  <Text style={s.cancelBtnText}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.modalButton, styles.saveButton]} onPress={handleSave}>
-                  <Text style={styles.saveButtonText}>Save</Text>
+                <TouchableOpacity style={s.saveBtn} onPress={handleSave}>
+                  <MaterialCommunityIcons name={editingItem ? 'check' : 'plus'} size={18} color="#FFF" />
+                  <Text style={s.saveBtnText}>{editingItem ? 'Save Changes' : 'Add Item'}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -531,68 +538,57 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Purchase Stock Modal */}
-      <Modal visible={purchaseModalVisible} animationType="slide" transparent={true}>
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              Stock Purchase: {selectedItemForPurchase?.name}
-            </Text>
+      {/* ── Purchase Modal ── */}
+      <Modal visible={purchaseModalVisible} animationType="slide" transparent>
+        <KeyboardAvoidingView style={s.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={s.modalSheet}>
+            <View style={s.sheetHandle} />
 
-            <TextInput
-              style={styles.input}
-              placeholder="Quantity to Add"
-              placeholderTextColor={colors.textMuted}
-              keyboardType="numeric"
-              value={purchaseData.quantity}
-              onChangeText={text => setPurchaseData({ ...purchaseData, quantity: text })}
-            />
-
-            <TextInput
-              style={styles.input}
-              placeholder="Unit Cost (₹)"
-              placeholderTextColor={colors.textMuted}
-              keyboardType="numeric"
-              value={purchaseData.unitCost}
-              onChangeText={text => setPurchaseData({ ...purchaseData, unitCost: text })}
-            />
-
-            <TextInput
-              style={styles.input}
-              placeholder="Supplier (optional)"
-              placeholderTextColor={colors.textMuted}
-              value={purchaseData.supplier}
-              onChangeText={text => setPurchaseData({ ...purchaseData, supplier: text })}
-            />
-
-            <TextInput
-              style={styles.input}
-              placeholder="Invoice Number (optional)"
-              placeholderTextColor={colors.textMuted}
-              value={purchaseData.invoiceNumber}
-              onChangeText={text => setPurchaseData({ ...purchaseData, invoiceNumber: text })}
-            />
-
-            <TextInput
-              style={styles.input}
-              placeholder="Notes (optional)"
-              placeholderTextColor={colors.textMuted}
-              value={purchaseData.notes}
-              onChangeText={text => setPurchaseData({ ...purchaseData, notes: text })}
-            />
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setPurchaseModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+            <View style={s.modalHeaderRow}>
+              <View style={[s.modalTitleIconBox, { backgroundColor: D.greenMuted, borderColor: D.greenBorder }]}>
+                <MaterialCommunityIcons name="plus-circle-outline" size={20} color={D.green} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.modalTitle}>Record Stock Purchase</Text>
+                <Text style={s.modalSub} numberOfLines={1}>{selectedItemForPurchase?.name}</Text>
+              </View>
+              <TouchableOpacity style={s.modalCloseBtn} onPress={() => setPurchaseModalVisible(false)}>
+                <MaterialCommunityIcons name="close" size={20} color={D.textSub} />
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, styles.saveButton]} onPress={handlePurchase}>
-                <Text style={styles.saveButtonText}>Record Purchase</Text>
+            </View>
+
+            <SectionLabel>PURCHASE DETAILS</SectionLabel>
+            <View style={s.rowInputs}>
+              <View style={{ flex: 1 }}>
+                <MInput label="Quantity to Add" icon="counter" value={purchaseData.quantity} onChange={t => setPurchaseData({ ...purchaseData, quantity: t })} placeholder="0" keyboard="numeric" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <MInput label="Unit Cost (₹)" icon="currency-inr" value={purchaseData.unitCost} onChange={t => setPurchaseData({ ...purchaseData, unitCost: t })} placeholder="0" keyboard="numeric" />
+              </View>
+            </View>
+
+            {/* Live total preview */}
+            {purchaseData.quantity && purchaseData.unitCost && !isNaN(+purchaseData.quantity) && !isNaN(+purchaseData.unitCost) && (
+              <View style={s.totalBanner}>
+                <MaterialCommunityIcons name="receipt" size={16} color={D.gold} />
+                <Text style={s.totalBannerText}>
+                  Total: <Text style={{ color: D.text, fontWeight: '800' }}>₹{(+purchaseData.quantity * +purchaseData.unitCost).toFixed(0)}</Text>
+                </Text>
+              </View>
+            )}
+
+            <SectionLabel>OPTIONAL INFO</SectionLabel>
+            <MInput label="Supplier" hint="Optional" icon="truck-outline" value={purchaseData.supplier} onChange={t => setPurchaseData({ ...purchaseData, supplier: t })} placeholder="Supplier name" />
+            <MInput label="Invoice Number" hint="Optional" icon="file-document-outline" value={purchaseData.invoiceNumber} onChange={t => setPurchaseData({ ...purchaseData, invoiceNumber: t })} placeholder="e.g. INV-2024-001" />
+            <MInput label="Notes" hint="Optional" icon="note-text-outline" value={purchaseData.notes} onChange={t => setPurchaseData({ ...purchaseData, notes: t })} placeholder="Any notes..." />
+
+            <View style={s.modalBtnRow}>
+              <TouchableOpacity style={s.cancelBtn} onPress={() => setPurchaseModalVisible(false)}>
+                <Text style={s.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.saveBtn, { backgroundColor: D.green }]} onPress={handlePurchase}>
+                <MaterialCommunityIcons name="plus" size={18} color="#FFF" />
+                <Text style={s.saveBtnText}>Record Purchase</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -602,352 +598,209 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+// ─── Styles ───────────────────────────────────────────────────────────────────
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: D.bg },
+
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.lg,
-    paddingBottom: theme.spacing.md,
-    backgroundColor: colors.surface,
+    paddingHorizontal: 20,
+    paddingTop: 52,
+    paddingBottom: 16,
+    backgroundColor: D.surface,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: D.border,
+    gap: 10,
   },
-  headerIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: theme.radius.lg,
-    backgroundColor: colors.primaryContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: theme.spacing.md,
+  backBtn: {
+    width: 40, height: 40, borderRadius: D.radius.md,
+    backgroundColor: D.bg, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: D.border,
   },
-  headerContent: {
-    flex: 1,
+  headerIconBox: {
+    width: 44, height: 44, borderRadius: D.radius.md,
+    backgroundColor: D.goldMuted, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: D.goldBorder,
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.text,
+  headerTitle: { fontSize: 18, fontWeight: '800', color: D.text, letterSpacing: -0.3 },
+  headerSub: { fontSize: 12, color: D.textMuted, marginTop: 1 },
+  reportBtn: {
+    width: 40, height: 40, borderRadius: D.radius.md,
+    backgroundColor: D.bg, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: D.border,
   },
-  headerSubtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
+  addBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: D.text, paddingHorizontal: 16, paddingVertical: 10,
+    borderRadius: D.radius.pill,
   },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: theme.radius.full,
-    gap: 6,
+  addBtnText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
+
+  // Analytics
+  analyticsRow: {
+    flexDirection: 'row', gap: 10, paddingHorizontal: 20, paddingVertical: 16,
+    backgroundColor: D.surfaceWarm, borderBottomWidth: 1, borderBottomColor: D.border,
   },
-  addButtonText: {
-    color: colors.textInverse,
-    fontSize: 14,
-    fontWeight: '600',
+  statCard: {
+    flex: 1, backgroundColor: D.surface, borderRadius: D.radius.lg,
+    padding: 12, alignItems: 'center', borderWidth: 1,
+    shadowColor: D.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 4, elevation: 2,
   },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  statIconBox: {
+    width: 34, height: 34, borderRadius: D.radius.sm,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 6,
   },
-  headerIconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: theme.radius.md,
-    backgroundColor: colors.primaryContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  analyticsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    gap: theme.spacing.md,
-  },
-  analyticsCard: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.radius.lg,
-  },
-  analyticsValue: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.textInverse,
-    marginTop: 4,
-  },
-  analyticsLabel: {
-    fontSize: 11,
-    color: colors.textInverse,
-    opacity: 0.9,
-    marginTop: 2,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.md,
-    gap: theme.spacing.md,
+  statValue: { fontSize: 16, fontWeight: '800', color: D.text, letterSpacing: -0.5 },
+  statLabel: { fontSize: 10, color: D.textMuted, fontWeight: '600', marginTop: 2, letterSpacing: 0.3 },
+
+  // Tabs
+  tabRow: {
+    flexDirection: 'row', gap: 10, paddingHorizontal: 20,
+    paddingTop: 14, paddingBottom: 6,
   },
   tab: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    backgroundColor: colors.surface,
-    borderRadius: theme.radius.lg,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    paddingVertical: 12, backgroundColor: D.surface, borderRadius: D.radius.lg,
+    borderWidth: 1.5, borderColor: D.border, gap: 7,
+  },
+  tabActive: { backgroundColor: D.goldMuted, borderColor: D.gold },
+  tabText: { fontSize: 13, fontWeight: '600', color: D.textMuted },
+  tabTextActive: { color: D.gold },
+
+  // Empty
+  emptyWrap: {
+    flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40,
+  },
+  emptyIconBox: {
+    width: 80, height: 80, borderRadius: D.radius.xl,
+    backgroundColor: D.surface, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: D.border, marginBottom: 16,
+  },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: D.text, marginBottom: 6 },
+  emptyHint: { fontSize: 13, color: D.textMuted, textAlign: 'center' },
+
+  // Item Card
+  card: {
+    flexDirection: 'row', backgroundColor: D.surface, borderRadius: D.radius.xl,
+    marginBottom: 12, borderWidth: 1, borderColor: D.border, overflow: 'hidden',
+    shadowColor: D.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 6, elevation: 2,
+  },
+  cardStripe: { width: 4 },
+  cardInner: { flex: 1, padding: 14 },
+  cardTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
+  cardIconBox: {
+    width: 44, height: 44, borderRadius: D.radius.md,
+    alignItems: 'center', justifyContent: 'center', marginRight: 10,
     borderWidth: 1,
-    borderColor: colors.border,
-    gap: 8,
   },
-  tabActive: {
-    backgroundColor: colors.primaryContainer,
-    borderColor: colors.primary,
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-  tabTextActive: {
-    color: colors.primary,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyText: {
-    color: colors.textMuted,
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: theme.spacing.md,
-  },
-  listContent: {
-    padding: theme.spacing.lg,
-    paddingBottom: 20,
-  },
-  itemCard: {
-    backgroundColor: colors.surface,
-    borderRadius: theme.radius.xl,
-    padding: theme.spacing.lg,
-    marginBottom: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
-  },
-  iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: theme.spacing.md,
-  },
-  itemName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 4,
-  },
-  statusPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: theme.radius.full,
-  },
-  statusDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    marginRight: 5,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  itemActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: theme.radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  itemTypeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
+  cardNameWrap: { flex: 1 },
+  cardName: { fontSize: 15, fontWeight: '700', color: D.text, marginBottom: 6 },
+  cardPillRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   typePill: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: theme.radius.full,
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: D.radius.pill,
+    borderWidth: 1,
   },
-  typePillText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.textInverse,
+  typePillText: { fontSize: 10, fontWeight: '700' },
+  statusPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: D.radius.pill, borderWidth: 1,
   },
-  stockBarContainer: {
-    marginBottom: theme.spacing.md,
+  statusDot: { width: 5, height: 5, borderRadius: 3 },
+  statusPillText: { fontSize: 10, fontWeight: '700' },
+  cardActions: { flexDirection: 'row', gap: 6, marginLeft: 6 },
+  actionBtn: {
+    width: 32, height: 32, borderRadius: D.radius.sm,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1,
   },
-  stockBarBackground: {
-    height: 6,
-    backgroundColor: colors.borderLight,
-    borderRadius: 3,
-    overflow: 'hidden',
-    marginBottom: 8,
+
+  // Stock bar
+  stockRow: { marginBottom: 10 },
+  stockBarBg: {
+    height: 5, backgroundColor: D.border, borderRadius: 3,
+    overflow: 'hidden', marginBottom: 6,
   },
-  stockBarFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  stockInfo: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  stockCurrent: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  stockLabel: {
-    fontSize: 12,
-    color: colors.textMuted,
-  },
-  detailsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.sm,
-    paddingTop: theme.spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-  },
+  stockBarFill: { height: '100%', borderRadius: 3 },
+  stockQty: { fontSize: 13 },
+
+  // Chips
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   detailChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: theme.radius.full,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: D.bg, paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: D.radius.pill, borderWidth: 1, borderColor: D.border,
   },
-  detailChipText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginLeft: 4,
-    fontWeight: '500',
+  detailChipText: { fontSize: 12, color: D.textSub, fontWeight: '500' },
+
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  modalSheet: {
+    backgroundColor: D.surface, borderTopLeftRadius: D.radius.xl, borderTopRightRadius: D.radius.xl,
+    padding: 20, paddingBottom: 40, borderTopWidth: 1, borderColor: D.border,
+    maxHeight: '92%',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'flex-end',
+  sheetHandle: {
+    width: 36, height: 4, backgroundColor: D.border, borderRadius: 2,
+    alignSelf: 'center', marginBottom: 18,
   },
-  modalScroll: {
-    flexGrow: 1,
-    justifyContent: 'flex-end',
+  modalHeaderRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20,
   },
-  modalContent: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    paddingBottom: 40,
+  modalTitleIconBox: {
+    width: 44, height: 44, borderRadius: D.radius.md,
+    backgroundColor: D.goldMuted, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: D.goldBorder,
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 20,
+  modalTitle: { fontSize: 17, fontWeight: '800', color: D.text, letterSpacing: -0.3 },
+  modalSub: { fontSize: 12, color: D.textMuted, marginTop: 1 },
+  modalCloseBtn: {
+    width: 36, height: 36, borderRadius: D.radius.sm,
+    backgroundColor: D.bg, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: D.border,
   },
-  typeSelector: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
+
+  // Type selector
+  typeRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
+  typeChip: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
+    padding: 12, backgroundColor: D.bg, borderRadius: D.radius.lg,
+    borderWidth: 1.5, borderColor: D.border,
   },
-  typeOption: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    backgroundColor: colors.background,
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: 8,
+  typeChipActive: { backgroundColor: D.goldMuted, borderColor: D.gold },
+  typeChipIcon: {
+    width: 32, height: 32, borderRadius: D.radius.sm,
+    backgroundColor: D.surface, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: D.border,
   },
-  typeOptionActive: {
-    backgroundColor: colors.primaryContainer,
-    borderColor: colors.primary,
+  typeChipIconActive: { backgroundColor: D.gold, borderColor: D.gold },
+  typeChipText: { fontSize: 13, fontWeight: '600', color: D.textMuted, flex: 1 },
+  typeChipTextActive: { color: D.text },
+
+  // Row inputs
+  rowInputs: { flexDirection: 'row', gap: 10 },
+
+  // Total banner
+  totalBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: D.goldMuted, borderRadius: D.radius.md,
+    paddingHorizontal: 14, paddingVertical: 10,
+    borderWidth: 1, borderColor: D.goldBorder,
+    marginBottom: 16, marginTop: -4,
   },
-  typeOptionText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textMuted,
+  totalBannerText: { fontSize: 14, color: D.textSub, fontWeight: '600' },
+
+  // Modal buttons
+  modalBtnRow: { flexDirection: 'row', gap: 10, marginTop: 8 },
+  cancelBtn: {
+    flex: 1, paddingVertical: 15, borderRadius: D.radius.lg,
+    backgroundColor: D.bg, alignItems: 'center', borderWidth: 1, borderColor: D.border,
   },
-  typeOptionTextActive: {
-    color: colors.primary,
+  cancelBtnText: { fontSize: 15, fontWeight: '700', color: D.textSub },
+  saveBtn: {
+    flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, paddingVertical: 15, borderRadius: D.radius.lg, backgroundColor: D.text,
+    shadowColor: D.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
   },
-  input: {
-    backgroundColor: colors.background,
-    borderRadius: theme.radius.full,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: 12,
-    color: colors.text,
-    fontSize: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: 12,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  inputHalf: {
-    flex: 1,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 12,
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 999,
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: colors.backgroundSecondary,
-  },
-  cancelButtonText: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  saveButton: {
-    backgroundColor: colors.primary,
-  },
-  saveButtonText: {
-    color: colors.textInverse,
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  saveBtnText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
 });
