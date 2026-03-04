@@ -99,15 +99,15 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.footer}>
             <View style={styles.footerItem}>
               <MaterialCommunityIcons name="tablet" size={14} color={colors.textMuted} />
-              <Text style={[theme.typography.caption, styles.footerText]}>Shared Tablet: username "salon" / password "salon123"</Text>
-            </View>
-            <View style={styles.footerItem}>
-              <MaterialCommunityIcons name="account" size={14} color={colors.textMuted} />
-              <Text style={[theme.typography.caption, styles.footerText]}>Staff: use your staff credentials</Text>
+              <Text style={[theme.typography.caption, styles.footerText]}>
+                Shared Salon Dashboard: username "salon" / password "salon123"
+              </Text>
             </View>
             <View style={styles.footerItem}>
               <MaterialCommunityIcons name="shield-account" size={14} color={colors.textMuted} />
-              <Text style={[theme.typography.caption, styles.footerText]}>Admin: use your admin credentials</Text>
+              <Text style={[theme.typography.caption, styles.footerText]}>
+                Admin: use your admin credentials
+              </Text>
             </View>
           </View>
         </View>

@@ -20,58 +20,11 @@ interface Props {
 
 export const StaffDashboardScreen: React.FC<Props> = ({ navigation }) => {
   const { user, logout } = useAuth();
-  const { getStaffTodayStats, getTodayAttendance, checkIn, checkOut, refreshData } = useData();
-  const [todayAttendance, setTodayAttendance] = useState<Attendance | null>(null);
-  const [attendanceLoading, setAttendanceLoading] = useState(false);
-
-  // Staff dashboard is now shared - no individual staff tracking here
-  const effectiveStaffId = user?.id;
-
-  useEffect(() => {
-    if (effectiveStaffId) {
-      getTodayAttendance(effectiveStaffId).then(setTodayAttendance);
-    } else {
-      setTodayAttendance(null);
-    }
-  }, [effectiveStaffId, getTodayAttendance]);
+  const { getStaffTodayStats } = useData();
+  const [todayAttendance] = useState<Attendance | null>(null);
+  const [attendanceLoading] = useState(false);
 
   const isSharedTablet = user?.id === 'shared-tablet';
-
-  const handleCheckIn = async () => {
-    if (!effectiveStaffId || isSharedTablet) return;
-    setAttendanceLoading(true);
-    try {
-      await checkIn(effectiveStaffId);
-      await refreshData();
-      const next = await getTodayAttendance(effectiveStaffId);
-      setTodayAttendance(next);
-    } catch (error: any) {
-      // Silently ignore errors for shared tablet
-      if (!isSharedTablet) {
-        console.error('Check-in error:', error);
-      }
-    } finally {
-      setAttendanceLoading(false);
-    }
-  };
-
-  const handleCheckOut = async () => {
-    if (!effectiveStaffId || isSharedTablet) return;
-    setAttendanceLoading(true);
-    try {
-      await checkOut(effectiveStaffId);
-      await refreshData();
-      const next = await getTodayAttendance(effectiveStaffId);
-      setTodayAttendance(next);
-    } catch (error: any) {
-      // Silently ignore errors for shared tablet
-      if (!isSharedTablet) {
-        console.error('Check-out error:', error);
-      }
-    } finally {
-      setAttendanceLoading(false);
-    }
-  };
 
   if (!user || user.role !== 'staff') {
     return (
@@ -188,57 +141,24 @@ export const StaffDashboardScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Attendance section - hidden for shared tablet */}
-      {!isSharedTablet && (
+      {/* Attendance entry is now handled via the shared salon attendance page */}
+      {isSharedTablet && (
         <View style={[styles.attendanceCard, shadows.sm]}>
           <View style={styles.attendanceHeader}>
             <MaterialCommunityIcons name="clock-outline" size={20} color={colors.textSecondary} />
             <Text style={[theme.typography.label, { marginLeft: theme.spacing.sm }]}>
-              Attendance
+              Staff Attendance
             </Text>
           </View>
-          <View style={styles.attendanceTimes}>
-            <View style={styles.attendanceTimeItem}>
-              <Text style={[theme.typography.caption, { color: colors.textMuted }]}>Check In</Text>
-              <Text style={[theme.typography.h3, { color: todayAttendance?.checkInTime ? colors.success : colors.textMuted }]}>
-                {formatTime(todayAttendance?.checkInTime)}
-              </Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.attendanceTimeItem}>
-              <Text style={[theme.typography.caption, { color: colors.textMuted }]}>Check Out</Text>
-              <Text style={[theme.typography.h3, { color: todayAttendance?.checkOutTime ? colors.textSecondary : colors.textMuted }]}>
-                {formatTime(todayAttendance?.checkOutTime)}
-              </Text>
-            </View>
-          </View>
           <View style={styles.attendanceActions}>
-            {!todayAttendance?.checkInTime ? (
-              <Button
-                title={attendanceLoading ? 'Processing...' : 'Check In'}
-                onPress={handleCheckIn}
-                disabled={attendanceLoading}
-                variant="primary"
-                icon="login-variant"
-                fullWidth
-              />
-            ) : !todayAttendance?.checkOutTime ? (
-              <Button
-                title={attendanceLoading ? 'Processing...' : 'Check Out'}
-                onPress={handleCheckOut}
-                disabled={attendanceLoading}
-                variant="secondary"
-                icon="logout-variant"
-                fullWidth
-              />
-            ) : (
-              <View style={styles.attendanceComplete}>
-                <MaterialCommunityIcons name="check-circle" size={16} color={colors.success} />
-                <Text style={[theme.typography.bodySmall, { color: colors.success, marginLeft: theme.spacing.xs }]}>
-                  Attendance Complete
-                </Text>
-              </View>
-            )}
+            <Button
+              title="Open Attendance Page"
+              onPress={() => navigation.navigate('StaffAttendance')}
+              disabled={attendanceLoading}
+              variant="primary"
+              icon="clock-check"
+              fullWidth
+            />
           </View>
         </View>
       )}

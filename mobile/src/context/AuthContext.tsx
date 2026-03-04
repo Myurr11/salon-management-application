@@ -88,23 +88,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return 'admin';
       }
 
-      const staff = await supabaseService.getStaffByUsername(u);
-      if (staff) {
-        const match = staff.password_hash
-          ? await bcrypt.compare(p, staff.password_hash)
-          : p === DEFAULT_STAFF_PASSWORD_WHEN_NULL;
-        if (match) {
-          setUser({
-            id: staff.id,
-            name: staff.name,
-            role: 'staff',
-            branchId: staff.branch_id ?? undefined,
-          });
-          return 'staff';
-        }
-      }
-
-      setLoginError('Invalid username or password.');
+      // Individual staff logins are disabled. Staff should use the shared tablet
+      // credentials (salon / salon123) for accessing the common salon dashboard.
+      setLoginError('Only admin and shared tablet logins are allowed. Staff must use the shared "salon" login.');
       return null;
     } catch (err: any) {
       console.error('Login error:', err);

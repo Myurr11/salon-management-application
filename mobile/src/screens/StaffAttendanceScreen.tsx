@@ -6,6 +6,9 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  TextInput,
+  Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,7 +16,11 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { colors, theme, shadows } from '../theme';
 import { Button } from '../components/ui/Button';
-import type { Attendance } from '../types';
+import type { Attendance, StaffMember } from '../types';
+import * as supabaseService from '../services/supabaseService';
+import bcrypt from 'bcryptjs';
+import * as ImagePicker from 'expo-image-picker';
+import * as attendancePhotoService from '../services/attendancePhotoService';
 
 interface Props {
   navigation: any;
@@ -22,37 +29,47 @@ interface Props {
 type AttendanceStatus = 'present' | 'late' | 'half_day' | 'absent';
 
 export const StaffAttendanceScreen: React.FC<Props> = ({ navigation }) => {
-  const { user, staffMembers, selectedStaffId, setSelectedStaff, isSharedTabletMode, getEffectiveStaffId } = useAuth();
-  const { checkIn, checkOut, getTodayAttendance, refreshData } = useData();
-  
-  const [todayAttendance, setTodayAttendance] = useState<Attendance | null>(null);
+  const { user, staffMembers } = useAuth();
+  const { attendance, checkIn, checkOut, refreshData } = useData();
+
+  const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<AttendanceStatus>('present');
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'checkIn' | 'checkOut' | null>(null);
 
-  // In individual login mode, only show the logged-in staff member
-  // In shared tablet mode, show all staff members
-  const displayableStaffMembers = useMemo(() => {
-    if (isSharedTabletMode) {
-      return staffMembers;
-    }
-    // Individual login mode - only show self
-    return staffMembers.filter(s => s.id === user?.id);
-  }, [staffMembers, user?.id, isSharedTabletMode]);
-
-  const effectiveStaffId = getEffectiveStaffId();
-  const selectedStaff = staffMembers.find(s => s.id === effectiveStaffId);
+  const isSharedTablet = user?.id === 'shared-tablet';
 
   useEffect(() => {
-    if (effectiveStaffId) {
-      loadAttendance();
-    }
-  }, [effectiveStaffId]);
+    refreshData();
+    attendancePhotoService.cleanupOldPhotos().catch(() => {});
+  }, [refreshData]);
 
-  const loadAttendance = async () => {
-    if (!selectedStaffId) return;
-    const attendance = await getTodayAttendance(selectedStaffId);
-    setTodayAttendance(attendance);
-  };
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+  const todaysAttendanceByStaffId = useMemo(() => {
+    const map = new Map<string, Attendance>();
+    attendance
+      .filter(record => record.attendanceDate === todayStr)
+      .forEach(record => {
+        map.set(record.staffId, record);
+      });
+    return map;
+  }, [attendance, todayStr]);
+
+  const displayableStaffMembers: StaffMember[] = useMemo(
+    () => staffMembers,
+    [staffMembers],
+  );
+
+  const selectedStaff = useMemo(
+    () => displayableStaffMembers.find(s => s.id === selectedStaffId) || null,
+    [displayableStaffMembers, selectedStaffId],
+  );
+
+  const selectedAttendance = selectedStaff
+    ? todaysAttendanceByStaffId.get(selectedStaff.id) ?? null
+    : null;
 
   const getInitials = (name: string) => {
     return name
@@ -69,45 +86,111 @@ export const StaffAttendanceScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const handleStaffSelect = (staffId: string) => {
-    // Only allow selection in shared tablet mode
-    if (isSharedTabletMode) {
-      setSelectedStaff(staffId);
-    }
+    setSelectedStaffId(staffId);
+    setPassword('');
+    setPendingAction(null);
   };
 
-  const handleCheckIn = async () => {
-    const staffId = getEffectiveStaffId();
-    if (!staffId) {
-      Alert.alert('Error', 'No staff member selected.');
+  const ensureCanPerformAction = (action: 'checkIn' | 'checkOut'): boolean => {
+    if (!selectedStaff) {
+      Alert.alert('Error', 'Please select a staff member first.');
+      return false;
+    }
+    const record = todaysAttendanceByStaffId.get(selectedStaff.id);
+    if (action === 'checkIn' && record?.checkInTime) {
+      Alert.alert('Already Marked', 'Check-in has already been recorded for today.');
+      return false;
+    }
+    if (action === 'checkOut') {
+      if (!record?.checkInTime) {
+        Alert.alert('Error', 'Please check in before checking out.');
+        return false;
+      }
+      if (record.checkOutTime) {
+        Alert.alert('Already Marked', 'Check-out has already been recorded for today.');
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const openPasswordModal = (action: 'checkIn' | 'checkOut') => {
+    if (!ensureCanPerformAction(action)) return;
+    setPendingAction(action);
+    setPassword('');
+    setPasswordModalVisible(true);
+  };
+
+  const verifyStaffPassword = async (staffId: string, plainPassword: string): Promise<boolean> => {
+    const staff = await supabaseService.getStaffById(staffId);
+    if (!staff || !staff.password_hash) {
+      return false;
+    }
+    return bcrypt.compare(plainPassword, staff.password_hash);
+  };
+
+  const handleConfirmPassword = async () => {
+    if (!selectedStaff || !pendingAction) {
+      setPasswordModalVisible(false);
+      return;
+    }
+    if (!password) {
+      Alert.alert('Required', 'Please enter the password.');
       return;
     }
     setLoading(true);
     try {
-      await checkIn(staffId);
-      await refreshData();
-      await loadAttendance();
-      Alert.alert('Success', 'Check-in recorded successfully!');
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to check in.');
-    } finally {
-      setLoading(false);
-    }
-  };
+      const isValid = await verifyStaffPassword(selectedStaff.id, password);
+      if (!isValid) {
+        Alert.alert('Invalid Password', 'The password you entered is incorrect.');
+        return;
+      }
 
-  const handleCheckOut = async () => {
-    const staffId = getEffectiveStaffId();
-    if (!staffId) {
-      Alert.alert('Error', 'No staff member selected.');
-      return;
-    }
-    setLoading(true);
-    try {
-      await checkOut(staffId);
+      // Ask for camera permission and capture photo
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Camera permission is required to capture attendance photo.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        quality: 0.6,
+        base64: false,
+        allowsEditing: false,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        Alert.alert('Cancelled', 'Photo was not captured. Attendance not updated.');
+        return;
+      }
+
+      const asset = result.assets[0];
+
+      // Save photo to local storage (2-day retention handled by service)
+      try {
+        await attendancePhotoService.savePhotoFromTempUri(asset.uri, {
+          staffId: selectedStaff.id,
+          staffName: selectedStaff.name,
+          attendanceDate: todayStr,
+          type: pendingAction,
+        });
+      } catch {
+        // If photo saving fails, we still allow attendance to be marked
+      }
+
+      if (pendingAction === 'checkIn') {
+        await checkIn(selectedStaff.id);
+      } else {
+        await checkOut(selectedStaff.id);
+      }
+
       await refreshData();
-      await loadAttendance();
-      Alert.alert('Success', 'Check-out recorded successfully!');
+      setPasswordModalVisible(false);
+      setPassword('');
+      setPendingAction(null);
+      Alert.alert('Success', 'Attendance updated successfully.');
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to check out.');
+      Alert.alert('Error', error.message || 'Failed to update attendance.');
     } finally {
       setLoading(false);
     }
@@ -141,6 +224,18 @@ export const StaffAttendanceScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
+  if (!user || user.role !== 'staff' || !isSharedTablet) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.center}>
+          <Text style={styles.errorText}>
+            This attendance page is only available on the shared salon tablet login.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -151,24 +246,24 @@ export const StaffAttendanceScreen: React.FC<Props> = ({ navigation }) => {
           </View>
           <Text style={styles.headerTitle}>Mark Attendance</Text>
           <Text style={styles.headerSubtitle}>
-            {isSharedTabletMode 
-              ? 'Select your name and mark attendance' 
-              : 'Mark your attendance for today'}
+            Select your name and mark attendance using your personal password
           </Text>
         </View>
 
-        {/* Staff Selection - Only show in shared tablet mode */}
-        {isSharedTabletMode && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Select Staff Member</Text>
-            <View style={styles.staffGrid}>
-              {displayableStaffMembers.map((staff, index) => (
+        {/* Staff Selection */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Select Staff Member</Text>
+          <View style={styles.staffGrid}>
+            {displayableStaffMembers.map((staff, index) => {
+              const record = todaysAttendanceByStaffId.get(staff.id) || null;
+              const isSelected = selectedStaffId === staff.id;
+              return (
                 <TouchableOpacity
                   key={staff.id}
                   style={[
                     styles.staffCard,
                     shadows.sm,
-                    effectiveStaffId === staff.id && styles.staffCardSelected,
+                    isSelected && styles.staffCardSelected,
                   ]}
                   onPress={() => handleStaffSelect(staff.id)}
                   activeOpacity={0.8}
@@ -179,18 +274,25 @@ export const StaffAttendanceScreen: React.FC<Props> = ({ navigation }) => {
                   <Text style={styles.staffName} numberOfLines={2}>
                     {staff.name}
                   </Text>
-                  {effectiveStaffId === staff.id && (
+                  <Text style={styles.staffStatusSmall}>
+                    {record?.checkInTime
+                      ? record.checkOutTime
+                        ? 'Done for today'
+                        : 'Checked in'
+                      : 'Not marked'}
+                  </Text>
+                  {isSelected && (
                     <View style={styles.selectedIndicator}>
                       <MaterialCommunityIcons name="check-circle" size={16} color={colors.success} />
                     </View>
                   )}
                 </TouchableOpacity>
-              ))}
-            </View>
+              );
+            })}
           </View>
-        )}
+        </View>
 
-        {/* Selected Staff Info */}
+        {/* Selected Staff Info & Actions */}
         {selectedStaff && (
           <View style={[styles.selectedStaffCard, shadows.md]}>
             <View style={styles.selectedStaffHeader}>
@@ -211,29 +313,29 @@ export const StaffAttendanceScreen: React.FC<Props> = ({ navigation }) => {
             </View>
 
             {/* Attendance Status */}
-            {todayAttendance?.checkInTime ? (
+            {selectedAttendance?.checkInTime ? (
               <View style={styles.attendanceStatus}>
                 <View style={styles.timeRow}>
                   <View style={styles.timeItem}>
                     <MaterialCommunityIcons name="login" size={20} color={colors.success} />
                     <Text style={styles.timeLabel}>Check In</Text>
-                    <Text style={styles.timeValue}>{formatTime(todayAttendance.checkInTime)}</Text>
+                    <Text style={styles.timeValue}>{formatTime(selectedAttendance.checkInTime)}</Text>
                   </View>
                   <View style={styles.timeDivider} />
                   <View style={styles.timeItem}>
                     <MaterialCommunityIcons 
-                      name={todayAttendance.checkOutTime ? "logout" : "timelapse"} 
+                      name={selectedAttendance.checkOutTime ? "logout" : "timelapse"} 
                       size={20} 
-                      color={todayAttendance.checkOutTime ? colors.textSecondary : colors.warning} 
+                      color={selectedAttendance.checkOutTime ? colors.textSecondary : colors.warning} 
                     />
                     <Text style={styles.timeLabel}>Check Out</Text>
-                    <Text style={[styles.timeValue, !todayAttendance.checkOutTime && { color: colors.warning }]}>
-                      {formatTime(todayAttendance.checkOutTime) || 'Pending'}
+                    <Text style={[styles.timeValue, !selectedAttendance.checkOutTime && { color: colors.warning }]}>
+                      {formatTime(selectedAttendance.checkOutTime) || 'Pending'}
                     </Text>
                   </View>
                 </View>
 
-                {todayAttendance.checkOutTime ? (
+                {selectedAttendance.checkOutTime ? (
                   <View style={styles.completedBadge}>
                     <MaterialCommunityIcons name="check-circle" size={16} color={colors.success} />
                     <Text style={styles.completedText}>Attendance Complete</Text>
@@ -241,7 +343,7 @@ export const StaffAttendanceScreen: React.FC<Props> = ({ navigation }) => {
                 ) : (
                   <Button
                     title={loading ? 'Processing...' : 'Check Out'}
-                    onPress={handleCheckOut}
+                    onPress={() => openPasswordModal('checkOut')}
                     disabled={loading}
                     variant="secondary"
                     icon="logout-variant"
@@ -255,7 +357,7 @@ export const StaffAttendanceScreen: React.FC<Props> = ({ navigation }) => {
                 <Text style={styles.checkInPrompt}>Not checked in yet today</Text>
                 <Button
                   title={loading ? 'Processing...' : 'Check In Now'}
-                  onPress={handleCheckIn}
+                  onPress={() => openPasswordModal('checkIn')}
                   disabled={loading}
                   variant="primary"
                   icon="login-variant"
@@ -276,6 +378,73 @@ export const StaffAttendanceScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.backButtonText}>Back to Dashboard</Text>
         </TouchableOpacity>
       </ScrollView>
+      {/* Password Modal */}
+      <Modal
+        visible={passwordModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => {
+          if (!loading) {
+            setPasswordModalVisible(false);
+            setPassword('');
+            setPendingAction(null);
+          }
+        }}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {pendingAction === 'checkOut' ? 'Confirm Check Out' : 'Confirm Check In'}
+            </Text>
+            <Text style={styles.modalSubtitle}>
+              Enter password for {selectedStaff?.name ?? 'staff member'}
+            </Text>
+            <View style={styles.modalInputContainer}>
+              <MaterialCommunityIcons
+                name="lock-outline"
+                size={20}
+                color={colors.textMuted}
+                style={styles.modalInputIcon}
+              />
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Password"
+                placeholderTextColor={colors.textMuted}
+                secureTextEntry
+                value={password}
+                editable={!loading}
+                onChangeText={setPassword}
+              />
+            </View>
+            <View style={styles.modalButtonsRow}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => {
+                  if (!loading) {
+                    setPasswordModalVisible(false);
+                    setPassword('');
+                    setPendingAction(null);
+                  }
+                }}
+                disabled={loading}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalConfirmButton]}
+                onPress={handleConfirmPassword}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color={colors.textInverse} size="small" />
+                ) : (
+                  <Text style={styles.modalConfirmText}>Confirm</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -360,6 +529,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     color: colors.text,
+    textAlign: 'center',
+  },
+  staffStatusSmall: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 4,
     textAlign: 'center',
   },
   selectedIndicator: {
@@ -484,5 +659,78 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.primary,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: '#00000080',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.lg,
+  },
+  modalContent: {
+    width: '100%',
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.xl,
+    padding: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: theme.spacing.xs,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: theme.spacing.md,
+  },
+  modalInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: theme.spacing.lg,
+  },
+  modalInputIcon: {
+    marginLeft: theme.spacing.md,
+  },
+  modalInput: {
+    flex: 1,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: colors.text,
+  },
+  modalButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: theme.spacing.sm,
+  },
+  modalButton: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radius.lg,
+  },
+  modalCancelButton: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalConfirmButton: {
+    backgroundColor: colors.primary,
+  },
+  modalCancelText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  modalConfirmText: {
+    color: colors.textInverse,
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

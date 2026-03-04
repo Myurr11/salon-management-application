@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { DatePickerField } from '../components/DatePickerField';
 import { useData } from '../context/DataContext';
 import { colors, theme, shadows } from '../theme';
 import type { Attendance } from '../types';
+import * as attendancePhotoService from '../services/attendancePhotoService';
 
 interface Props {
   navigation: any;
@@ -20,6 +21,8 @@ export const AdminAttendanceScreen: React.FC<Props> = ({ navigation }) => {
   );
   const [attendanceRecords, setAttendanceRecords] = useState<Attendance[]>([]);
   const [loading, setLoading] = useState(true);
+  const [photoMap, setPhotoMap] = useState<Record<string, attendancePhotoService.AttendancePhotoMeta[]>>({});
+  const [selectedPhoto, setSelectedPhoto] = useState<attendancePhotoService.AttendancePhotoMeta | null>(null);
 
   useEffect(() => {
     loadAttendance();
@@ -34,6 +37,19 @@ export const AdminAttendanceScreen: React.FC<Props> = ({ navigation }) => {
       }
       const records = await getAttendance(filters);
       setAttendanceRecords(records);
+      // Load photos for these records and cleanup old ones
+      await attendancePhotoService.cleanupOldPhotos().catch(() => {});
+      const map: Record<string, attendancePhotoService.AttendancePhotoMeta[]> = {};
+      for (const record of records) {
+        const photos = await attendancePhotoService.getPhotosForAttendance(
+          record.staffId,
+          record.attendanceDate,
+        );
+        if (photos.length > 0) {
+          map[record.id] = photos;
+        }
+      }
+      setPhotoMap(map);
     } catch (error) {
       console.error('Error loading attendance:', error);
     } finally {
@@ -79,6 +95,8 @@ export const AdminAttendanceScreen: React.FC<Props> = ({ navigation }) => {
 
   const renderAttendance = ({ item }: { item: Attendance }) => {
     const statusStyle = getStatusStyle(item.status);
+    const photos = photoMap[item.id] || [];
+    const latestPhoto = photos.length > 0 ? photos[photos.length - 1] : undefined;
     return (
       <View style={[styles.attendanceCard, shadows.sm]}>
         <View style={styles.cardHeader}>
@@ -96,6 +114,16 @@ export const AdminAttendanceScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.hoursValue}>{calculateHours(item.checkInTime, item.checkOutTime)}</Text>
           </View>
         </View>
+        {latestPhoto && (
+          <TouchableOpacity
+            style={styles.photoBadge}
+            onPress={() => setSelectedPhoto(latestPhoto)}
+            activeOpacity={0.8}
+          >
+            <MaterialCommunityIcons name="image-search" size={16} color={colors.primary} />
+            <Text style={styles.photoBadgeText}>View Photo</Text>
+          </TouchableOpacity>
+        )}
         <View style={styles.divider} />
         <View style={styles.timeGrid}>
           <View style={styles.timeItem}>
@@ -212,6 +240,37 @@ export const AdminAttendanceScreen: React.FC<Props> = ({ navigation }) => {
           contentContainerStyle={styles.listContent}
         />
       )}
+      {/* Photo viewer modal (admin-only) */}
+      <Modal
+        visible={!!selectedPhoto}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setSelectedPhoto(null)}
+      >
+        <View style={styles.photoModalBackdrop}>
+          <View style={styles.photoModalContent}>
+            {selectedPhoto && (
+              <>
+                <Image
+                  source={{ uri: selectedPhoto.fileUri }}
+                  style={styles.photoImage}
+                  resizeMode="contain"
+                />
+                <Text style={styles.photoCaption}>
+                  {selectedPhoto.staffName ?? 'Staff'} • {selectedPhoto.type === 'checkIn' ? 'Check In' : 'Check Out'} • {selectedPhoto.attendanceDate}
+                </Text>
+                <TouchableOpacity
+                  style={styles.photoCloseButton}
+                  onPress={() => setSelectedPhoto(null)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.photoCloseButtonText}>Close</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -398,5 +457,59 @@ const styles = StyleSheet.create({
   errorText: {
     color: colors.error,
     fontSize: 16,
+  },
+  photoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginTop: theme.spacing.sm,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: theme.radius.full,
+    backgroundColor: colors.primaryMuted,
+    gap: 4,
+  },
+  photoBadgeText: {
+    fontSize: 11,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  photoModalBackdrop: {
+    flex: 1,
+    backgroundColor: '#000000CC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing.lg,
+  },
+  photoModalContent: {
+    width: '100%',
+    maxHeight: '80%',
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.md,
+    alignItems: 'center',
+  },
+  photoImage: {
+    width: '100%',
+    height: 300,
+    borderRadius: theme.radius.md,
+    marginBottom: theme.spacing.md,
+  },
+  photoCaption: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: theme.spacing.md,
+    textAlign: 'center',
+  },
+  photoCloseButton: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radius.full,
+    backgroundColor: colors.primary,
+  },
+  photoCloseButtonText: {
+    color: colors.textInverse,
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
