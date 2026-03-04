@@ -82,15 +82,83 @@ export interface Visit {
   attendingStaff?: VisitStaff[];
 }
 
+export type InventoryItemType = 'retail' | 'consumable';
+
 export interface InventoryItem {
   id: string;
   name: string;
   quantity: number;
   minThreshold: number;
-  price: number;
-  costPrice?: number | null;
+  price: number; // Sale price
+  costPrice?: number | null; // Purchase cost
+  itemType?: InventoryItemType;
+  supplier?: string | null;
+  sku?: string | null;
+  unit?: string;
   branchId?: string | null;
   branchName?: string | null;
+}
+
+// Stock Purchase tracking
+export interface StockPurchase {
+  id: string;
+  itemId: string;
+  itemName?: string;
+  branchId?: string | null;
+  quantity: number;
+  unitCost: number;
+  totalCost: number;
+  supplier?: string | null;
+  invoiceNumber?: string | null;
+  purchaseDate: string;
+  notes?: string | null;
+  createdBy?: string | null;
+  createdAt: string;
+}
+
+// Service Consumable - links consumables to services
+export interface ServiceConsumable {
+  id: string;
+  serviceId: string;
+  serviceName?: string;
+  itemId: string;
+  itemName?: string;
+  quantityUsed: number;
+  unit?: string;
+}
+
+// Consumable Usage - tracks actual usage during visits
+export interface ConsumableUsage {
+  id: string;
+  visitId: string;
+  itemId: string;
+  itemName?: string;
+  serviceId?: string | null;
+  serviceName?: string;
+  quantityUsed: number;
+  unitCost: number;
+  totalCost: number;
+  usedAt: string;
+}
+
+// Inventory Analytics
+export interface InventoryAnalytics {
+  id: string;
+  name: string;
+  itemType: InventoryItemType;
+  quantity: number;
+  salePrice: number;
+  costPrice: number;
+  profitMargin: number;
+  marginPercent: number;
+  branchId?: string | null;
+  branchName?: string;
+  totalUnitsSold: number;
+  totalRevenue: number;
+  totalCost: number;
+  totalProfit: number;
+  totalUnitsPurchased: number;
+  totalPurchaseCost: number;
 }
 
 export interface ProductSale {

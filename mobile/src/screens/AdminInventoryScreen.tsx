@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,28 +14,66 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useData } from '../context/DataContext';
-import type { InventoryItem } from '../types';
+import type { InventoryItem, InventoryItemType } from '../types';
 import { colors, theme, shadows } from '../theme';
+import * as supabaseService from '../services/supabaseService';
 
 interface Props {
   navigation: any;
 }
 
+type InventoryTab = 'retail' | 'consumable';
+
 export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
-  const { inventory, addInventoryItem, updateInventoryItem, deleteInventoryItem } = useData();
+  const { inventory, addInventoryItem, updateInventoryItem, deleteInventoryItem, refreshData } = useData();
+  const [activeTab, setActiveTab] = useState<InventoryTab>('retail');
   const [modalVisible, setModalVisible] = useState(false);
+  const [purchaseModalVisible, setPurchaseModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const [selectedItemForPurchase, setSelectedItemForPurchase] = useState<InventoryItem | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     quantity: '',
     minThreshold: '',
     price: '',
     costPrice: '',
+    itemType: 'retail' as InventoryItemType,
+    supplier: '',
+    sku: '',
+    unit: 'units',
   });
+  const [purchaseData, setPurchaseData] = useState({
+    quantity: '',
+    unitCost: '',
+    supplier: '',
+    invoiceNumber: '',
+    notes: '',
+  });
+
+  const filteredInventory = useMemo(() => {
+    return inventory.filter(item => (item.itemType || 'retail') === activeTab);
+  }, [inventory, activeTab]);
+
+  const analytics = useMemo(() => {
+    const retailItems = inventory.filter(i => (i.itemType || 'retail') === 'retail');
+    const consumableItems = inventory.filter(i => (i.itemType || 'retail') === 'consumable');
+    
+    const totalRetailValue = retailItems.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+    const totalRetailCost = retailItems.reduce((sum, item) => sum + (item.quantity * (item.costPrice || 0)), 0);
+    const totalConsumableValue = consumableItems.reduce((sum, item) => sum + (item.quantity * (item.costPrice || 0)), 0);
+    
+    return {
+      retailCount: retailItems.length,
+      consumableCount: consumableItems.length,
+      retailStockValue: totalRetailValue,
+      retailProfitPotential: totalRetailValue - totalRetailCost,
+      consumableStockValue: totalConsumableValue,
+    };
+  }, [inventory]);
 
   const openAddModal = () => {
     setEditingItem(null);
-    setFormData({ name: '', quantity: '', minThreshold: '', price: '', costPrice: '' });
+    setFormData({ name: '', quantity: '', minThreshold: '', price: '', costPrice: '', itemType: activeTab, supplier: '', sku: '', unit: 'units' });
     setModalVisible(true);
   };
 
@@ -47,8 +85,18 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
       minThreshold: String(item.minThreshold),
       price: String(item.price),
       costPrice: item.costPrice != null ? String(item.costPrice) : '',
+      itemType: item.itemType || 'retail',
+      supplier: item.supplier || '',
+      sku: item.sku || '',
+      unit: item.unit || 'units',
     });
     setModalVisible(true);
+  };
+
+  const openPurchaseModal = (item: InventoryItem) => {
+    setSelectedItemForPurchase(item);
+    setPurchaseData({ quantity: '', unitCost: item.costPrice ? String(item.costPrice) : '', supplier: '', invoiceNumber: '', notes: '' });
+    setPurchaseModalVisible(true);
   };
 
   const handleSave = async () => {
@@ -86,6 +134,10 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
           minThreshold,
           price,
           costPrice: costPrice ?? undefined,
+          itemType: formData.itemType,
+          supplier: formData.supplier.trim() || undefined,
+          sku: formData.sku.trim() || undefined,
+          unit: formData.unit.trim() || 'units',
         });
         Alert.alert('Success', 'Item updated successfully.');
       } else {
@@ -95,12 +147,51 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
           minThreshold,
           price,
           costPrice: costPrice ?? undefined,
+          itemType: formData.itemType,
+          supplier: formData.supplier.trim() || undefined,
+          sku: formData.sku.trim() || undefined,
+          unit: formData.unit.trim() || 'units',
         });
         Alert.alert('Success', 'Item added successfully.');
       }
       setModalVisible(false);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to save item. Please try again.');
+    }
+  };
+
+  const handlePurchase = async () => {
+    if (!selectedItemForPurchase) return;
+    
+    const quantity = parseInt(purchaseData.quantity, 10);
+    const unitCost = parseFloat(purchaseData.unitCost);
+    
+    if (isNaN(quantity) || quantity <= 0) {
+      Alert.alert('Error', 'Please enter a valid quantity.');
+      return;
+    }
+    if (isNaN(unitCost) || unitCost < 0) {
+      Alert.alert('Error', 'Please enter a valid unit cost.');
+      return;
+    }
+
+    try {
+      await supabaseService.addStockPurchase({
+        itemId: selectedItemForPurchase.id,
+        quantity,
+        unitCost,
+        totalCost: quantity * unitCost,
+        supplier: purchaseData.supplier.trim() || undefined,
+        invoiceNumber: purchaseData.invoiceNumber.trim() || undefined,
+        purchaseDate: new Date().toISOString().split('T')[0],
+        notes: purchaseData.notes.trim() || undefined,
+      });
+      
+      await refreshData();
+      Alert.alert('Success', 'Stock purchase recorded successfully.');
+      setPurchaseModalVisible(false);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to record purchase. Please try again.');
     }
   };
 
@@ -131,22 +222,40 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
   const renderItem = ({ item }: { item: InventoryItem }) => {
     const status = getStockStatus(item);
     const stockPercentage = Math.min((item.quantity / (item.minThreshold * 3)) * 100, 100);
+    const isRetail = (item.itemType || 'retail') === 'retail';
+    const profit = item.costPrice ? item.price - item.costPrice : 0;
+    const margin = item.costPrice ? ((profit / item.price) * 100).toFixed(0) : 0;
     
     return (
       <TouchableOpacity style={[styles.itemCard, shadows.sm]} activeOpacity={0.9}>
         {/* Header with Icon and Actions */}
         <View style={styles.cardHeader}>
           <View style={[styles.iconCircle, { backgroundColor: `${status.color}15` }]}>
-            <MaterialCommunityIcons name="spray" size={24} color={status.color} />
+            <MaterialCommunityIcons 
+              name={isRetail ? "package-variant" : "spray"} 
+              size={24} 
+              color={status.color} 
+            />
           </View>
           <View style={styles.headerContent}>
             <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
-            <View style={[styles.statusPill, { backgroundColor: `${status.color}15` }]}>
-              <View style={[styles.statusDot, { backgroundColor: status.color }]} />
-              <Text style={[styles.statusText, { color: status.color }]}>{status.text}</Text>
+            <View style={styles.itemTypeRow}>
+              <View style={[styles.typePill, { backgroundColor: isRetail ? colors.accentBlue : colors.accentGreen }]}>
+                <Text style={styles.typePillText}>{isRetail ? 'Retail' : 'Consumable'}</Text>
+              </View>
+              <View style={[styles.statusPill, { backgroundColor: `${status.color}15` }]}>
+                <View style={[styles.statusDot, { backgroundColor: status.color }]} />
+                <Text style={[styles.statusText, { color: status.color }]}>{status.text}</Text>
+              </View>
             </View>
           </View>
           <View style={styles.itemActions}>
+            <TouchableOpacity
+              style={[styles.iconButton, { backgroundColor: colors.successMuted }]}
+              onPress={() => openPurchaseModal(item)}
+            >
+              <MaterialCommunityIcons name="plus-circle" size={16} color={colors.success} />
+            </TouchableOpacity>
             <TouchableOpacity
               style={[styles.iconButton, { backgroundColor: colors.infoMuted }]}
               onPress={() => openEditModal(item)}
@@ -169,7 +278,7 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
           </View>
           <View style={styles.stockInfo}>
             <Text style={styles.stockCurrent}>{item.quantity}</Text>
-            <Text style={styles.stockLabel}> / {item.minThreshold * 3} units</Text>
+            <Text style={styles.stockLabel}> / {item.minThreshold * 3} {item.unit || 'units'}</Text>
           </View>
         </View>
 
@@ -179,14 +288,20 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
             <MaterialCommunityIcons name="currency-inr" size={14} color={colors.textMuted} />
             <Text style={styles.detailChipText}>₹{item.price}</Text>
           </View>
+          {isRetail && item.costPrice && (
+            <View style={styles.detailChip}>
+              <MaterialCommunityIcons name="tag-outline" size={14} color={colors.success} />
+              <Text style={[styles.detailChipText, { color: colors.success }]}>+{margin}%</Text>
+            </View>
+          )}
           <View style={styles.detailChip}>
             <MaterialCommunityIcons name="alert-circle-outline" size={14} color={colors.textMuted} />
             <Text style={styles.detailChipText}>Min: {item.minThreshold}</Text>
           </View>
-          {item.costPrice && (
+          {item.sku && (
             <View style={styles.detailChip}>
-              <MaterialCommunityIcons name="tag-outline" size={14} color={colors.textMuted} />
-              <Text style={styles.detailChipText}>Cost: ₹{item.costPrice}</Text>
+              <MaterialCommunityIcons name="barcode" size={14} color={colors.textMuted} />
+              <Text style={styles.detailChipText}>{item.sku}</Text>
             </View>
           )}
         </View>
@@ -205,87 +320,279 @@ export const AdminInventoryScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={styles.headerTitle}>Inventory</Text>
           <Text style={styles.headerSubtitle}>{inventory.length} items</Text>
         </View>
-        <TouchableOpacity style={styles.addButton} onPress={openAddModal} activeOpacity={0.8}>
-          <MaterialCommunityIcons name="plus" size={20} color={colors.textInverse} />
-          <Text style={styles.addButtonText}>Add</Text>
+        <View style={styles.headerActions}>
+          <TouchableOpacity 
+            style={[styles.headerIconButton, { marginRight: 8 }]} 
+            onPress={() => navigation.navigate('InventoryReport')}
+            activeOpacity={0.8}
+          >
+            <MaterialCommunityIcons name="chart-bar" size={20} color={colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.addButton} onPress={openAddModal} activeOpacity={0.8}>
+            <MaterialCommunityIcons name="plus" size={20} color={colors.textInverse} />
+            <Text style={styles.addButtonText}>Add</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Analytics Summary */}
+      <View style={styles.analyticsContainer}>
+        <View style={[styles.analyticsCard, { backgroundColor: colors.accentBlue }]}>
+          <MaterialCommunityIcons name="store" size={20} color={colors.textInverse} />
+          <Text style={styles.analyticsValue}>{analytics.retailCount}</Text>
+          <Text style={styles.analyticsLabel}>Retail Items</Text>
+        </View>
+        <View style={[styles.analyticsCard, { backgroundColor: colors.accentGreen }]}>
+          <MaterialCommunityIcons name="spray" size={20} color={colors.textInverse} />
+          <Text style={styles.analyticsValue}>{analytics.consumableCount}</Text>
+          <Text style={styles.analyticsLabel}>Consumables</Text>
+        </View>
+        <View style={[styles.analyticsCard, { backgroundColor: colors.accentPurple }]}>
+          <MaterialCommunityIcons name="currency-inr" size={20} color={colors.textInverse} />
+          <Text style={styles.analyticsValue}>₹{(analytics.retailStockValue / 1000).toFixed(1)}k</Text>
+          <Text style={styles.analyticsLabel}>Stock Value</Text>
+        </View>
+      </View>
+
+      {/* Tabs */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'retail' && styles.tabActive]}
+          onPress={() => setActiveTab('retail')}
+        >
+          <MaterialCommunityIcons 
+            name="store" 
+            size={18} 
+            color={activeTab === 'retail' ? colors.primary : colors.textMuted} 
+          />
+          <Text style={[styles.tabText, activeTab === 'retail' && styles.tabTextActive]}>
+            Retail Products
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'consumable' && styles.tabActive]}
+          onPress={() => setActiveTab('consumable')}
+        >
+          <MaterialCommunityIcons 
+            name="spray" 
+            size={18} 
+            color={activeTab === 'consumable' ? colors.primary : colors.textMuted} 
+          />
+          <Text style={[styles.tabText, activeTab === 'consumable' && styles.tabTextActive]}>
+            Salon Consumables
+          </Text>
         </TouchableOpacity>
       </View>
 
-      {inventory.length === 0 ? (
+      {filteredInventory.length === 0 ? (
         <View style={styles.emptyContainer}>
           <MaterialCommunityIcons name="package-variant-closed" size={64} color={colors.border} />
-          <Text style={styles.emptyText}>No inventory items. Add your first item!</Text>
+          <Text style={styles.emptyText}>
+            No {activeTab} items. Add your first {activeTab} item!
+          </Text>
         </View>
       ) : (
         <FlatList
-          data={inventory}
+          data={filteredInventory}
           keyExtractor={item => item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
         />
       )}
 
+      {/* Add/Edit Modal */}
       <Modal visible={modalVisible} animationType="slide" transparent={true}>
         <KeyboardAvoidingView
           style={styles.modalOverlay}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
+          <ScrollView contentContainerStyle={styles.modalScroll}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>{editingItem ? 'Edit Item' : 'Add New Item'}</Text>
+
+              {/* Item Type Selector */}
+              {!editingItem && (
+                <View style={styles.typeSelector}>
+                  <TouchableOpacity
+                    style={[styles.typeOption, formData.itemType === 'retail' && styles.typeOptionActive]}
+                    onPress={() => setFormData({ ...formData, itemType: 'retail' })}
+                  >
+                    <MaterialCommunityIcons 
+                      name="store" 
+                      size={20} 
+                      color={formData.itemType === 'retail' ? colors.primary : colors.textMuted} 
+                    />
+                    <Text style={[styles.typeOptionText, formData.itemType === 'retail' && styles.typeOptionTextActive]}>
+                      Retail Product
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.typeOption, formData.itemType === 'consumable' && styles.typeOptionActive]}
+                    onPress={() => setFormData({ ...formData, itemType: 'consumable' })}
+                  >
+                    <MaterialCommunityIcons 
+                      name="spray" 
+                      size={20} 
+                      color={formData.itemType === 'consumable' ? colors.primary : colors.textMuted} 
+                    />
+                    <Text style={[styles.typeOptionText, formData.itemType === 'consumable' && styles.typeOptionTextActive]}>
+                      Salon Consumable
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              <TextInput
+                style={styles.input}
+                placeholder="Item Name"
+                placeholderTextColor={colors.textMuted}
+                value={formData.name}
+                onChangeText={text => setFormData({ ...formData, name: text })}
+              />
+
+              <TextInput
+                style={styles.input}
+                placeholder="SKU / Product Code (optional)"
+                placeholderTextColor={colors.textMuted}
+                value={formData.sku}
+                onChangeText={text => setFormData({ ...formData, sku: text })}
+              />
+
+              <View style={styles.inputRow}>
+                <TextInput
+                  style={[styles.input, styles.inputHalf]}
+                  placeholder={formData.itemType === 'retail' ? 'Selling Price (₹)' : 'Unit Cost (₹)'}
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="numeric"
+                  value={formData.price}
+                  onChangeText={text => setFormData({ ...formData, price: text })}
+                />
+                <TextInput
+                  style={[styles.input, styles.inputHalf]}
+                  placeholder={formData.itemType === 'retail' ? 'Cost Price (₹)' : 'Current Stock'}
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="numeric"
+                  value={formData.itemType === 'retail' ? formData.costPrice : formData.quantity}
+                  onChangeText={text => formData.itemType === 'retail' 
+                    ? setFormData({ ...formData, costPrice: text })
+                    : setFormData({ ...formData, quantity: text })
+                  }
+                />
+              </View>
+
+              <View style={styles.inputRow}>
+                <TextInput
+                  style={[styles.input, styles.inputHalf]}
+                  placeholder="Current Quantity"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="numeric"
+                  value={formData.quantity}
+                  onChangeText={text => setFormData({ ...formData, quantity: text })}
+                />
+                <TextInput
+                  style={[styles.input, styles.inputHalf]}
+                  placeholder="Min Threshold"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="numeric"
+                  value={formData.minThreshold}
+                  onChangeText={text => setFormData({ ...formData, minThreshold: text })}
+                />
+              </View>
+
+              <TextInput
+                style={styles.input}
+                placeholder="Unit (e.g., bottles, kg, units)"
+                placeholderTextColor={colors.textMuted}
+                value={formData.unit}
+                onChangeText={text => setFormData({ ...formData, unit: text })}
+              />
+
+              <TextInput
+                style={styles.input}
+                placeholder="Supplier (optional)"
+                placeholderTextColor={colors.textMuted}
+                value={formData.supplier}
+                onChangeText={text => setFormData({ ...formData, supplier: text })}
+              />
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => setModalVisible(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.modalButton, styles.saveButton]} onPress={handleSave}>
+                  <Text style={styles.saveButtonText}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Purchase Stock Modal */}
+      <Modal visible={purchaseModalVisible} animationType="slide" transparent={true}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{editingItem ? 'Edit Item' : 'Add New Item'}</Text>
+            <Text style={styles.modalTitle}>
+              Stock Purchase: {selectedItemForPurchase?.name}
+            </Text>
 
             <TextInput
               style={styles.input}
-              placeholder="Item Name"
+              placeholder="Quantity to Add"
               placeholderTextColor={colors.textMuted}
-              value={formData.name}
-              onChangeText={text => setFormData({ ...formData, name: text })}
+              keyboardType="numeric"
+              value={purchaseData.quantity}
+              onChangeText={text => setPurchaseData({ ...purchaseData, quantity: text })}
             />
 
             <TextInput
               style={styles.input}
-              placeholder="Selling Price (₹)"
+              placeholder="Unit Cost (₹)"
               placeholderTextColor={colors.textMuted}
               keyboardType="numeric"
-              value={formData.price}
-              onChangeText={text => setFormData({ ...formData, price: text })}
+              value={purchaseData.unitCost}
+              onChangeText={text => setPurchaseData({ ...purchaseData, unitCost: text })}
             />
 
             <TextInput
               style={styles.input}
-              placeholder="Cost Price (₹, optional)"
+              placeholder="Supplier (optional)"
               placeholderTextColor={colors.textMuted}
-              keyboardType="numeric"
-              value={formData.costPrice}
-              onChangeText={text => setFormData({ ...formData, costPrice: text })}
+              value={purchaseData.supplier}
+              onChangeText={text => setPurchaseData({ ...purchaseData, supplier: text })}
             />
 
             <TextInput
               style={styles.input}
-              placeholder="Quantity"
+              placeholder="Invoice Number (optional)"
               placeholderTextColor={colors.textMuted}
-              keyboardType="numeric"
-              value={formData.quantity}
-              onChangeText={text => setFormData({ ...formData, quantity: text })}
+              value={purchaseData.invoiceNumber}
+              onChangeText={text => setPurchaseData({ ...purchaseData, invoiceNumber: text })}
             />
 
             <TextInput
               style={styles.input}
-              placeholder="Minimum Threshold"
+              placeholder="Notes (optional)"
               placeholderTextColor={colors.textMuted}
-              keyboardType="numeric"
-              value={formData.minThreshold}
-              onChangeText={text => setFormData({ ...formData, minThreshold: text })}
+              value={purchaseData.notes}
+              onChangeText={text => setPurchaseData({ ...purchaseData, notes: text })}
             />
 
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setModalVisible(false)}
+                onPress={() => setPurchaseModalVisible(false)}
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, styles.saveButton]} onPress={handleSave}>
-                <Text style={styles.saveButtonText}>Save</Text>
+              <TouchableOpacity style={[styles.modalButton, styles.saveButton]} onPress={handlePurchase}>
+                <Text style={styles.saveButtonText}>Record Purchase</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -344,6 +651,72 @@ const styles = StyleSheet.create({
     color: colors.textInverse,
     fontSize: 14,
     fontWeight: '600',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerIconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.radius.md,
+    backgroundColor: colors.primaryContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  analyticsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    gap: theme.spacing.md,
+  },
+  analyticsCard: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.radius.lg,
+  },
+  analyticsValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textInverse,
+    marginTop: 4,
+  },
+  analyticsLabel: {
+    fontSize: 11,
+    color: colors.textInverse,
+    opacity: 0.9,
+    marginTop: 2,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+    gap: theme.spacing.md,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 8,
+  },
+  tabActive: {
+    backgroundColor: colors.primaryContainer,
+    borderColor: colors.primary,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  tabTextActive: {
+    color: colors.primary,
   },
   emptyContainer: {
     flex: 1,
@@ -417,6 +790,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  itemTypeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  typePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: theme.radius.full,
+  },
+  typePillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textInverse,
+  },
   stockBarContainer: {
     marginBottom: theme.spacing.md,
   },
@@ -471,6 +859,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'flex-end',
   },
+  modalScroll: {
+    flexGrow: 1,
+    justifyContent: 'flex-end',
+  },
   modalContent: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: 20,
@@ -484,6 +876,35 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: 20,
   },
+  typeSelector: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  typeOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    backgroundColor: colors.background,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 8,
+  },
+  typeOptionActive: {
+    backgroundColor: colors.primaryContainer,
+    borderColor: colors.primary,
+  },
+  typeOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  typeOptionTextActive: {
+    color: colors.primary,
+  },
   input: {
     backgroundColor: colors.background,
     borderRadius: theme.radius.full,
@@ -494,6 +915,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     marginBottom: 12,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  inputHalf: {
+    flex: 1,
   },
   modalActions: {
     flexDirection: 'row',

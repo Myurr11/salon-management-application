@@ -35,12 +35,12 @@ export const colors = {
   accentLight: '#14b8a6',
   accentMuted: '#ccfbf1',
 
-  // Accent variations for cards
-  accentBlue: '#dbeafe',
-  accentGreen: '#dcfce7',
-  accentAmber: '#fef3c7',
-  accentRose: '#ffe4e6',
-  accentPurple: '#f3e8ff',
+  // Accent variations for cards (solid colors for backgrounds)
+  accentBlue: '#3b82f6',
+  accentGreen: '#10b981',
+  accentAmber: '#f59e0b',
+  accentRose: '#f43f5e',
+  accentPurple: '#8b5cf6',
 
   // Status
   success: '#059669',

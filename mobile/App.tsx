@@ -20,6 +20,7 @@ import { AdminAttendanceScreen } from './src/screens/AdminAttendanceScreen';
 import { AdminUdhaarScreen } from './src/screens/AdminUdhaarScreen';
 import { AdminStaffPerformanceScreen } from './src/screens/AdminStaffPerformanceScreen';
 import { StaffReportScreen } from './src/screens/StaffReportScreen';
+import { InventoryReportScreen } from './src/screens/InventoryReportScreen';
 import { BranchDetailScreen } from './src/screens/BranchDetailScreen';
 import { AdminAssignBranchScreen } from './src/screens/AdminAssignBranchScreen';
 import { AdminAddStaffScreen } from './src/screens/AdminAddStaffScreen';
@@ -148,6 +149,11 @@ const AdminStackNavigator = () => (
       name="StaffReport"
       component={StaffReportScreen}
       options={{ title: 'Staff Report' }}
+    />
+    <AdminStack.Screen
+      name="InventoryReport"
+      component={InventoryReportScreen}
+      options={{ title: 'Inventory Report' }}
     />
     <AdminStack.Screen
       name="AdminAssignBranch"

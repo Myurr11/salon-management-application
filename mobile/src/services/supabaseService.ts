@@ -3,11 +3,16 @@ import type {
   Appointment,
   Attendance,
   Branch,
+  ConsumableUsage,
   Customer,
+  InventoryAnalytics,
   InventoryItem,
+  InventoryItemType,
   ProductSale,
   Service,
+  ServiceConsumable,
   StaffMember,
+  StockPurchase,
   UdhaarBalance,
   UdhaarTransaction,
   Visit,
@@ -237,10 +242,16 @@ export const getServices = async (): Promise<Service[]> => {
 };
 
 // Inventory (optional branchId filter for branch-level inventory)
-export const getInventoryItems = async (branchId?: string | null): Promise<InventoryItem[]> => {
+export const getInventoryItems = async (
+  branchId?: string | null,
+  itemType?: InventoryItemType | null,
+): Promise<InventoryItem[]> => {
   let query = supabase.from('inventory_items').select('*').order('name');
   if (branchId) {
     query = query.eq('branch_id', branchId);
+  }
+  if (itemType) {
+    query = query.eq('item_type', itemType);
   }
   const { data, error } = await query;
   if (error) throw error;
@@ -251,6 +262,10 @@ export const getInventoryItems = async (branchId?: string | null): Promise<Inven
     minThreshold: item.min_threshold,
     price: parseFloat(item.price),
     costPrice: item.cost_price != null ? parseFloat(item.cost_price) : undefined,
+    itemType: item.item_type || 'retail',
+    supplier: item.supplier,
+    sku: item.sku,
+    unit: item.unit,
     branchId: item.branch_id || undefined,
   }));
 };
@@ -263,7 +278,11 @@ export const createInventoryItem = async (
     quantity: item.quantity,
     min_threshold: item.minThreshold,
     price: item.price,
-    cost_price: item.costPrice ?? item.price,
+    cost_price: item.costPrice ?? item.price * 0.7,
+    item_type: item.itemType || 'retail',
+    supplier: item.supplier,
+    sku: item.sku,
+    unit: item.unit,
     branch_id: item.branchId || null,
   };
   const { data, error } = await supabase.from('inventory_items').insert(payload).select().single();
@@ -275,6 +294,10 @@ export const createInventoryItem = async (
     minThreshold: data.min_threshold,
     price: parseFloat(data.price),
     costPrice: data.cost_price != null ? parseFloat(data.cost_price) : undefined,
+    itemType: data.item_type || 'retail',
+    supplier: data.supplier,
+    sku: data.sku,
+    unit: data.unit,
     branchId: data.branch_id || undefined,
   };
 };
@@ -289,6 +312,10 @@ export const updateInventoryItem = async (
   if (updates.minThreshold !== undefined) updateData.min_threshold = updates.minThreshold;
   if (updates.price !== undefined) updateData.price = updates.price;
   if (updates.costPrice !== undefined) updateData.cost_price = updates.costPrice;
+  if (updates.itemType !== undefined) updateData.item_type = updates.itemType;
+  if (updates.supplier !== undefined) updateData.supplier = updates.supplier;
+  if (updates.sku !== undefined) updateData.sku = updates.sku;
+  if (updates.unit !== undefined) updateData.unit = updates.unit;
   if (updates.branchId !== undefined) updateData.branch_id = updates.branchId;
 
   const { data, error } = await supabase
@@ -305,6 +332,10 @@ export const updateInventoryItem = async (
     minThreshold: data.min_threshold,
     price: parseFloat(data.price),
     costPrice: data.cost_price != null ? parseFloat(data.cost_price) : undefined,
+    itemType: data.item_type || 'retail',
+    supplier: data.supplier,
+    sku: data.sku,
+    unit: data.unit,
     branchId: data.branch_id || undefined,
   };
 };
@@ -312,6 +343,236 @@ export const updateInventoryItem = async (
 export const deleteInventoryItem = async (id: string): Promise<void> => {
   const { error } = await supabase.from('inventory_items').delete().eq('id', id);
   if (error) throw error;
+};
+
+// Stock Purchases
+export const getStockPurchases = async (filters?: {
+  itemId?: string;
+  branchId?: string;
+  startDate?: string;
+  endDate?: string;
+}): Promise<StockPurchase[]> => {
+  let query = supabase
+    .from('stock_purchases')
+    .select('*, inventory_items(name)')
+    .order('purchase_date', { ascending: false });
+
+  if (filters?.itemId) query = query.eq('item_id', filters.itemId);
+  if (filters?.branchId) query = query.eq('branch_id', filters.branchId);
+  if (filters?.startDate) query = query.gte('purchase_date', filters.startDate);
+  if (filters?.endDate) query = query.lte('purchase_date', filters.endDate);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return (data || []).map((item: any) => ({
+    id: item.id,
+    itemId: item.item_id,
+    itemName: item.inventory_items?.name,
+    branchId: item.branch_id,
+    quantity: item.quantity,
+    unitCost: parseFloat(item.unit_cost),
+    totalCost: parseFloat(item.total_cost),
+    supplier: item.supplier,
+    invoiceNumber: item.invoice_number,
+    purchaseDate: item.purchase_date,
+    notes: item.notes,
+    createdBy: item.created_by,
+    createdAt: item.created_at,
+  }));
+};
+
+export const addStockPurchase = async (
+  purchase: Omit<StockPurchase, 'id' | 'itemName' | 'createdAt'>,
+): Promise<StockPurchase> => {
+  const payload = {
+    item_id: purchase.itemId,
+    branch_id: purchase.branchId,
+    quantity: purchase.quantity,
+    unit_cost: purchase.unitCost,
+    total_cost: purchase.totalCost,
+    supplier: purchase.supplier,
+    invoice_number: purchase.invoiceNumber,
+    purchase_date: purchase.purchaseDate,
+    notes: purchase.notes,
+    created_by: purchase.createdBy,
+  };
+
+  const { data, error } = await supabase
+    .from('stock_purchases')
+    .insert(payload)
+    .select('*, inventory_items(name)')
+    .single();
+
+  if (error) throw error;
+
+  // Update inventory quantity
+  const { data: currentItem } = await supabase
+    .from('inventory_items')
+    .select('quantity')
+    .eq('id', purchase.itemId)
+    .single();
+
+  if (currentItem) {
+    await supabase
+      .from('inventory_items')
+      .update({ quantity: currentItem.quantity + purchase.quantity })
+      .eq('id', purchase.itemId);
+  }
+
+  return {
+    id: data.id,
+    itemId: data.item_id,
+    itemName: data.inventory_items?.name,
+    branchId: data.branch_id,
+    quantity: data.quantity,
+    unitCost: parseFloat(data.unit_cost),
+    totalCost: parseFloat(data.total_cost),
+    supplier: data.supplier,
+    invoiceNumber: data.invoice_number,
+    purchaseDate: data.purchase_date,
+    notes: data.notes,
+    createdBy: data.created_by,
+    createdAt: data.created_at,
+  };
+};
+
+// Service Consumables
+export const getServiceConsumables = async (serviceId?: string): Promise<ServiceConsumable[]> => {
+  let query = supabase
+    .from('service_consumables')
+    .select('*, services(name), inventory_items(name)')
+    .order('created_at');
+
+  if (serviceId) query = query.eq('service_id', serviceId);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return (data || []).map((item: any) => ({
+    id: item.id,
+    serviceId: item.service_id,
+    serviceName: item.services?.name,
+    itemId: item.item_id,
+    itemName: item.inventory_items?.name,
+    quantityUsed: parseFloat(item.quantity_used),
+    unit: item.unit,
+  }));
+};
+
+export const addServiceConsumable = async (
+  consumable: Omit<ServiceConsumable, 'id' | 'serviceName' | 'itemName'>,
+): Promise<ServiceConsumable> => {
+  const payload = {
+    service_id: consumable.serviceId,
+    item_id: consumable.itemId,
+    quantity_used: consumable.quantityUsed,
+    unit: consumable.unit,
+  };
+
+  const { data, error } = await supabase
+    .from('service_consumables')
+    .insert(payload)
+    .select('*, services(name), inventory_items(name)')
+    .single();
+
+  if (error) throw error;
+
+  return {
+    id: data.id,
+    serviceId: data.service_id,
+    serviceName: data.services?.name,
+    itemId: data.item_id,
+    itemName: data.inventory_items?.name,
+    quantityUsed: parseFloat(data.quantity_used),
+    unit: data.unit,
+  };
+};
+
+export const removeServiceConsumable = async (id: string): Promise<void> => {
+  const { error } = await supabase.from('service_consumables').delete().eq('id', id);
+  if (error) throw error;
+};
+
+// Consumable Usage
+export const recordConsumableUsage = async (
+  usage: Omit<ConsumableUsage, 'id' | 'itemName' | 'serviceName'>,
+): Promise<ConsumableUsage> => {
+  const payload = {
+    visit_id: usage.visitId,
+    item_id: usage.itemId,
+    service_id: usage.serviceId,
+    quantity_used: usage.quantityUsed,
+    unit_cost: usage.unitCost,
+    total_cost: usage.totalCost,
+    used_at: usage.usedAt,
+  };
+
+  const { data, error } = await supabase
+    .from('consumable_usage')
+    .insert(payload)
+    .select('*, inventory_items(name), services(name)')
+    .single();
+
+  if (error) throw error;
+
+  // Deduct from inventory
+  const { data: currentItem } = await supabase
+    .from('inventory_items')
+    .select('quantity')
+    .eq('id', usage.itemId)
+    .single();
+
+  if (currentItem) {
+    const newQty = Math.max(0, currentItem.quantity - usage.quantityUsed);
+    await supabase.from('inventory_items').update({ quantity: newQty }).eq('id', usage.itemId);
+  }
+
+  return {
+    id: data.id,
+    visitId: data.visit_id,
+    itemId: data.item_id,
+    itemName: data.inventory_items?.name,
+    serviceId: data.service_id,
+    serviceName: data.services?.name,
+    quantityUsed: parseFloat(data.quantity_used),
+    unitCost: parseFloat(data.unit_cost),
+    totalCost: parseFloat(data.total_cost),
+    usedAt: data.used_at,
+  };
+};
+
+// Inventory Analytics
+export const getInventoryAnalytics = async (filters?: {
+  branchId?: string;
+  itemType?: InventoryItemType;
+}): Promise<InventoryAnalytics[]> => {
+  let query = supabase.from('inventory_analytics').select('*');
+
+  if (filters?.branchId) query = query.eq('branch_id', filters.branchId);
+  if (filters?.itemType) query = query.eq('item_type', filters.itemType);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return (data || []).map((item: any) => ({
+    id: item.id,
+    name: item.name,
+    itemType: item.item_type,
+    quantity: item.quantity,
+    salePrice: parseFloat(item.sale_price),
+    costPrice: parseFloat(item.cost_price),
+    profitMargin: parseFloat(item.profit_margin),
+    marginPercent: parseFloat(item.margin_percent),
+    branchId: item.branch_id,
+    branchName: item.branch_name,
+    totalUnitsSold: parseInt(item.total_units_sold) || 0,
+    totalRevenue: parseFloat(item.total_revenue) || 0,
+    totalCost: parseFloat(item.total_cost) || 0,
+    totalProfit: parseFloat(item.total_profit) || 0,
+    totalUnitsPurchased: parseInt(item.total_units_purchased) || 0,
+    totalPurchaseCost: parseFloat(item.total_purchase_cost) || 0,
+  }));
 };
 
 // Visits
