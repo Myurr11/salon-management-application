@@ -38,7 +38,7 @@ interface DataContextValue {
   updateInventoryItem: (itemId: string, updates: Partial<InventoryItem>) => Promise<void>;
   addInventoryItem: (item: Omit<InventoryItem, 'id'>) => Promise<void>;
   deleteInventoryItem: (itemId: string) => Promise<void>;
-  getStaffTodayStats: (staffId: string, branchId?: string | null) => { totalRevenue: number; customerCount: number; visits: Visit[] };
+  getStaffTodayStats: (staffId: string | 'all', branchId?: string | null) => { totalRevenue: number; customerCount: number; visits: Visit[] };
   getAdminRevenueSummary: () => {
     todayTotal: number;
     monthlyTotal: number;
@@ -411,16 +411,29 @@ export const DataProvider = ({ children }: DataProviderProps) => {
   );
 
   const getStaffTodayStats = useCallback(
-    (staffId: string, branchId?: string | null) => {
+    (staffId: string | 'all', branchId?: string | null) => {
       const today = startOfDay(new Date());
       const todayStr = today.toISOString().split('T')[0];
       const todayVisits = visits.filter(v => {
         const visitDate = v.date.split('T')[0];
-        const matchStaff = v.staffId === staffId && visitDate === todayStr;
-        if (branchId) {
-          return matchStaff && (v.branchId === branchId || !v.branchId);
+        if (visitDate !== todayStr) return false;
+        
+        if (staffId === 'all') {
+          // Return all visits for today
+          if (branchId) {
+            return v.branchId === branchId || !v.branchId;
+          }
+          return true;
         }
-        return matchStaff;
+        
+        // Check if staff is in attendingStaff array (new format) or is primary staff (old format)
+        const isAttending = v.attendingStaff?.some(s => s.staffId === staffId) || v.staffId === staffId;
+        if (!isAttending) return false;
+        
+        if (branchId) {
+          return v.branchId === branchId || !v.branchId;
+        }
+        return true;
       });
       const totalRevenue = todayVisits.reduce((sum, v) => sum + v.total, 0);
       const customerCount = todayVisits.length;
@@ -460,7 +473,16 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       if (visitDateStr === todayStr) {
         todayTotal += v.total;
         paymentBreakdown[mode] = (paymentBreakdown[mode] || 0) + v.total;
-        todayByStaff[v.staffId] = (todayByStaff[v.staffId] || 0) + v.total;
+        
+        // Use attendingStaff for multi-staff billing, fallback to primary staffId
+        if (v.attendingStaff && v.attendingStaff.length > 0) {
+          v.attendingStaff.forEach(staff => {
+            todayByStaff[staff.staffId] = (todayByStaff[staff.staffId] || 0) + staff.revenueShare;
+          });
+        } else {
+          todayByStaff[v.staffId] = (todayByStaff[v.staffId] || 0) + v.total;
+        }
+        
         const bid = v.branchId || 'default';
         if (!byBranchMap[bid]) byBranchMap[bid] = { todayTotal: 0, monthlyTotal: 0, yearlyTotal: 0 };
         byBranchMap[bid].todayTotal += v.total;
@@ -526,7 +548,15 @@ export const DataProvider = ({ children }: DataProviderProps) => {
         if (visitDateStr === todayStr) {
           todayTotal += v.total;
           paymentBreakdown[mode] = (paymentBreakdown[mode] || 0) + v.total;
-          todayByStaff[v.staffId] = (todayByStaff[v.staffId] || 0) + v.total;
+          
+          // Use attendingStaff for multi-staff billing, fallback to primary staffId
+          if (v.attendingStaff && v.attendingStaff.length > 0) {
+            v.attendingStaff.forEach(staff => {
+              todayByStaff[staff.staffId] = (todayByStaff[staff.staffId] || 0) + staff.revenueShare;
+            });
+          } else {
+            todayByStaff[v.staffId] = (todayByStaff[v.staffId] || 0) + v.total;
+          }
         }
       });
 

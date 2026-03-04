@@ -14,18 +14,11 @@ interface AuthContextValue {
   user: AuthUser | null;
   staffMembers: StaffMember[];
   setUser: (user: AuthUser | null) => void;
-  login: (username: string, password: string) => Promise<'admin' | 'staff' | 'shared_tablet' | null>;
+  login: (username: string, password: string) => Promise<'admin' | 'staff' | null>;
   logout: () => void;
   refreshStaffMembers: () => Promise<void>;
   loading: boolean;
   loginError: string | null;
-  // Shared tablet mode
-  selectedStaffId: string | null;
-  setSelectedStaff: (staffId: string | null) => void;
-  isSharedTabletMode: boolean;
-  getEffectiveStaffId: () => string | null;
-  // Staff password verification for shared tablet
-  verifyStaffPassword: (staffId: string, password: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -42,12 +35,14 @@ const DEFAULT_STAFF_PASSWORD_WHEN_NULL = 'staff123';
 const SHARED_TABLET_USERNAME = 'salon';
 const SHARED_TABLET_PASSWORD = 'salon123';
 
+
+
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [loginError, setLoginError] = useState<string | null>(null);
-  const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
+
 
   useEffect(() => {
     const loadStaffMembers = async () => {
@@ -64,7 +59,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     loadStaffMembers();
   }, []);
 
-  const login = async (username: string, password: string): Promise<'admin' | 'staff' | 'shared_tablet' | null> => {
+  const login = async (username: string, password: string): Promise<'admin' | 'staff' | null> => {
     setLoginError(null);
     const u = username.trim();
     const p = password;
@@ -76,8 +71,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       // Check for shared tablet login first
       if (u === SHARED_TABLET_USERNAME && p === SHARED_TABLET_PASSWORD) {
         setUser({ id: 'shared-tablet', name: 'Salon Tablet', role: 'staff' });
-        setSelectedStaffId(null); // Will be selected on next screen
-        return 'shared_tablet';
+        return 'staff';
       }
 
       const admin = await supabaseService.getAdminByUsername(u);
@@ -122,44 +116,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const logout = () => {
     setUser(null);
     setLoginError(null);
-    setSelectedStaffId(null);
-  };
-
-  const setSelectedStaff = (staffId: string | null) => {
-    setSelectedStaffId(staffId);
-  };
-
-  const verifyStaffPassword = async (staffId: string, password: string): Promise<boolean> => {
-    try {
-      const staff = await supabaseService.getStaffById(staffId);
-      if (!staff) {
-        return false;
-      }
-      
-      const match = staff.password_hash
-        ? await bcrypt.compare(password, staff.password_hash)
-        : password === DEFAULT_STAFF_PASSWORD_WHEN_NULL;
-      
-      if (match) {
-        // Set this staff as the selected staff for the session
-        setSelectedStaffId(staffId);
-        return true;
-      }
-      
-      return false;
-    } catch (error) {
-      console.error('Password verification error:', error);
-      return false;
-    }
-  };
-
-  const isSharedTabletMode = user?.id === 'shared-tablet';
-
-  const getEffectiveStaffId = (): string | null => {
-    if (user?.role === 'staff' && !isSharedTabletMode) {
-      return user.id;
-    }
-    return selectedStaffId;
   };
 
   const refreshStaffMembers = async () => {
@@ -180,11 +136,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     refreshStaffMembers,
     loading,
     loginError,
-    selectedStaffId,
-    setSelectedStaff,
-    isSharedTabletMode,
-    getEffectiveStaffId,
-    verifyStaffPassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

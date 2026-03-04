@@ -19,14 +19,13 @@ interface Props {
 }
 
 export const StaffDashboardScreen: React.FC<Props> = ({ navigation }) => {
-  const { user, logout, staffMembers, selectedStaffId, isSharedTabletMode, setSelectedStaff } = useAuth();
+  const { user, logout } = useAuth();
   const { getStaffTodayStats, getTodayAttendance, checkIn, checkOut, refreshData } = useData();
   const [todayAttendance, setTodayAttendance] = useState<Attendance | null>(null);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
 
-  // Get the effective staff ID (either selected in shared mode or logged-in user)
-  const effectiveStaffId = isSharedTabletMode ? selectedStaffId : user?.id;
-  const selectedStaff = staffMembers.find(s => s.id === selectedStaffId);
+  // Staff dashboard is now shared - no individual staff tracking here
+  const effectiveStaffId = user?.id;
 
   useEffect(() => {
     if (effectiveStaffId) {
@@ -36,35 +35,42 @@ export const StaffDashboardScreen: React.FC<Props> = ({ navigation }) => {
     }
   }, [effectiveStaffId, getTodayAttendance]);
 
+  const isSharedTablet = user?.id === 'shared-tablet';
+
   const handleCheckIn = async () => {
-    if (!effectiveStaffId) return;
+    if (!effectiveStaffId || isSharedTablet) return;
     setAttendanceLoading(true);
     try {
       await checkIn(effectiveStaffId);
       await refreshData();
       const next = await getTodayAttendance(effectiveStaffId);
       setTodayAttendance(next);
+    } catch (error: any) {
+      // Silently ignore errors for shared tablet
+      if (!isSharedTablet) {
+        console.error('Check-in error:', error);
+      }
     } finally {
       setAttendanceLoading(false);
     }
   };
 
   const handleCheckOut = async () => {
-    if (!effectiveStaffId) return;
+    if (!effectiveStaffId || isSharedTablet) return;
     setAttendanceLoading(true);
     try {
       await checkOut(effectiveStaffId);
       await refreshData();
       const next = await getTodayAttendance(effectiveStaffId);
       setTodayAttendance(next);
+    } catch (error: any) {
+      // Silently ignore errors for shared tablet
+      if (!isSharedTablet) {
+        console.error('Check-out error:', error);
+      }
     } finally {
       setAttendanceLoading(false);
     }
-  };
-
-  const handleSwitchStaff = () => {
-    setSelectedStaff(null);
-    // Navigation happens automatically via AppContent when selectedStaffId becomes null
   };
 
   if (!user || user.role !== 'staff') {
@@ -75,25 +81,10 @@ export const StaffDashboardScreen: React.FC<Props> = ({ navigation }) => {
     );
   }
 
-  // In shared tablet mode, require staff selection
-  if (isSharedTabletMode && !selectedStaffId) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>Please select a staff member.</Text>
-        <Button
-          title="Select Staff"
-          onPress={handleSwitchStaff}
-          variant="primary"
-          style={{ marginTop: theme.spacing.lg }}
-        />
-      </View>
-    );
-  }
-
+  // Get all visits for today (shared dashboard shows all salon activity)
   const { totalRevenue, customerCount, visits } = useMemo(() => {
-    if (!effectiveStaffId) return { totalRevenue: 0, customerCount: 0, visits: [] };
-    return getStaffTodayStats(effectiveStaffId);
-  }, [getStaffTodayStats, effectiveStaffId]);
+    return getStaffTodayStats('all');
+  }, [getStaffTodayStats]);
 
   const formatTime = (timeString?: string) => {
     if (!timeString) return '--';
@@ -158,26 +149,15 @@ export const StaffDashboardScreen: React.FC<Props> = ({ navigation }) => {
             Welcome back,
           </Text>
           <Text style={theme.typography.h2}>
-            {isSharedTabletMode && selectedStaff ? selectedStaff.name : user.name}
+            {user.name}
           </Text>
-          {isSharedTabletMode && (
-            <Text style={[theme.typography.caption, { color: colors.accent }]}>
-              Shared Tablet Mode
-            </Text>
-          )}
+          <Text style={[theme.typography.caption, { color: colors.accent }]}>
+            Staff Dashboard
+          </Text>
         </View>
         <View style={styles.headerActions}>
-          {isSharedTabletMode && (
-            <TouchableOpacity 
-              style={[styles.headerButton, { backgroundColor: colors.accentLight }]} 
-              onPress={handleSwitchStaff} 
-              activeOpacity={0.8}
-            >
-              <MaterialCommunityIcons name="account-switch" size={18} color={colors.accent} />
-            </TouchableOpacity>
-          )}
           <TouchableOpacity style={styles.logoutButton} onPress={logout} activeOpacity={0.8}>
-            <MaterialCommunityIcons name={isSharedTabletMode ? "lock" : "logout"} size={18} color={colors.error} />
+            <MaterialCommunityIcons name="logout" size={18} color={colors.error} />
           </TouchableOpacity>
         </View>
       </View>
@@ -208,57 +188,60 @@ export const StaffDashboardScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       </View>
 
-      <View style={[styles.attendanceCard, shadows.sm]}>
-        <View style={styles.attendanceHeader}>
-          <MaterialCommunityIcons name="clock-outline" size={20} color={colors.textSecondary} />
-          <Text style={[theme.typography.label, { marginLeft: theme.spacing.sm }]}>
-            Attendance
-          </Text>
-        </View>
-        <View style={styles.attendanceTimes}>
-          <View style={styles.attendanceTimeItem}>
-            <Text style={[theme.typography.caption, { color: colors.textMuted }]}>Check In</Text>
-            <Text style={[theme.typography.h3, { color: todayAttendance?.checkInTime ? colors.success : colors.textMuted }]}>
-              {formatTime(todayAttendance?.checkInTime)}
+      {/* Attendance section - hidden for shared tablet */}
+      {!isSharedTablet && (
+        <View style={[styles.attendanceCard, shadows.sm]}>
+          <View style={styles.attendanceHeader}>
+            <MaterialCommunityIcons name="clock-outline" size={20} color={colors.textSecondary} />
+            <Text style={[theme.typography.label, { marginLeft: theme.spacing.sm }]}>
+              Attendance
             </Text>
           </View>
-          <View style={styles.divider} />
-          <View style={styles.attendanceTimeItem}>
-            <Text style={[theme.typography.caption, { color: colors.textMuted }]}>Check Out</Text>
-            <Text style={[theme.typography.h3, { color: todayAttendance?.checkOutTime ? colors.textSecondary : colors.textMuted }]}>
-              {formatTime(todayAttendance?.checkOutTime)}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.attendanceActions}>
-          {!todayAttendance?.checkInTime ? (
-            <Button
-              title={attendanceLoading ? 'Processing...' : 'Check In'}
-              onPress={handleCheckIn}
-              disabled={attendanceLoading}
-              variant="primary"
-              icon="login-variant"
-              fullWidth
-            />
-          ) : !todayAttendance?.checkOutTime ? (
-            <Button
-              title={attendanceLoading ? 'Processing...' : 'Check Out'}
-              onPress={handleCheckOut}
-              disabled={attendanceLoading}
-              variant="secondary"
-              icon="logout-variant"
-              fullWidth
-            />
-          ) : (
-            <View style={styles.attendanceComplete}>
-              <MaterialCommunityIcons name="check-circle" size={16} color={colors.success} />
-              <Text style={[theme.typography.bodySmall, { color: colors.success, marginLeft: theme.spacing.xs }]}>
-                Attendance Complete
+          <View style={styles.attendanceTimes}>
+            <View style={styles.attendanceTimeItem}>
+              <Text style={[theme.typography.caption, { color: colors.textMuted }]}>Check In</Text>
+              <Text style={[theme.typography.h3, { color: todayAttendance?.checkInTime ? colors.success : colors.textMuted }]}>
+                {formatTime(todayAttendance?.checkInTime)}
               </Text>
             </View>
-          )}
+            <View style={styles.divider} />
+            <View style={styles.attendanceTimeItem}>
+              <Text style={[theme.typography.caption, { color: colors.textMuted }]}>Check Out</Text>
+              <Text style={[theme.typography.h3, { color: todayAttendance?.checkOutTime ? colors.textSecondary : colors.textMuted }]}>
+                {formatTime(todayAttendance?.checkOutTime)}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.attendanceActions}>
+            {!todayAttendance?.checkInTime ? (
+              <Button
+                title={attendanceLoading ? 'Processing...' : 'Check In'}
+                onPress={handleCheckIn}
+                disabled={attendanceLoading}
+                variant="primary"
+                icon="login-variant"
+                fullWidth
+              />
+            ) : !todayAttendance?.checkOutTime ? (
+              <Button
+                title={attendanceLoading ? 'Processing...' : 'Check Out'}
+                onPress={handleCheckOut}
+                disabled={attendanceLoading}
+                variant="secondary"
+                icon="logout-variant"
+                fullWidth
+              />
+            ) : (
+              <View style={styles.attendanceComplete}>
+                <MaterialCommunityIcons name="check-circle" size={16} color={colors.success} />
+                <Text style={[theme.typography.bodySmall, { color: colors.success, marginLeft: theme.spacing.xs }]}>
+                  Attendance Complete
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
-      </View>
+      )}
 
       <View style={styles.statsRow}>
         <View style={[styles.statCard, shadows.sm]}>
@@ -306,14 +289,6 @@ export const StaffDashboardScreen: React.FC<Props> = ({ navigation }) => {
         >
           <MaterialCommunityIcons name="package-variant" size={24} color={colors.accent} />
           <Text style={[theme.typography.bodySmall, { marginTop: theme.spacing.sm }]}>Inventory</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.quickActionButton, shadows.sm]}
-          onPress={() => navigation.navigate('StaffAttendance')}
-          activeOpacity={0.8}
-        >
-          <MaterialCommunityIcons name="clock-check" size={24} color={colors.warning} />
-          <Text style={[theme.typography.bodySmall, { marginTop: theme.spacing.sm }]}>Attendance</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.quickActionButton, shadows.sm]}

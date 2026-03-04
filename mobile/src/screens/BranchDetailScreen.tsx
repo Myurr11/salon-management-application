@@ -7,11 +7,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { BarChartCard } from '../components/BarChartCard';
-import { colors, theme } from '../theme';
+import { colors, theme, shadows } from '../theme';
 import { RevenueBarChart } from '../components/RevenueBarChart';
+import { StatCard } from '../components/ui/StatCard';
+import { Badge } from '../components/ui/Badge';
 import type { ProductSale } from '../types';
 
 const DEFAULT_BRANCH_ID = '00000000-0000-0000-0000-000000000001';
@@ -64,7 +67,7 @@ export const BranchDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     [inventory, branchId],
   );
 
-  const recentSales = useMemo(() => productSales.slice(0, 10), [productSales]);
+  const recentSales = useMemo(() => productSales.slice(0, 4), [productSales]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -75,27 +78,48 @@ export const BranchDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{branchName}</Text>
-        <Text style={styles.headerSubtitle}>Branch analytics</Text>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* Header */}
+      <View style={styles.headerRow}>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.primary} />
+          </TouchableOpacity>
+          <View style={styles.headerContent}>
+            <Text style={[theme.typography.bodySmall, { color: colors.textMuted }]}>Branch</Text>
+            <Text style={theme.typography.h2}>{branchName}</Text>
+          </View>
+        </View>
       </View>
 
-      <View style={styles.statsGrid}>
-        <View style={styles.statCard}>
-          <Text style={styles.statLabel}>Today</Text>
-          <Text style={styles.statValue}>₹{summary.todayTotal.toFixed(0)}</Text>
+      {/* Stats Row */}
+      <View style={styles.statsRow}>
+        <View style={styles.statCardWrapper}>
+          <StatCard
+            title="Today's Revenue"
+            value={`₹${summary.todayTotal.toFixed(0)}`}
+            icon="cash-multiple"
+            iconColor={colors.primary}
+            iconBgColor={colors.primaryContainer}
+          />
         </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statLabel}>Monthly</Text>
-          <Text style={styles.statValue}>₹{summary.monthlyTotal.toFixed(0)}</Text>
+        <View style={styles.statCardWrapper}>
+          <StatCard
+            title="Monthly Revenue"
+            value={`₹${summary.monthlyTotal.toFixed(0)}`}
+            icon="calendar-month"
+            iconColor={colors.accent}
+            iconBgColor={colors.accentMuted}
+          />
         </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statLabel}>Yearly</Text>
-          <Text style={styles.statValue}>₹{summary.yearlyTotal.toFixed(0)}</Text>
+        <View style={styles.statCardWrapper}>
+          <StatCard
+            title="Yearly Revenue"
+            value={`₹${summary.yearlyTotal.toFixed(0)}`}
+            icon="chart-line"
+            iconColor={colors.success}
+            iconBgColor={colors.successMuted}
+          />
         </View>
       </View>
 
@@ -116,60 +140,116 @@ export const BranchDetailScreen: React.FC<Props> = ({ navigation, route }) => {
         formatValue={(v) => `₹${v.toFixed(0)}`}
       />
 
+      {/* Staff Revenue Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Today's Revenue by Staff (this branch)</Text>
-        {summary.byStaffToday
-          .filter((s) => s.total > 0)
-          .map((staff) => (
-            <View key={staff.staffId} style={styles.row}>
-              <Text style={styles.rowLabel}>{staff.staffName}</Text>
-              <Text style={styles.rowValue}>₹{staff.total.toFixed(0)}</Text>
-            </View>
-          ))}
-        {summary.byStaffToday.every((s) => s.total === 0) && (
-          <Text style={styles.emptyText}>No staff revenue today for this branch.</Text>
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionTitleRow}>
+            <MaterialCommunityIcons name="account-group" size={18} color={colors.primary} />
+            <Text style={[theme.typography.h4, { marginLeft: theme.spacing.sm }]}>
+              Today's Revenue by Staff
+            </Text>
+          </View>
+        </View>
+        {summary.byStaffToday.filter((s) => s.total > 0).length === 0 ? (
+          <View style={styles.emptyCard}>
+            <MaterialCommunityIcons name="account-off" size={32} color={colors.border} />
+            <Text style={styles.emptyCardText}>No staff revenue today</Text>
+          </View>
+        ) : (
+          <View style={styles.staffList}>
+            {summary.byStaffToday
+              .filter((s) => s.total > 0)
+              .map((staff, index) => (
+                <View key={staff.staffId} style={[styles.staffCard, shadows.sm]}>
+                  <View style={[styles.staffRank, { backgroundColor: index < 3 ? colors.accentAmber : colors.background }]}>
+                    <Text style={[styles.staffRankText, { color: index < 3 ? colors.chartAmber : colors.textMuted }]}>
+                      #{index + 1}
+                    </Text>
+                  </View>
+                  <View style={styles.staffInfo}>
+                    <Text style={styles.staffName}>{staff.staffName}</Text>
+                  </View>
+                  <Text style={styles.staffAmount}>₹{staff.total.toFixed(0)}</Text>
+                </View>
+              ))}
+          </View>
         )}
       </View>
 
+      {/* Low Stock Section */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Low Stock (this branch)</Text>
+          <View style={styles.sectionTitleRow}>
+            <MaterialCommunityIcons name="alert-circle" size={18} color={colors.warning} />
+            <Text style={[theme.typography.h4, { marginLeft: theme.spacing.sm }]}>Low Stock Items</Text>
+            {lowStockItems.length > 0 && (
+              <Badge text={`${lowStockItems.length}`} variant="warning" size="sm" style={{ marginLeft: theme.spacing.sm }} />
+            )}
+          </View>
           <TouchableOpacity onPress={() => navigation.navigate('AdminInventory')}>
-            <Text style={styles.manageLink}>Manage</Text>
+            <Text style={[theme.typography.bodySmall, { color: colors.primary }]}>Manage</Text>
           </TouchableOpacity>
         </View>
         {lowStockItems.length === 0 ? (
-          <Text style={styles.emptyText}>All items well stocked.</Text>
+          <View style={styles.emptyCard}>
+            <MaterialCommunityIcons name="check-circle" size={32} color={colors.success} />
+            <Text style={styles.emptyCardText}>All items well stocked</Text>
+          </View>
         ) : (
           lowStockItems.map((item) => (
-            <View key={item.id} style={styles.lowStockRow}>
-              <Text style={styles.lowStockName}>{item.name}</Text>
-              <Text style={styles.lowStockQty}>
-                {item.quantity} / {item.minThreshold}
-              </Text>
+            <View key={item.id} style={[styles.lowStockItem, shadows.sm]}>
+              <View style={styles.lowStockInfo}>
+                <MaterialCommunityIcons name="package-variant" size={18} color={colors.textSecondary} />
+                <Text style={[theme.typography.bodySmall, { marginLeft: theme.spacing.sm }]}>{item.name}</Text>
+              </View>
+              <Badge 
+                text={`${item.quantity} left`} 
+                variant={item.quantity === 0 ? 'error' : 'warning'} 
+                size="sm" 
+              />
             </View>
           ))
         )}
       </View>
 
+      {/* Recent Sales Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent Product Sales (this branch)</Text>
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionTitleRow}>
+            <MaterialCommunityIcons name="cart-outline" size={18} color={colors.success} />
+            <Text style={[theme.typography.h4, { marginLeft: theme.spacing.sm }]}>Recent Product Sales</Text>
+          </View>
+        </View>
         {salesLoading ? (
           <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 12 }} />
         ) : recentSales.length === 0 ? (
-          <Text style={styles.emptyText}>No product sales yet.</Text>
+          <View style={styles.emptyCard}>
+            <MaterialCommunityIcons name="package-variant" size={32} color={colors.border} />
+            <Text style={styles.emptyCardText}>No product sales yet</Text>
+          </View>
         ) : (
-          recentSales.map((sale) => (
-            <View key={sale.id} style={styles.saleRow}>
-              <View>
-                <Text style={styles.saleProduct}>{sale.productName}</Text>
-                <Text style={styles.saleMeta}>
-                  {sale.staffName} · {sale.customerName} · {formatDate(sale.date)}
-                </Text>
+          <View style={styles.salesList}>
+            {recentSales.map((sale) => (
+              <View key={sale.id} style={[styles.saleCard, shadows.sm]}>
+                <View style={[styles.saleIcon, { backgroundColor: colors.accentGreen }]}>
+                  <MaterialCommunityIcons name="package-variant" size={20} color={colors.success} />
+                </View>
+                <View style={styles.saleContent}>
+                  <View style={styles.saleHeader}>
+                    <Text style={styles.saleProduct} numberOfLines={1}>{sale.productName}</Text>
+                    <Text style={styles.saleAmount}>₹{sale.totalPrice.toFixed(0)}</Text>
+                  </View>
+                  <View style={styles.saleMeta}>
+                    <Text style={styles.saleMetaText}>{sale.quantity} × ₹{sale.unitPrice}</Text>
+                    <Text style={styles.saleMetaDot}>•</Text>
+                    <Text style={styles.saleMetaText}>{sale.staffName}</Text>
+                    <Text style={styles.saleMetaDot}>•</Text>
+                    <Text style={styles.saleMetaText}>{formatDate(sale.date)}</Text>
+                  </View>
+                </View>
               </View>
-              <Text style={styles.saleAmount}>₹{sale.totalPrice.toFixed(0)}</Text>
-            </View>
-          ))
+            ))}
+          </View>
         )}
       </View>
     </ScrollView>
@@ -192,114 +272,178 @@ const styles = StyleSheet.create({
     color: colors.error,
     fontSize: 16,
   },
-  header: {
-    marginBottom: 20,
+  // Header Styles
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.xl,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   backButton: {
-    alignSelf: 'flex-start',
-    marginBottom: 8,
+    width: 40,
+    height: 40,
+    borderRadius: theme.radius.md,
+    backgroundColor: colors.primaryContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
   },
-  backButtonText: {
-    color: colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginTop: 4,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 16,
-  },
-  statCard: {
+  headerContent: {
     flex: 1,
-    minWidth: '30%',
-    backgroundColor: colors.surface,
-    borderRadius: theme.radius.lg,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
-  statLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginBottom: 4,
+  // Stats Row
+  statsRow: {
+    flexDirection: 'row',
+    marginBottom: theme.spacing.xl,
+    gap: theme.spacing.md,
   },
-  statValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.success,
+  statCardWrapper: {
+    flex: 1,
   },
+  // Section Styles
   section: {
-    marginBottom: 24,
+    marginBottom: theme.spacing.xl,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: theme.spacing.md,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 12,
-  },
-  manageLink: {
-    fontSize: 14,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  row: {
+  sectionTitleRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    alignItems: 'center',
+  },
+  // Staff List Styles
+  staffList: {
+    gap: theme.spacing.sm,
+  },
+  staffCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.surface,
-    borderRadius: theme.radius.md,
-    marginBottom: 8,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  rowLabel: { fontSize: 14, color: colors.text, fontWeight: '500' },
-  rowValue: { fontSize: 14, color: colors.success, fontWeight: '600' },
-  lowStockRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    backgroundColor: colors.errorMuted,
+  staffRank: {
+    width: 32,
+    height: 32,
     borderRadius: theme.radius.md,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
   },
-  lowStockName: { fontSize: 14, color: colors.error, fontWeight: '500' },
-  lowStockQty: { fontSize: 14, color: colors.error, fontWeight: '600' },
-  saleRow: {
+  staffRankText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  staffInfo: {
+    flex: 1,
+  },
+  staffName: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: '500',
+  },
+  staffAmount: {
+    fontSize: 14,
+    color: colors.success,
+    fontWeight: '600',
+  },
+  // Low Stock Styles
+  lowStockItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: 12,
+    paddingHorizontal: theme.spacing.lg,
     backgroundColor: colors.surface,
     borderRadius: theme.radius.md,
     marginBottom: 8,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  saleProduct: { fontSize: 14, fontWeight: '600', color: colors.text },
-  saleMeta: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
-  saleAmount: { fontSize: 14, fontWeight: '700', color: colors.success },
+  lowStockInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  // Sales List Styles
+  salesList: {
+    gap: theme.spacing.sm,
+  },
+  saleCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  saleIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
+  },
+  saleContent: {
+    flex: 1,
+  },
+  saleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  saleProduct: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+    flex: 1,
+    marginRight: theme.spacing.sm,
+  },
+  saleAmount: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.success,
+  },
+  saleMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  saleMetaText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  saleMetaDot: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginHorizontal: 6,
+  },
+  // Empty State Styles
+  emptyCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: theme.spacing.xl,
+    backgroundColor: colors.surface,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  emptyCardText: {
+    fontSize: 14,
+    color: colors.textMuted,
+    marginTop: theme.spacing.sm,
+  },
   emptyText: {
     color: colors.textMuted,
     fontSize: 14,

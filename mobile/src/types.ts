@@ -13,6 +13,8 @@ export interface StaffMember {
   branchId?: string | null;
   branchName?: string | null;
   username?: string | null;
+  // Goal tracking - set by admin
+  monthlyGoal?: number | null;
 }
 
 export interface Service {
@@ -50,9 +52,16 @@ export interface VisitProductLine {
   totalPrice: number;
 }
 
+// Staff who attended the customer and their share of revenue
+export interface VisitStaff {
+  staffId: string;
+  staffName: string;
+  revenueShare: number; // Amount this staff gets from the visit
+}
+
 export interface Visit {
   id: string;
-  staffId: string;
+  staffId: string; // Primary staff (for backward compatibility)
   staffName: string;
   customerId: string;
   customerName: string;
@@ -69,6 +78,8 @@ export interface Visit {
   amountOverride?: number | null;
   overrideReason?: string | null;
   billNumber?: string | null;
+  // New field for multiple staff
+  attendingStaff?: VisitStaff[];
 }
 
 export interface InventoryItem {

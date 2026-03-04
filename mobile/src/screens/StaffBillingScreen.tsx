@@ -14,7 +14,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
-import type { InventoryItem, PaymentMode, Service, VisitProductLine, VisitServiceLine } from '../types';
+import type { InventoryItem, PaymentMode, Service, VisitProductLine, VisitServiceLine, VisitStaff } from '../types';
 import { colors, theme, shadows } from '../theme';
 import { DatePickerField } from '../components/DatePickerField';
 import { Button } from '../components/ui/Button';
@@ -27,12 +27,11 @@ interface Props {
 type CustomerMode = 'new' | 'existing';
 
 export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
-  const { user, staffMembers, selectedStaffId, isSharedTabletMode, setSelectedStaff, getEffectiveStaffId } = useAuth();
+  const { user, staffMembers } = useAuth();
   const { services, customers, inventory, addOrUpdateCustomer, recordVisit } = useData();
   
-  // Get effective staff ID and details
-  const effectiveStaffId = getEffectiveStaffId();
-  const selectedStaff = staffMembers.find(s => s.id === selectedStaffId);
+  // Attending staff selection - can be multiple staff members
+  const [attendingStaffIds, setAttendingStaffIds] = useState<string[]>([]);
 
   const [customerMode, setCustomerMode] = useState<CustomerMode>('new');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
@@ -178,15 +177,26 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
   }, [subtotal, discountPercent, discountAmount, amountOverride]);
 
   const handleSubmit = async () => {
-    const staffId = getEffectiveStaffId();
-    const staffName = isSharedTabletMode && selectedStaff 
-      ? selectedStaff.name 
-      : user?.name;
-    
-    if (!staffId || !staffName) {
-      Alert.alert('Error', 'No staff user selected. Please select a staff member.');
+    // Use attending staff if selected, otherwise show error
+    if (attendingStaffIds.length === 0) {
+      Alert.alert('Error', 'Please select at least one staff member who attended the customer.');
       return;
     }
+    
+    // Get the first staff as primary (for backward compatibility)
+    const primaryStaffId = attendingStaffIds[0];
+    const primaryStaff = staffMembers.find(s => s.id === primaryStaffId);
+    const staffName = primaryStaff?.name || user?.name || 'Staff';
+    
+    // Calculate revenue share for each staff member
+    const attendingStaff: VisitStaff[] = attendingStaffIds.map(staffId => {
+      const staff = staffMembers.find(s => s.id === staffId);
+      return {
+        staffId,
+        staffName: staff?.name || 'Unknown',
+        revenueShare: total / attendingStaffIds.length, // Equal split
+      };
+    });
 
     if (selectedLines.length === 0 && selectedProducts.length === 0) {
       Alert.alert('Missing data', 'Please select at least one service or product.');
@@ -239,11 +249,11 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
       }
 
       const visitId = await recordVisit({
-        staffId,
+        staffId: primaryStaffId,
         staffName,
         customerId,
         customerName: name,
-        branchId: selectedStaff?.branchId || user?.branchId || undefined,
+        branchId: primaryStaff?.branchId || user?.branchId || undefined,
         date: dateOnly,
         services: selectedLines,
         products: selectedProducts,
@@ -253,6 +263,7 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
         discountAmount: discountAmtNum,
         amountOverride: overrideNum,
         overrideReason: overrideReason.trim() || undefined,
+        attendingStaff, // Multiple staff with revenue share
       });
 
       Alert.alert('Saved', 'Visit saved successfully.', [
@@ -294,6 +305,7 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
     const selected = selectedLines.some(l => l.serviceId === item.id);
     return (
       <TouchableOpacity
+        key={item.id}
         style={[styles.serviceWidget, selected && styles.serviceWidgetSelected]}
         onPress={() => toggleService(item)}
         activeOpacity={0.8}
@@ -338,9 +350,12 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
     </View>
   ), []);
 
-  const handleSwitchStaff = () => {
-    setSelectedStaff(null);
-    navigation.replace('StaffSelection');
+  const toggleAttendingStaff = (staffId: string) => {
+    setAttendingStaffIds(prev => 
+      prev.includes(staffId) 
+        ? prev.filter(id => id !== staffId)
+        : [...prev, staffId]
+    );
   };
 
   const getInitials = (name: string) => {
@@ -354,44 +369,47 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
 
   const renderHeader = useCallback(() => (
     <View style={styles.headerContainer}>
-      {/* Staff Selector - Only show in shared tablet mode */}
-      {isSharedTabletMode && (
-        <View style={[styles.staffSelectorCard, shadows.sm]}>
-          <View style={styles.staffSelectorRow}>
-            <View style={styles.staffInfo}>
-              {selectedStaff ? (
-                <>
-                  <View style={[styles.staffAvatar, { backgroundColor: colors.primary }]}>
-                    <Text style={styles.staffAvatarText}>{getInitials(selectedStaff.name)}</Text>
-                  </View>
-                  <View style={styles.staffDetails}>
-                    <Text style={styles.staffLabel}>Billing as</Text>
-                    <Text style={styles.staffName}>{selectedStaff.name}</Text>
-                  </View>
-                </>
-              ) : (
-                <>
-                  <View style={[styles.staffAvatar, { backgroundColor: colors.error }]}>
-                    <MaterialCommunityIcons name="alert" size={20} color={colors.textInverse} />
-                  </View>
-                  <View style={styles.staffDetails}>
-                    <Text style={styles.staffLabel}>No Staff Selected</Text>
-                    <Text style={styles.staffName}>Please select a staff member</Text>
-                  </View>
-                </>
-              )}
-            </View>
-            <TouchableOpacity 
-              style={styles.switchStaffButton}
-              onPress={handleSwitchStaff}
-              activeOpacity={0.8}
-            >
-              <MaterialCommunityIcons name="account-switch" size={18} color={colors.primary} />
-              <Text style={styles.switchStaffText}>Switch</Text>
-            </TouchableOpacity>
-          </View>
+      {/* Staff Selector - Select who attended the customer */}
+      <View style={[styles.staffSelectorCard, shadows.sm]}>
+        <View style={styles.staffSelectorHeader}>
+          <MaterialCommunityIcons name="account-group" size={20} color={colors.primary} />
+          <Text style={styles.staffSelectorTitle}>Staff Who Attended Customer</Text>
         </View>
-      )}
+        <Text style={styles.staffSelectorSubtitle}>
+          Select one or more staff members. Revenue will be split equally.
+        </Text>
+        <View style={styles.staffGrid}>
+          {staffMembers.map(staff => {
+            const isSelected = attendingStaffIds.includes(staff.id);
+            return (
+              <TouchableOpacity
+                key={staff.id}
+                style={[styles.staffChip, isSelected && styles.staffChipSelected]}
+                onPress={() => toggleAttendingStaff(staff.id)}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.staffChipAvatar, { backgroundColor: isSelected ? colors.primary : colors.textMuted }]}>
+                  <Text style={styles.staffChipAvatarText}>{getInitials(staff.name)}</Text>
+                </View>
+                <Text style={[styles.staffChipName, isSelected && styles.staffChipNameSelected]} numberOfLines={1}>
+                  {staff.name}
+                </Text>
+                {isSelected && (
+                  <MaterialCommunityIcons name="check-circle" size={16} color={colors.success} style={styles.staffChipCheck} />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        {attendingStaffIds.length > 0 && (
+          <View style={styles.revenueShareInfo}>
+            <MaterialCommunityIcons name="cash-multiple" size={16} color={colors.success} />
+            <Text style={styles.revenueShareText}>
+              Each staff will receive ₹{(total / attendingStaffIds.length).toFixed(0)} (equal split)
+            </Text>
+          </View>
+        )}
+      </View>
 
       <View style={styles.card}>
         <View style={styles.cardHeader}>
@@ -657,7 +675,7 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
         ) : null}
       </View>
     </View>
-  ), [customerMode, selectedCustomerId, customers, customerName, customerDob, customerPhone, customerEmail, customerGender, customerAddress, services, selectedLines, selectedProducts, inventory, paymentMode, discountPercent, discountAmount, amountOverride, overrideReason, total]);
+  ), [customerMode, selectedCustomerId, customers, customerName, customerDob, customerPhone, customerEmail, customerGender, customerAddress, services, selectedLines, selectedProducts, inventory, paymentMode, discountPercent, discountAmount, amountOverride, overrideReason, total, attendingStaffIds, staffMembers]);
 
   const renderFooter = useCallback(() => (
     <View style={styles.footer}>
@@ -1046,6 +1064,80 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  staffSelectorHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  staffSelectorTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginLeft: theme.spacing.sm,
+  },
+  staffSelectorSubtitle: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginBottom: theme.spacing.md,
+  },
+  staffGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.sm,
+  },
+  staffChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: theme.radius.lg,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 6,
+  },
+  staffChipSelected: {
+    backgroundColor: colors.primaryContainer,
+    borderColor: colors.primary,
+  },
+  staffChipAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  staffChipAvatarText: {
+    color: colors.textInverse,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  staffChipName: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    maxWidth: 100,
+  },
+  staffChipNameSelected: {
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  staffChipCheck: {
+    marginLeft: 2,
+  },
+  revenueShareInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: theme.spacing.md,
+    paddingTop: theme.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+    gap: theme.spacing.sm,
+  },
+  revenueShareText: {
+    fontSize: 13,
+    color: colors.success,
+    fontWeight: '500',
   },
   staffSelectorRow: {
     flexDirection: 'row',

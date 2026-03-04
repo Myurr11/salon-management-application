@@ -24,7 +24,7 @@ export const getBranches = async (): Promise<Branch[]> => {
 
 // Staff Members (with optional branch filter); includes username for Assign Branch
 export const getStaffMembers = async (branchId?: string | null): Promise<StaffMember[]> => {
-  let query = supabase.from('staff_members').select('id, name, branch_id, username').order('name');
+  let query = supabase.from('staff_members').select('id, name, branch_id, username, monthly_goal').order('name');
   if (branchId) {
     query = query.eq('branch_id', branchId);
   }
@@ -35,6 +35,7 @@ export const getStaffMembers = async (branchId?: string | null): Promise<StaffMe
     name: item.name,
     branchId: item.branch_id ?? undefined,
     username: item.username ?? undefined,
+    monthlyGoal: item.monthly_goal ? parseFloat(item.monthly_goal) : undefined,
   }));
 };
 
@@ -111,6 +112,18 @@ export const updateStaffPassword = async (
   const { error } = await supabase
     .from('staff_members')
     .update({ password_hash: passwordHash, updated_at: new Date().toISOString() })
+    .eq('id', staffId);
+  if (error) throw error;
+};
+
+// Update staff monthly goal (admin sets from Staff Performance)
+export const updateStaffGoal = async (
+  staffId: string,
+  monthlyGoal: number,
+): Promise<void> => {
+  const { error } = await supabase
+    .from('staff_members')
+    .update({ monthly_goal: monthlyGoal, updated_at: new Date().toISOString() })
     .eq('id', staffId);
   if (error) throw error;
 };
@@ -342,7 +355,7 @@ export const getVisits = async (filters?: {
   // Fetch services and products for each visit
   const visitsWithDetails = await Promise.all(
     data.map(async visit => {
-      const [servicesData, productsData] = await Promise.all([
+      const [servicesData, productsData, visitStaffData] = await Promise.all([
         supabase
           .from('visit_services')
           .select(
@@ -360,6 +373,13 @@ export const getVisits = async (filters?: {
             inventory_items(id, name, price)
           `,
           )
+          .eq('visit_id', visit.id),
+        supabase
+          .from('visit_staff')
+          .select(`
+            *,
+            staff_members(name)
+          `)
           .eq('visit_id', visit.id),
       ]);
 
@@ -382,6 +402,12 @@ export const getVisits = async (filters?: {
           totalPrice: parseFloat(p.total_price),
         })) || [];
 
+      const attendingStaff = visitStaffData.data?.map((s: any) => ({
+        staffId: s.staff_id,
+        staffName: s.staff_members?.name || 'Unknown',
+        revenueShare: parseFloat(s.revenue_share),
+      })) || undefined;
+
       return {
         id: visit.id,
         staffId: visit.staff_id,
@@ -401,6 +427,7 @@ export const getVisits = async (filters?: {
         amountOverride: visit.amount_override != null ? parseFloat(visit.amount_override) : undefined,
         overrideReason: visit.override_reason || undefined,
         billNumber: visit.bill_number || undefined,
+        attendingStaff,
       };
     }),
   );
@@ -457,6 +484,20 @@ export const createVisit = async (visit: Omit<Visit, 'id' | 'createdAt'>): Promi
   if (visitError) throw visitError;
   const visitId = visitData.id;
 
+  // Create visit_staff records for multi-staff billing
+  if (visit.attendingStaff && visit.attendingStaff.length > 0) {
+    const visitStaffToInsert = visit.attendingStaff.map(s => ({
+      visit_id: visitId,
+      staff_id: s.staffId,
+      revenue_share: s.revenueShare,
+    }));
+
+    const { error: visitStaffError } = await supabase
+      .from('visit_staff')
+      .insert(visitStaffToInsert);
+    if (visitStaffError) throw visitStaffError;
+  }
+
   // If payment mode is udhaar, add to customer's credit balance
   if ((visit.paymentMode || 'cash') === 'udhaar' && visit.total > 0) {
     await addUdhaarSale(visit.customerId, branchId, visit.total, visitId);
@@ -510,6 +551,7 @@ export const createVisit = async (visit: Omit<Visit, 'id' | 'createdAt'>): Promi
     }
 
     // Create product sales records (with branch_id for analytics)
+    // For multi-staff, use primary staff for product sales tracking
     const salesToInsert = visit.products.map(p => ({
       visit_id: visitId,
       product_id: p.productId,
@@ -635,6 +677,11 @@ export const checkIn = async (staffId: string, date?: string): Promise<Attendanc
   const attendanceDate = date || new Date().toISOString().split('T')[0];
   const checkInTime = new Date().toISOString();
 
+  // Handle shared tablet user (not a real staff member)
+  if (staffId === 'shared-tablet') {
+    throw new Error('Shared tablet mode does not support attendance tracking');
+  }
+
   const { data: staffRow } = await supabase
     .from('staff_members')
     .select('branch_id')
@@ -708,6 +755,11 @@ export const checkOut = async (staffId: string, date?: string): Promise<Attendan
   const attendanceDate = date || new Date().toISOString().split('T')[0];
   const checkOutTime = new Date().toISOString();
 
+  // Handle shared tablet user (not a real staff member)
+  if (staffId === 'shared-tablet') {
+    throw new Error('Shared tablet mode does not support attendance tracking');
+  }
+
   // Find today's attendance record
   const { data: existing, error: findError } = await supabase
     .from('attendance')
@@ -753,6 +805,11 @@ export const checkOut = async (staffId: string, date?: string): Promise<Attendan
 };
 
 export const getTodayAttendance = async (staffId: string): Promise<Attendance | null> => {
+  // Handle shared tablet user (not a real staff member)
+  if (staffId === 'shared-tablet') {
+    return null;
+  }
+
   const today = new Date().toISOString().split('T')[0];
   const { data, error } = await supabase
     .from('attendance')

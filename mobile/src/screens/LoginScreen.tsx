@@ -27,12 +27,8 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const handleLogin = async () => {
     setSubmitting(true);
     try {
-      const result = await login(username, password);
-      if (result === 'shared_tablet') {
-        // Navigate to staff selection screen for shared tablet
-        navigation.navigate('StaffSelection');
-      }
-      // For 'admin' and 'staff', navigation happens via AuthContext/App.tsx
+      await login(username, password);
+      // Navigation happens via AuthContext/App.tsx based on user role
     } catch (error) {
       console.error('Login error:', error);
     } finally {
@@ -104,6 +100,10 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.footerItem}>
               <MaterialCommunityIcons name="tablet" size={14} color={colors.textMuted} />
               <Text style={[theme.typography.caption, styles.footerText]}>Shared Tablet: username "salon" / password "salon123"</Text>
+            </View>
+            <View style={styles.footerItem}>
+              <MaterialCommunityIcons name="account" size={14} color={colors.textMuted} />
+              <Text style={[theme.typography.caption, styles.footerText]}>Staff: use your staff credentials</Text>
             </View>
             <View style={styles.footerItem}>
               <MaterialCommunityIcons name="shield-account" size={14} color={colors.textMuted} />

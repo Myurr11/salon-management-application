@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS staff_members (
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255) UNIQUE,
   phone VARCHAR(20),
+  monthly_goal DECIMAL(10, 2) DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -127,6 +128,31 @@ CREATE INDEX IF NOT EXISTS idx_product_sales_sale_date ON product_sales(sale_dat
 CREATE INDEX IF NOT EXISTS idx_appointments_staff_id ON appointments(staff_id);
 CREATE INDEX IF NOT EXISTS idx_appointments_customer_id ON appointments(customer_id);
 CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments(status);
+
+-- Visit Staff Table (Many-to-Many for multi-staff billing)
+CREATE TABLE IF NOT EXISTS visit_staff (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  visit_id UUID NOT NULL REFERENCES visits(id) ON DELETE CASCADE,
+  staff_id UUID NOT NULL REFERENCES staff_members(id) ON DELETE CASCADE,
+  revenue_share DECIMAL(10, 2) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(visit_id, staff_id)
+);
+
+-- Create indexes for visit_staff
+CREATE INDEX IF NOT EXISTS idx_visit_staff_visit_id ON visit_staff(visit_id);
+CREATE INDEX IF NOT EXISTS idx_visit_staff_staff_id ON visit_staff(staff_id);
+
+-- Enable RLS on visit_staff
+ALTER TABLE visit_staff ENABLE ROW LEVEL SECURITY;
+
+-- Add RLS policy for visit_staff
+CREATE POLICY "Allow all for authenticated users" ON visit_staff
+  FOR ALL USING (true);
+
+-- Add updated_at trigger for visit_staff
+CREATE TRIGGER update_visit_staff_updated_at BEFORE UPDATE ON visit_staff
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
