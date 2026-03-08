@@ -92,10 +92,9 @@ export const CustomerListScreen: React.FC<Props> = ({ navigation }) => {
 
   // Summary
   const summary = useMemo(() => {
-    const totalRevenue = Object.values(customerStats).reduce((s, v) => s + v.totalSpend, 0);
     const vip     = customers.filter(c => (customerStats[c.id]?.totalSpend ?? 0) >= 10000).length;
     const active  = customers.filter(c => (customerStats[c.id]?.visitCount  ?? 0) > 0).length;
-    return { total: customers.length, vip, active, totalRevenue };
+    return { total: customers.length, vip, active };
   }, [customers, customerStats]);
 
   // Filter + sort
@@ -174,10 +173,10 @@ export const CustomerListScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Spend + chevron */}
+        {/* Visit count + chevron */}
         <View style={s.cardRight}>
-          <Text style={s.cardSpend}>₹{stats.totalSpend.toFixed(0)}</Text>
-          <Text style={s.cardSpendLabel}>{stats.visitCount} visit{stats.visitCount !== 1 ? 's' : ''}</Text>
+          <Text style={s.cardSpend}>{stats.visitCount}</Text>
+          <Text style={s.cardSpendLabel}>visit{stats.visitCount !== 1 ? 's' : ''}</Text>
         </View>
 
         <View style={s.cardChevron}>
@@ -207,14 +206,6 @@ export const CustomerListScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={s.headerTitle}>Clients</Text>
             <Text style={s.headerSub}>{summary.total} total · {summary.active} active</Text>
           </View>
-        </View>
-        <View style={s.headerRevenueBox}>
-          <Text style={s.headerRevenueLabel}>LIFETIME</Text>
-          <Text style={s.headerRevenueValue}>
-            ₹{summary.totalRevenue >= 1000
-              ? `${(summary.totalRevenue / 1000).toFixed(1)}k`
-              : summary.totalRevenue.toFixed(0)}
-          </Text>
         </View>
       </View>
 
@@ -315,7 +306,7 @@ const s = StyleSheet.create({
   // Header
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: D.surface, paddingHorizontal: 20, paddingTop: 52, paddingBottom: 16,
+    backgroundColor: D.surface, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16,
     borderBottomWidth: 1, borderBottomColor: D.border, overflow: 'hidden', position: 'relative',
   },
   headerGlow: {
@@ -330,13 +321,6 @@ const s = StyleSheet.create({
   },
   headerTitle: { fontSize: 20, fontWeight: '800', color: D.text, letterSpacing: -0.4 },
   headerSub: { fontSize: 12, color: D.textMuted, marginTop: 1 },
-  headerRevenueBox: {
-    alignItems: 'flex-end', backgroundColor: D.goldMuted,
-    borderRadius: D.radius.md, paddingHorizontal: 12, paddingVertical: 8,
-    borderWidth: 1, borderColor: D.goldBorder,
-  },
-  headerRevenueLabel: { fontSize: 9, fontWeight: '700', color: D.gold, letterSpacing: 1.5 },
-  headerRevenueValue: { fontSize: 16, fontWeight: '800', color: D.gold, letterSpacing: -0.3 },
 
   // Summary
   summaryBand: {

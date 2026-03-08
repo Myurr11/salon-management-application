@@ -441,7 +441,7 @@ const s = StyleSheet.create({
   // Header
   header: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: 52, paddingBottom: 16,
+    paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16,
     backgroundColor: D.surface, borderBottomWidth: 1, borderBottomColor: D.border, gap: 10,
   },
   backBtn: {

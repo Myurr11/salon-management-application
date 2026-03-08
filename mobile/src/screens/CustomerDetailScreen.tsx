@@ -191,12 +191,6 @@ export const CustomerDetailScreen: React.FC<Props> = ({ navigation, route }) => 
           label="Total Visits"
         />
         <StatCard
-          icon="currency-inr"
-          iconColor={D.green} iconBg={D.greenMuted} iconBorder={D.greenBorder}
-          value={`₹${(totalSpend / 1000).toFixed(1)}k`}
-          label="Lifetime Spend"
-        />
-        <StatCard
           icon="calculator-variant-outline"
           iconColor={D.amber} iconBg={D.amberMuted} iconBorder={D.amberBorder}
           value={`₹${avgSpend.toFixed(0)}`}
@@ -276,14 +270,15 @@ export const CustomerDetailScreen: React.FC<Props> = ({ navigation, route }) => 
                       </View>
                     </View>
 
-                    {/* Amount */}
-                    <View style={s.visitAmountCol}>
-                      <Text style={s.visitAmount}>₹{v.total.toFixed(0)}</Text>
-                      <View style={s.visitViewBtn}>
-                        <Text style={s.visitViewBtnText}>View Bill</Text>
-                        <MaterialCommunityIcons name="chevron-right" size={12} color={D.green} />
-                      </View>
-                    </View>
+                    {/* View Bill button only */}
+                    <TouchableOpacity
+                      style={s.visitViewBtn}
+                      onPress={() => navigation?.navigate('BillView', { visitId: v.id })}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={s.visitViewBtnText}>View Bill</Text>
+                      <MaterialCommunityIcons name="chevron-right" size={12} color={D.green} />
+                    </TouchableOpacity>
                   </View>
 
                   {/* Services + products */}
@@ -321,7 +316,7 @@ const s = StyleSheet.create({
 
   // Hero
   hero: {
-    backgroundColor: D.surface, paddingHorizontal: 20, paddingTop: 52, paddingBottom: 28,
+    backgroundColor: D.surface, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 28,
     borderBottomWidth: 1, borderBottomColor: D.border, alignItems: 'center',
     overflow: 'hidden', position: 'relative',
   },
@@ -392,8 +387,6 @@ const s = StyleSheet.create({
   visitDate: { fontSize: 14, fontWeight: '700', color: D.text },
   visitStaffRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   visitStaff: { fontSize: 12, color: D.textSub, fontWeight: '500' },
-  visitAmountCol: { alignItems: 'flex-end', gap: 6 },
-  visitAmount: { fontSize: 18, fontWeight: '800', color: D.green, letterSpacing: -0.5 },
   visitViewBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
     backgroundColor: D.greenMuted, paddingHorizontal: 8, paddingVertical: 4,

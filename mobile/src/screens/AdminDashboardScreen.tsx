@@ -249,12 +249,13 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
       <View style={s.actionsGrid}>
         {[
           { icon: 'package-variant',         label: 'Inventory',         color: D.purple, bg: D.purpleLight, nav: 'AdminInventory' },
+          { icon: 'spa',                      label: 'Services',          color: D.green,  bg: D.greenLight,  nav: 'AdminServices' },
           { icon: 'cart-outline',             label: 'Product Sales',     color: D.blue,   bg: D.blueLight,   nav: 'AdminProductSales' },
           { icon: 'clipboard-check-outline',  label: 'Attendance',        color: D.green,  bg: D.greenLight,  nav: 'AdminAttendance' },
           { icon: 'credit-card-outline',      label: 'Udhaar',            color: D.rose,   bg: D.roseLight,   nav: 'AdminUdhaar' },
           { icon: 'chart-bar',                label: 'Staff Performance', color: D.amber,  bg: D.amberLight,  nav: 'AdminStaffPerformance' },
+          { icon: 'account-group',            label: 'Manage Staff',      color: D.green,  bg: D.greenLight,  nav: 'AdminManageStaff' },
           { icon: 'office-building-outline',  label: 'Assign Branch',     color: D.primary,bg: D.primaryLight,nav: 'AdminAssignBranch' },
-          { icon: 'account-plus-outline',     label: 'Add Staff',         color: D.green,  bg: D.greenLight,  nav: 'AdminAddStaff' },
           { icon: 'calendar-clock',           label: 'Appointments',      color: D.blue,   bg: D.blueLight,   nav: 'AppointmentsList' },
           { icon: 'file-chart',               label: 'Staff Report',      color: D.purple, bg: D.purpleLight, nav: 'StaffReport' },
         ].map(a => (

@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 52,
+    paddingTop: 10,
     paddingBottom: 16,
     backgroundColor: D.surface,
     borderBottomWidth: 1,

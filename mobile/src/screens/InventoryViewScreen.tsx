@@ -71,8 +71,7 @@ export const InventoryViewScreen: React.FC<Props> = ({ navigation }) => {
     const inStock = inventory.filter(i => i.quantity > i.minThreshold).length;
     const low     = inventory.filter(i => i.quantity > 0 && i.quantity <= i.minThreshold).length;
     const out     = inventory.filter(i => i.quantity === 0).length;
-    const totalValue = inventory.reduce((s, i) => s + i.price * i.quantity, 0);
-    return { inStock, low, out, totalValue };
+    return { inStock, low, out };
   }, [inventory]);
 
   const filtered = useMemo(() => {
@@ -106,7 +105,6 @@ export const InventoryViewScreen: React.FC<Props> = ({ navigation }) => {
     const cfg = getStockCfg(item);
     const maxQty = Math.max(item.minThreshold * 3, item.quantity, 1);
     const pct = Math.min((item.quantity / maxQty) * 100, 100);
-    const stockValue = item.price * item.quantity;
 
     return (
       <View style={s.card}>
@@ -121,7 +119,6 @@ export const InventoryViewScreen: React.FC<Props> = ({ navigation }) => {
             </View>
             <View style={s.cardMainInfo}>
               <Text style={s.cardName} numberOfLines={1}>{item.name}</Text>
-              <Text style={s.cardPrice}>₹{item.price} per unit</Text>
             </View>
             <View style={[s.statusPill, { backgroundColor: cfg.bg, borderColor: cfg.border }]}>
               <View style={[s.statusDot, { backgroundColor: cfg.color }]} />
@@ -149,10 +146,6 @@ export const InventoryViewScreen: React.FC<Props> = ({ navigation }) => {
               <MaterialCommunityIcons name="arrow-down-circle-outline" size={12} color={D.textMuted} />
               <Text style={s.chipText}>Min threshold: <Text style={{ color: D.text, fontWeight: '700' }}>{item.minThreshold}</Text></Text>
             </View>
-            <View style={[s.chip, { backgroundColor: D.goldMuted, borderColor: D.goldBorder }]}>
-              <MaterialCommunityIcons name="currency-inr" size={12} color={D.gold} />
-              <Text style={[s.chipText, { color: D.gold }]}>Stock value: <Text style={{ fontWeight: '700' }}>₹{stockValue.toFixed(0)}</Text></Text>
-            </View>
           </View>
         </View>
       </View>
@@ -173,10 +166,6 @@ export const InventoryViewScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={s.headerTitle}>Inventory</Text>
             <Text style={s.headerSub}>{inventory.length} products tracked</Text>
           </View>
-        </View>
-        <View style={s.totalValueBadge}>
-          <Text style={s.totalValueLabel}>STOCK VALUE</Text>
-          <Text style={s.totalValueAmount}>₹{(summary.totalValue / 1000).toFixed(1)}k</Text>
         </View>
       </View>
 
@@ -219,29 +208,31 @@ export const InventoryViewScreen: React.FC<Props> = ({ navigation }) => {
       </View>
 
       {/* ── Filter tabs ── */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabsRow}>
-        {TABS.map(tab => {
-          const active = activeTab === tab.key;
-          const tc = tabColor(tab.key);
-          return (
-            <TouchableOpacity
-              key={tab.key}
-              style={[s.tab, active && { backgroundColor: tc.bg, borderColor: tc.color }]}
-              onPress={() => setActiveTab(tab.key)}
-              activeOpacity={0.8}
-            >
-              <MaterialCommunityIcons
-                name={tab.icon as any} size={14}
-                color={active ? tc.color : D.textMuted}
-              />
-              <Text style={[s.tabText, active && { color: tc.color }]}>{tab.label}</Text>
-              <View style={[s.tabBadge, active && { backgroundColor: tc.color }]}>
-                <Text style={[s.tabBadgeText, active && { color: '#FFF' }]}>{tabCount(tab.key)}</Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+      <View style={s.tabsContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabsRow}>
+          {TABS.map(tab => {
+            const active = activeTab === tab.key;
+            const tc = tabColor(tab.key);
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                style={[s.tab, active && { backgroundColor: tc.bg, borderColor: tc.color }]}
+                onPress={() => setActiveTab(tab.key)}
+                activeOpacity={0.8}
+              >
+                <MaterialCommunityIcons
+                  name={tab.icon as any} size={14}
+                  color={active ? tc.color : D.textMuted}
+                />
+                <Text style={[s.tabText, active && { color: tc.color }]} numberOfLines={1}>{tab.label}</Text>
+                <View style={[s.tabBadge, active && { backgroundColor: tc.color }]}>
+                  <Text style={[s.tabBadgeText, active && { color: '#FFF' }]} numberOfLines={1}>{tabCount(tab.key)}</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       {/* ── List ── */}
       {filtered.length === 0 ? (
@@ -274,7 +265,7 @@ const s = StyleSheet.create({
   // Header
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: D.surface, paddingHorizontal: 20, paddingTop: 52, paddingBottom: 16,
+    backgroundColor: D.surface, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16,
     borderBottomWidth: 1, borderBottomColor: D.border, overflow: 'hidden', position: 'relative',
   },
   headerGlow: {
@@ -289,14 +280,6 @@ const s = StyleSheet.create({
   },
   headerTitle: { fontSize: 20, fontWeight: '800', color: D.text, letterSpacing: -0.4 },
   headerSub: { fontSize: 12, color: D.textMuted, marginTop: 1 },
-  totalValueBadge: {
-    alignItems: 'flex-end',
-    backgroundColor: D.goldMuted, borderRadius: D.radius.md,
-    paddingHorizontal: 12, paddingVertical: 8,
-    borderWidth: 1, borderColor: D.goldBorder,
-  },
-  totalValueLabel: { fontSize: 9, fontWeight: '700', color: D.gold, letterSpacing: 1.5 },
-  totalValueAmount: { fontSize: 16, fontWeight: '800', color: D.gold, letterSpacing: -0.3 },
 
   // Summary
   summaryBand: {
@@ -323,18 +306,25 @@ const s = StyleSheet.create({
   searchBarClear: { paddingHorizontal: 10 },
 
   // Tabs
-  tabsRow: { paddingHorizontal: 20, paddingVertical: 10, gap: 8 },
+  tabsContainer: {
+    paddingHorizontal: 20, paddingTop: 10, paddingBottom: 10,
+    backgroundColor: D.surface, borderBottomWidth: 1, borderBottomColor: D.border,
+  },
+  tabsRow: { gap: 8 },
   tab: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 12, paddingVertical: 8,
+    paddingHorizontal: 14, paddingVertical: 9,
     backgroundColor: D.surface, borderRadius: D.radius.pill,
     borderWidth: 1, borderColor: D.border,
+    height: 38,
   },
   tabText: { fontSize: 12, fontWeight: '700', color: D.text },
   tabBadge: {
+    minWidth: 22, height: 22,
     backgroundColor: D.bg, borderRadius: D.radius.pill,
-    paddingHorizontal: 7, paddingVertical: 2,
+    alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: D.border,
+    paddingHorizontal: 6,
   },
   tabBadgeText: { fontSize: 10, fontWeight: '800', color: D.text },
 
@@ -356,7 +346,6 @@ const s = StyleSheet.create({
   },
   cardMainInfo: { flex: 1 },
   cardName: { fontSize: 15, fontWeight: '700', color: D.text, marginBottom: 3 },
-  cardPrice: { fontSize: 12, color: D.textSub, fontWeight: '500' },
   statusPill: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingHorizontal: 9, paddingVertical: 5,

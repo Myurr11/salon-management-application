@@ -29,7 +29,11 @@ export const getBranches = async (): Promise<Branch[]> => {
 
 // Staff Members (with optional branch filter); includes username for Assign Branch
 export const getStaffMembers = async (branchId?: string | null): Promise<StaffMember[]> => {
-  let query = supabase.from('staff_members').select('id, name, branch_id, username, monthly_goal').order('name');
+  let query = supabase
+    .from('staff_members')
+    .select('id, name, branch_id, username, monthly_goal')
+    .eq('is_active', true) // Only return active staff members
+    .order('name');
   if (branchId) {
     query = query.eq('branch_id', branchId);
   }
@@ -160,6 +164,49 @@ export const createStaffMember = async (payload: {
   };
 };
 
+// Update staff member details
+export const updateStaffMember = async (
+  id: string,
+  updates: {
+    name?: string;
+    username?: string;
+    passwordHash?: string;
+    branchId?: string | null;
+    monthlyGoal?: number | null;
+  }
+): Promise<StaffMember> => {
+  const updateData: any = {};
+  if (updates.name !== undefined) updateData.name = updates.name.trim();
+  if (updates.username !== undefined) updateData.username = updates.username.trim().toLowerCase();
+  if (updates.passwordHash !== undefined) updateData.password_hash = updates.passwordHash;
+  if (updates.branchId !== undefined) updateData.branch_id = updates.branchId ?? null;
+  if (updates.monthlyGoal !== undefined) updateData.monthly_goal = updates.monthlyGoal;
+
+  const { data, error } = await supabase
+    .from('staff_members')
+    .update(updateData)
+    .eq('id', id)
+    .select('id, name, branch_id, username, monthly_goal')
+    .single();
+  if (error) throw error;
+  return {
+    id: data.id,
+    name: data.name,
+    branchId: data.branch_id ?? undefined,
+    username: data.username ?? undefined,
+    monthlyGoal: data.monthly_goal ?? undefined,
+  };
+};
+
+// Delete staff member (soft delete by setting is_active to false)
+export const deleteStaffMember = async (id: string): Promise<void> => {
+  const { error } = await supabase
+    .from('staff_members')
+    .update({ is_active: false })
+    .eq('id', id);
+  if (error) throw error;
+};
+
 // Customers
 export const getCustomers = async (): Promise<Customer[]> => {
   const { data, error } = await supabase.from('customers').select('*').order('name');
@@ -234,11 +281,63 @@ export const getServices = async (): Promise<Service[]> => {
     .eq('is_active', true)
     .order('name');
   if (error) throw error;
-  return (data || []).map((item: { id: string; name: string; price: string | number }) => ({
+  return (data || []).map((item: { id: string; name: string; price: string | number; description?: string }) => ({
     id: item.id,
     name: item.name,
     price: Number(parseFloat(String(item.price))) || 0,
+    description: item.description || undefined,
   }));
+};
+
+// Create new service
+export const createService = async (service: Omit<Service, 'id'>): Promise<Service> => {
+  const { data, error } = await supabase
+    .from('services')
+    .insert({
+      name: service.name,
+      price: service.price,
+      description: service.description || null,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return {
+    id: data.id,
+    name: data.name,
+    price: Number(parseFloat(String(data.price))) || 0,
+    description: data.description || undefined,
+  };
+};
+
+// Update existing service
+export const updateService = async (id: string, updates: Partial<Service>): Promise<Service> => {
+  const updateData: any = {};
+  if (updates.name !== undefined) updateData.name = updates.name;
+  if (updates.price !== undefined) updateData.price = updates.price;
+  if (updates.description !== undefined) updateData.description = updates.description;
+
+  const { data, error } = await supabase
+    .from('services')
+    .update(updateData)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return {
+    id: data.id,
+    name: data.name,
+    price: Number(parseFloat(String(data.price))) || 0,
+    description: data.description || undefined,
+  };
+};
+
+// Delete service (soft delete by setting is_active to false)
+export const deleteService = async (id: string): Promise<void> => {
+  const { error } = await supabase
+    .from('services')
+    .update({ is_active: false })
+    .eq('id', id);
+  if (error) throw error;
 };
 
 // Inventory (optional branchId filter for branch-level inventory)
@@ -1285,6 +1384,7 @@ export const getAppointments = async (filters?: {
       serviceIds,
       serviceNames,
       notes: item.notes || undefined,
+      advanceAmount: item.advance_amount || 0,
       createdAt: item.created_at,
       updatedAt: item.updated_at,
     };
@@ -1300,6 +1400,7 @@ export const createAppointment = async (appointment: Omit<Appointment, 'id' | 'c
       appointment_time: appointment.appointmentTime,
       status: appointment.status,
       notes: appointment.notes || null,
+      advance_amount: appointment.advanceAmount || 0,
     })
     .select(`
       *,
@@ -1329,6 +1430,7 @@ export const createAppointment = async (appointment: Omit<Appointment, 'id' | 'c
     status: data.status,
     serviceIds: appointment.serviceIds || [],
     notes: data.notes || undefined,
+    advanceAmount: data.advance_amount || 0,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };
@@ -1344,6 +1446,7 @@ export const updateAppointment = async (
   if (updates.appointmentTime !== undefined) updateData.appointment_time = updates.appointmentTime;
   if (updates.status !== undefined) updateData.status = updates.status;
   if (updates.notes !== undefined) updateData.notes = updates.notes;
+  if (updates.advanceAmount !== undefined) updateData.advance_amount = updates.advanceAmount;
 
   const { data, error } = await supabase
     .from('appointments')

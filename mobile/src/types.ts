@@ -21,6 +21,7 @@ export interface Service {
   id: string;
   name: string;
   price: number;
+  description?: string;
 }
 
 export type Gender = 'male' | 'female' | 'other';
@@ -189,6 +190,7 @@ export interface Appointment {
   serviceIds: string[];
   serviceNames?: string[];
   notes?: string;
+  advanceAmount?: number;
   createdAt: string;
   updatedAt: string;
 }

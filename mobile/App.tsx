@@ -27,6 +27,8 @@ import { AdminAddStaffScreen } from './src/screens/AdminAddStaffScreen';
 import { StaffAttendanceScreen } from './src/screens/StaffAttendanceScreen';
 import { BookAppointmentScreen } from './src/screens/BookAppointmentScreen';
 import { AppointmentsListScreen } from './src/screens/AppointmentsListScreen';
+import { AdminServicesScreen } from './src/screens/AdminServicesScreen';
+import { AdminManageStaffScreen } from './src/screens/AdminManageStaffScreen';
 
 const RootStack = createNativeStackNavigator();
 const StaffStack = createNativeStackNavigator();
@@ -184,6 +186,16 @@ const AdminStackNavigator = () => (
       name="AppointmentsList"
       component={AppointmentsListScreen}
       options={{ title: 'Appointments' }}
+    />
+    <AdminStack.Screen
+      name="AdminServices"
+      component={AdminServicesScreen}
+      options={{ title: 'Manage Services' }}
+    />
+    <AdminStack.Screen
+      name="AdminManageStaff"
+      component={AdminManageStaffScreen}
+      options={{ title: 'Manage Staff' }}
     />
   </AdminStack.Navigator>
 );

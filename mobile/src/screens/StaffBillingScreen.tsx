@@ -785,7 +785,7 @@ const s = StyleSheet.create({
   // Page header
   pageHeader: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingTop: 52, paddingBottom: 20,
+    paddingTop: 10, paddingBottom: 20,
   },
   backBtn: {
     width: 40, height: 40, borderRadius: D.radius.md,

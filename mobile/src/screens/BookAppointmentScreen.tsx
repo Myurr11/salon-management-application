@@ -150,6 +150,7 @@ export const BookAppointmentScreen: React.FC<Props> = ({ navigation, route }) =>
   });
   const [notes, setNotes] = useState(editingAppt?.notes || '');
   const [status, setStatus] = useState<AppointmentStatus>(editingAppt?.status || 'scheduled');
+  const [advanceAmount, setAdvanceAmount] = useState<string>(editingAppt?.advanceAmount?.toString() || '0');
   const [submitting, setSubmitting] = useState(false);
   const [pickerMode, setPickerMode] = useState<'date' | 'time' | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -221,6 +222,7 @@ export const BookAppointmentScreen: React.FC<Props> = ({ navigation, route }) =>
         serviceIds: selectedServiceIds,
         appointmentTime: appointmentDate.toISOString(),
         status, notes: notes.trim() || undefined,
+        advanceAmount: parseFloat(advanceAmount) || 0,
       };
       if (editingId) {
         await updateAppointment(editingId, payload);
@@ -435,6 +437,34 @@ export const BookAppointmentScreen: React.FC<Props> = ({ navigation, route }) =>
             </View>
           )}
 
+          {/* Advance payment display in summary */}
+          {selectedServiceIds.length > 0 && (parseFloat(advanceAmount) || 0) > 0 && (
+            <View style={[s.servicesSummary, { backgroundColor: D.goldMuted, borderColor: D.goldBorder }]}>
+              <View style={s.servicesSummaryLeft}>
+                <MaterialCommunityIcons name="cash" size={15} color={D.gold} />
+                <Text style={[s.servicesSummaryText, { color: D.gold }]}>
+                  Advance Paid
+                </Text>
+              </View>
+              <Text style={[s.servicesSummaryPrice, { color: D.gold }]}>- ₹{parseFloat(advanceAmount) || 0}</Text>
+            </View>
+          )}
+
+          {/* Balance due display */}
+          {selectedServiceIds.length > 0 && (parseFloat(advanceAmount) || 0) > 0 && (
+            <View style={[s.servicesSummary, { backgroundColor: D.greenMuted, borderColor: D.greenBorder }]}>
+              <View style={s.servicesSummaryLeft}>
+                <MaterialCommunityIcons name="wallet-outline" size={15} color={D.green} />
+                <Text style={[s.servicesSummaryText, { color: D.green }]}>
+                  Balance Due
+                </Text>
+              </View>
+              <Text style={[s.servicesSummaryPrice, { color: D.green }]}>
+                ₹{Math.max(0, totalPrice - (parseFloat(advanceAmount) || 0))}
+              </Text>
+            </View>
+          )}
+
           {/* ── 4. Date & Time ── */}
           <SectionLabel n={4}>DATE & TIME</SectionLabel>
           <View style={s.dateTimeRow}>
@@ -536,6 +566,44 @@ export const BookAppointmentScreen: React.FC<Props> = ({ navigation, route }) =>
             onChange={setNotes}
             multiline
           />
+
+          {/* ── Advance Amount ── */}
+          <SectionLabel n={editingId ? 7 : 6}>ADVANCE PAYMENT</SectionLabel>
+          <View style={s.advanceCard}>
+            <View style={s.advanceHeader}>
+              <View style={[s.advanceIcon, { backgroundColor: D.goldMuted, borderColor: D.goldBorder }]}>
+                <MaterialCommunityIcons name="cash" size={18} color={D.gold} />
+              </View>
+              <Text style={s.advanceTitle}>Advance Amount Received</Text>
+            </View>
+            <View style={s.advanceInputRow}>
+              <View style={s.rupeeSymbol}>
+                <Text style={s.rupeeText}>₹</Text>
+              </View>
+              <TextInput
+                style={s.advanceInput}
+                placeholder="0"
+                placeholderTextColor={D.textMuted}
+                value={advanceAmount}
+                onChangeText={setAdvanceAmount}
+                keyboardType="numeric"
+                autoFocus={false}
+              />
+            </View>
+            {totalPrice > 0 && (
+              <View style={s.advanceBalanceRow}>
+                <Text style={s.advanceBalanceLabel}>Total: ₹{totalPrice}</Text>
+                <Text style={[
+                  s.advanceBalanceValue,
+                  { color: (parseFloat(advanceAmount) || 0) > 0 ? D.green : D.textMuted }
+                ]}>
+                  {(parseFloat(advanceAmount) || 0) > 0 
+                    ? `Advance: ₹${parseFloat(advanceAmount) || 0}` 
+                    : 'No advance'}
+                </Text>
+              </View>
+            )}
+          </View>
 
           {/* ── Submit ── */}
           <TouchableOpacity
@@ -845,6 +913,39 @@ const s = StyleSheet.create({
   },
   submitBtnText: { flex: 1, color: '#FFF', fontSize: 16, fontWeight: '800', letterSpacing: -0.2 },
   submitHint: { textAlign: 'center', fontSize: 12, color: D.textMuted, marginTop: 10 },
+
+  // Advance payment
+  advanceCard: {
+    backgroundColor: D.surface, borderRadius: D.radius.lg,
+    borderWidth: 1, borderColor: D.goldBorder, padding: 14,
+    marginBottom: 20,
+  },
+  advanceHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  advanceIcon: {
+    width: 36, height: 36, borderRadius: D.radius.sm,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1,
+  },
+  advanceTitle: { fontSize: 14, fontWeight: '700', color: D.text },
+  advanceInputRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: D.bg, borderRadius: D.radius.md,
+    borderWidth: 1, borderColor: D.border, overflow: 'hidden',
+  },
+  rupeeSymbol: {
+    width: 42, height: 48, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: D.goldMuted, borderRightWidth: 1, borderRightColor: D.border,
+  },
+  rupeeText: { fontSize: 20, fontWeight: '700', color: D.gold },
+  advanceInput: {
+    flex: 1, paddingHorizontal: 14, fontSize: 18, fontWeight: '700',
+    color: D.text, paddingVertical: 14,
+  },
+  advanceBalanceRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: D.border,
+  },
+  advanceBalanceLabel: { fontSize: 12, color: D.textMuted, fontWeight: '600' },
+  advanceBalanceValue: { fontSize: 13, fontWeight: '700' },
 
   // Modal
   modalOverlay: {

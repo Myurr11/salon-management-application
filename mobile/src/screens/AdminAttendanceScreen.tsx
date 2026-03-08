@@ -421,7 +421,7 @@ const s = StyleSheet.create({
   // Header
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: D.surface, paddingHorizontal: 20, paddingTop: 52, paddingBottom: 16,
+    backgroundColor: D.surface, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16,
     borderBottomWidth: 1, borderBottomColor: D.border, overflow: 'hidden', position: 'relative',
   },
   headerGlow: { position: 'absolute', top: -50, right: -50, width: 160, height: 160, borderRadius: 80, backgroundColor: D.greenMuted },

@@ -212,6 +212,14 @@ export const AppointmentsListScreen: React.FC<Props> = ({ navigation, route }) =
             </View>
           )}
 
+          {/* ── Advance Amount ── */}
+          {a.advanceAmount && a.advanceAmount > 0 && (
+            <View style={s.advanceWrap}>
+              <MaterialCommunityIcons name="cash" size={14} color={D.gold} style={{ marginTop: 1 }} />
+              <Text style={[s.advanceText, { color: D.gold }]}>Advance Paid: ₹{a.advanceAmount}</Text>
+            </View>
+          )}
+
           {/* ── Actions ── */}
           <View style={s.actionsRow}>
             {isUpcoming && (
@@ -441,7 +449,8 @@ const s = StyleSheet.create({
   // Header
   header: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: 8, paddingBottom: 14,
+    marginTop: -50,
+    paddingHorizontal: 20, paddingTop: 20, paddingBottom: 20,
     backgroundColor: D.surface, borderBottomWidth: 1, borderBottomColor: D.border, gap: 10,
   },
   backBtn: {
@@ -582,6 +591,15 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: D.border, marginBottom: 10,
   },
   notesText: { flex: 1, fontSize: 12, color: D.textSub, fontStyle: 'italic', lineHeight: 18 },
+
+  // Advance amount
+  advanceWrap: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 7,
+    paddingHorizontal: 10, paddingVertical: 8,
+    backgroundColor: D.goldMuted, borderRadius: D.radius.md,
+    borderWidth: 1, borderColor: D.goldBorder, marginBottom: 10,
+  },
+  advanceText: { flex: 1, fontSize: 12, fontWeight: '600', lineHeight: 18 },
 
   // Actions
   actionsRow: {
