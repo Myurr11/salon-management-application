@@ -11,6 +11,7 @@ import type {
   ProductSale,
   Service,
   ServiceConsumable,
+  ServiceOffer,
   StaffMember,
   StockPurchase,
   UdhaarBalance,
@@ -335,6 +336,111 @@ export const updateService = async (id: string, updates: Partial<Service>): Prom
 export const deleteService = async (id: string): Promise<void> => {
   const { error } = await supabase
     .from('services')
+    .update({ is_active: false })
+    .eq('id', id);
+  if (error) throw error;
+};
+
+// Service Offers
+export const getServiceOffers = async (): Promise<ServiceOffer[]> => {
+  const { data, error } = await supabase
+    .from('service_offers')
+    .select('*')
+    .eq('is_active', true)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data || []).map((item: any) => ({
+    id: item.id,
+    name: item.name,
+    description: item.description || undefined,
+    comboPrice: Number(parseFloat(String(item.combo_price))) || 0,
+    originalPrice: Number(parseFloat(String(item.original_price))) || 0,
+    discountPercentage: Number(parseFloat(String(item.discount_percentage))) || 0,
+    serviceIds: item.service_ids || [],
+    serviceNames: item.service_names || [],
+    isActive: item.is_active ?? true,
+    validFrom: item.valid_from || undefined,
+    validUntil: item.valid_until || undefined,
+    createdAt: item.created_at,
+    updatedAt: item.updated_at,
+  }));
+};
+
+export const createServiceOffer = async (offer: Omit<ServiceOffer, 'id' | 'createdAt' | 'updatedAt'>): Promise<ServiceOffer> => {
+  const { data, error } = await supabase
+    .from('service_offers')
+    .insert({
+      name: offer.name,
+      description: offer.description || null,
+      combo_price: offer.comboPrice,
+      original_price: offer.originalPrice,
+      discount_percentage: offer.discountPercentage,
+      service_ids: offer.serviceIds,
+      service_names: offer.serviceNames,
+      is_active: offer.isActive,
+      valid_from: offer.validFrom || null,
+      valid_until: offer.validUntil || null,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return {
+    id: data.id,
+    name: data.name,
+    description: data.description || undefined,
+    comboPrice: Number(parseFloat(String(data.combo_price))) || 0,
+    originalPrice: Number(parseFloat(String(data.original_price))) || 0,
+    discountPercentage: Number(parseFloat(String(data.discount_percentage))) || 0,
+    serviceIds: data.service_ids || [],
+    serviceNames: data.service_names || [],
+    isActive: data.is_active ?? true,
+    validFrom: data.valid_from || undefined,
+    validUntil: data.valid_until || undefined,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
+};
+
+export const updateServiceOffer = async (id: string, updates: Partial<ServiceOffer>): Promise<ServiceOffer> => {
+  const updateData: any = {};
+  if (updates.name !== undefined) updateData.name = updates.name;
+  if (updates.description !== undefined) updateData.description = updates.description;
+  if (updates.comboPrice !== undefined) updateData.combo_price = updates.comboPrice;
+  if (updates.originalPrice !== undefined) updateData.original_price = updates.originalPrice;
+  if (updates.discountPercentage !== undefined) updateData.discount_percentage = updates.discountPercentage;
+  if (updates.serviceIds !== undefined) updateData.service_ids = updates.serviceIds;
+  if (updates.serviceNames !== undefined) updateData.service_names = updates.serviceNames;
+  if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
+  if (updates.validFrom !== undefined) updateData.valid_from = updates.validFrom;
+  if (updates.validUntil !== undefined) updateData.valid_until = updates.validUntil;
+
+  const { data, error } = await supabase
+    .from('service_offers')
+    .update(updateData)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return {
+    id: data.id,
+    name: data.name,
+    description: data.description || undefined,
+    comboPrice: Number(parseFloat(String(data.combo_price))) || 0,
+    originalPrice: Number(parseFloat(String(data.original_price))) || 0,
+    discountPercentage: Number(parseFloat(String(data.discount_percentage))) || 0,
+    serviceIds: data.service_ids || [],
+    serviceNames: data.service_names || [],
+    isActive: data.is_active ?? true,
+    validFrom: data.valid_from || undefined,
+    validUntil: data.valid_until || undefined,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
+};
+
+export const deleteServiceOffer = async (id: string): Promise<void> => {
+  const { error } = await supabase
+    .from('service_offers')
     .update({ is_active: false })
     .eq('id', id);
   if (error) throw error;

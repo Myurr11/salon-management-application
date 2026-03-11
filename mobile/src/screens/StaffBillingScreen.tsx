@@ -6,7 +6,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
-import type { InventoryItem, PaymentMode, Service, VisitProductLine, VisitServiceLine, VisitStaff } from '../types';
+import type { InventoryItem, PaymentMode, Service, ServiceOffer, VisitProductLine, VisitServiceLine, VisitStaff } from '../types';
 import { colors, theme, shadows } from '../theme';
 import { DatePickerField } from '../components/DatePickerField';
 
@@ -127,7 +127,7 @@ const initials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpp
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
   const { user, staffMembers } = useAuth();
-  const { services, customers, inventory, addOrUpdateCustomer, recordVisit } = useData();
+  const { services, customers, inventory, addOrUpdateCustomer, recordVisit, offers } = useData();
 
   const [attendingStaffIds, setAttendingStaffIds] = useState<string[]>([]);
   const [customerMode, setCustomerMode] = useState<CustomerMode>('new');
@@ -169,6 +169,70 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
     setSelectedLines(prev => prev.map(l =>
       l.id === lineId ? { ...l, finalPrice: Number.isNaN(numeric) ? l.finalPrice : numeric } : l
     ));
+  };
+
+  const handleOfferSelect = (offer: ServiceOffer) => {
+    // Check if user long-pressed to see details (double-tap simulation)
+    // For now, just apply the offer as before
+    
+    // First, check which services from the offer are already selected
+    const selectedServiceIds = selectedLines.map(l => l.serviceId);
+    
+    // Find services from the offer that are NOT yet selected
+    const missingServiceIds = offer.serviceIds.filter(
+      serviceId => !selectedServiceIds.includes(serviceId)
+    );
+
+    // If there are missing services, add them first
+    if (missingServiceIds.length > 0) {
+      const newServices: VisitServiceLine[] = [];
+      
+      missingServiceIds.forEach(serviceId => {
+        const service = services.find(s => s.id === serviceId);
+        if (service) {
+          const price = Number(service.price);
+          const safePrice = Number.isFinite(price) ? price : 0;
+          newServices.push({
+            id: `${service.id}-${Date.now()}-${Math.random()}`,
+            serviceId: service.id,
+            serviceName: service.name,
+            basePrice: safePrice,
+            finalPrice: safePrice,
+          });
+        }
+      });
+
+      // Add missing services to selection
+      setSelectedLines(prev => [...prev, ...newServices]);
+    }
+
+    // Now apply combo pricing after all services are selected
+    setTimeout(() => {
+      const totalOriginalPrice = offer.serviceIds.reduce((sum, serviceId) => {
+        const service = services.find(s => s.id === serviceId);
+        return sum + (service?.price || 0);
+      }, 0);
+
+      const ratio = offer.comboPrice / totalOriginalPrice;
+      
+      setSelectedLines(prev => prev.map(line => {
+        const isInOffer = offer.serviceIds.includes(line.serviceId);
+        if (isInOffer) {
+          const newFinalPrice = Math.round(line.basePrice * ratio * 100) / 100;
+          return { ...line, finalPrice: newFinalPrice };
+        }
+        return line;
+      }));
+
+      // Show detailed services list in the success alert
+      const servicesListText = offer.serviceNames.map(name => `• ${name}`).join('\n');
+      
+      Alert.alert(
+        '🎉 Offer Applied!',
+        `Package: "${offer.name}"\n\nServices Included (${offer.serviceNames.length}):\n${servicesListText}\n\nTotal Value: ₹${offer.originalPrice}\nYour Price: ₹${offer.comboPrice}\nYou Save: ₹${(totalOriginalPrice - offer.comboPrice).toFixed(2)} (${offer.discountPercentage}% off)!`,
+        [{ text: 'Great!', onPress: () => {} }]
+      );
+    }, 100);
   };
 
   const addProduct = (product: InventoryItem) => {
@@ -570,6 +634,59 @@ export const StaffBillingScreen: React.FC<Props> = ({ navigation }) => {
           )}
         </View>
 
+        {/* ══ OFFERS ════════════════════════════════════════════════════ */}
+        {offers.length > 0 && (
+          <>
+            <SectionLabel n={3.5} icon="percent">SPECIAL OFFERS</SectionLabel>
+            <View style={s.card}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 4 }}>
+                {offers.map((offer) => {
+                  const allServicesSelected = offer.serviceIds.every(serviceId =>
+                    selectedLines.some(l => l.serviceId === serviceId)
+                  );
+                  const isActive = allServicesSelected;
+                  return (
+                    <TouchableOpacity
+                      key={offer.id}
+                      style={[s.offerTile, isActive && s.offerTileActive]}
+                      onPress={() => handleOfferSelect(offer)}
+                      activeOpacity={0.8}
+                    >
+                      <View style={[s.offerTileIcon, isActive && { backgroundColor: D.goldMuted, borderColor: D.goldBorder }]}>
+                        <MaterialCommunityIcons name="percent" size={20} color={isActive ? D.gold : D.textSub} />
+                      </View>
+                      <Text style={[s.offerTileName, isActive && { color: D.gold }]} numberOfLines={1}>{offer.name}</Text>
+                      <View style={s.offerServicesList}>
+                        {offer.serviceNames.slice(0, 2).map((serviceName, idx) => (
+                          <Text key={idx} style={s.offerServiceItem} numberOfLines={1}>• {serviceName}</Text>
+                        ))}
+                        {offer.serviceNames.length > 2 && (
+                          <Text style={s.offerServiceMore} numberOfLines={1}>+ {offer.serviceNames.length - 2} more</Text>
+                        )}
+                      </View>
+                      <View style={s.offerPriceBlock}>
+                        <Text style={s.offerOriginalPrice}>₹{offer.originalPrice}</Text>
+                        <Text style={s.offerComboPrice}>₹{offer.comboPrice}</Text>
+                      </View>
+                      {isActive && (
+                        <View style={s.offerTileCheck}>
+                          <MaterialCommunityIcons name="check" size={11} color="#FFF" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+              {offers.length > 0 && (
+                <View style={s.offerHint}>
+                  <MaterialCommunityIcons name="information-outline" size={14} color={D.gold} />
+                  <Text style={s.offerHintText}>Tap an offer to automatically add all its services and apply combo pricing</Text>
+                </View>
+              )}
+            </View>
+          </>
+        )}
+
         {/* ══ 4. PRODUCTS ════════════════════════════════════════════════════ */}
         <SectionLabel n={4} icon="package-variant">PRODUCTS</SectionLabel>
         <View style={s.card}>
@@ -927,6 +1044,40 @@ const s = StyleSheet.create({
     width: 20, height: 20, borderRadius: 10, backgroundColor: D.surface,
     borderWidth: 1, borderColor: D.purpleBorder, alignItems: 'center', justifyContent: 'center',
   },
+
+  // Offer tiles
+  offerTile: {
+    width: 110, alignItems: 'center', backgroundColor: D.surface,
+    borderRadius: D.radius.lg, borderWidth: 1.5, borderColor: D.border, padding: 12,
+    position: 'relative',
+  },
+  offerTileActive: { borderColor: D.gold, backgroundColor: D.goldMuted },
+  offerTileIcon: {
+    width: 48, height: 48, borderRadius: D.radius.md,
+    backgroundColor: D.bg, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: D.border, marginBottom: 8,
+  },
+  offerTileName: { fontSize: 11, fontWeight: '600', color: D.text, textAlign: 'center', marginBottom: 4, minHeight: 24 },
+  offerServicesList: {
+    marginBottom: 6, paddingHorizontal: 4,
+    minHeight: 48, alignItems: 'center',
+  },
+  offerServiceItem: { fontSize: 9, color: D.textSub, textAlign: 'center', lineHeight: 13, marginBottom: 2 },
+  offerServiceMore: { fontSize: 9, color: D.gold, fontWeight: '700', textAlign: 'center', marginTop: 2 },
+  offerPriceBlock: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  offerOriginalPrice: { fontSize: 10, fontWeight: '600', color: D.textMuted, textDecorationLine: 'line-through' },
+  offerComboPrice: { fontSize: 13, fontWeight: '800', color: D.gold },
+  offerTileCheck: {
+    position: 'absolute', top: 6, right: 6,
+    width: 18, height: 18, borderRadius: 9, backgroundColor: D.gold,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  offerHint: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    marginTop: 10, paddingHorizontal: 12, paddingVertical: 8,
+    backgroundColor: D.goldMuted, borderRadius: D.radius.md,
+  },
+  offerHintText: { fontSize: 11, color: D.gold, fontWeight: '600', flex: 1 },
 
   // Selected section
   selectedSection: {

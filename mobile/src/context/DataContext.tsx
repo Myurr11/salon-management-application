@@ -15,6 +15,7 @@ import type {
   InventoryItem,
   ProductSale,
   Service,
+  ServiceOffer,
   UdhaarBalance,
   UdhaarTransaction,
   Visit,
@@ -30,6 +31,7 @@ interface DataContextValue {
   appointments: Appointment[];
   productSales: ProductSale[];
   branches: Branch[];
+  offers: ServiceOffer[];
   loading: boolean;
   error: string | null;
   refreshData: () => Promise<void>;
@@ -91,6 +93,7 @@ export const DataProvider = ({ children }: DataProviderProps) => {
   const [productSales, setProductSales] = useState<ProductSale[]>([]);
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [offers, setOffers] = useState<ServiceOffer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -108,6 +111,7 @@ export const DataProvider = ({ children }: DataProviderProps) => {
         attendanceData,
         branchesData,
         appointmentsData,
+        offersData,
       ] = await Promise.all([
         supabaseService.getServices(),
         supabaseService.getCustomers(),
@@ -117,6 +121,7 @@ export const DataProvider = ({ children }: DataProviderProps) => {
         supabaseService.getAttendance(),
         supabaseService.getBranches().catch(() => []),
         supabaseService.getAppointments().catch(() => []),
+        supabaseService.getServiceOffers().catch(() => []),
       ]);
 
       setServices(servicesData);
@@ -127,6 +132,7 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       setAttendance(attendanceData);
       setBranches(branchesData);
       setAppointments(appointmentsData);
+      setOffers(offersData);
     } catch (err: any) {
       console.error('Error loading data:', err);
       setError(err.message || 'Failed to load data');
@@ -581,6 +587,7 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       productSales,
       branches,
       attendance,
+      offers,
       loading,
       error,
       refreshData,
@@ -616,6 +623,7 @@ export const DataProvider = ({ children }: DataProviderProps) => {
       productSales,
       branches,
       attendance,
+      offers,
       loading,
       error,
       refreshData,

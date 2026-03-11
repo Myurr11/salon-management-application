@@ -24,6 +24,22 @@ export interface Service {
   description?: string;
 }
 
+export interface ServiceOffer {
+  id: string;
+  name: string;
+  description?: string;
+  comboPrice: number;
+  originalPrice: number;
+  discountPercentage: number;
+  serviceIds: string[];
+  serviceNames: string[];
+  isActive: boolean;
+  validFrom?: string;
+  validUntil?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type Gender = 'male' | 'female' | 'other';
 
 export interface Customer {

@@ -250,6 +250,7 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
         {[
           { icon: 'package-variant',         label: 'Inventory',         color: D.purple, bg: D.purpleLight, nav: 'AdminInventory' },
           { icon: 'spa',                      label: 'Services',          color: D.green,  bg: D.greenLight,  nav: 'AdminServices' },
+          { icon: 'percent',                 label: 'Offers',            color: D.amber,  bg: D.amberLight,   nav: 'AdminOffers' },
           { icon: 'cart-outline',             label: 'Product Sales',     color: D.blue,   bg: D.blueLight,   nav: 'AdminProductSales' },
           { icon: 'clipboard-check-outline',  label: 'Attendance',        color: D.green,  bg: D.greenLight,  nav: 'AdminAttendance' },
           { icon: 'credit-card-outline',      label: 'Udhaar',            color: D.rose,   bg: D.roseLight,   nav: 'AdminUdhaar' },
