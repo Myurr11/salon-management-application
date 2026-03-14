@@ -2,6 +2,135 @@
 
 A comprehensive salon management application built with React Native and Supabase, designed to streamline salon operations including staff management, customer tracking, inventory control, billing, appointments, and financial reporting.
 
+## 📸 Screenshots
+
+### Authentication
+#### Login Screen
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="screenshots/login-screen.PNG" alt="Login Screen" width="30%" />
+</div>
+
+### Admin Dashboard
+#### Main Dashboard
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="screenshots/admin-dashboard.PNG" alt="Admin Dashboard" width="30%" />
+</div>
+
+#### Staff Performance
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="screenshots/staff-performance.PNG" alt="Staff Performance" width="30%" />
+</div>
+
+### Staff Management (Admin)
+#### Manage Staff
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="screenshots/manage-staff.PNG" alt="Manage Staff" width="30%" />
+</div>
+
+#### Add Staff
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="screenshots/add-staff.PNG" alt="Add Staff" width="30%" />
+</div>
+
+### Attendance System
+#### Mark Attendance (Staff Dashboard)
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="screenshots/mark-attendance.PNG" alt="Mark Attendance Before" width="30%" />
+</div>
+
+#### Attendance View (Admin Dashboard with Photo)
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="screenshots/attendance-admin-photo.PNG" alt="Attendance with Photo" width="30%" />
+</div>
+
+### Services Management (Admin)
+#### Manage Services
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="screenshots/manage-services.PNG" alt="Manage Services" width="30%" />
+</div>
+
+#### Add Services
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="screenshots/add-services.PNG" alt="Add Services" width="30%" />
+</div>
+
+### Inventory Management (Admin)
+#### Manage Inventory
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="screenshots/manage-inventory.PNG" alt="Manage Inventory" width="30%" />
+</div>
+
+#### Add Inventory Items
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="screenshots/add-inventory-items.PNG" alt="Add Inventory Items" width="30%" />
+</div>
+
+### Appointments
+#### Appointments List
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="screenshots/appointments-list.PNG" alt="Appointments List" width="30%" />
+</div>
+
+#### Book Appointment
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="screenshots/book-appointment.PNG" alt="Book Appointment" width="30%" />
+</div>
+
+### Special Offers (Admin)
+#### Special Offers List
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="screenshots/special-offers.PNG" alt="Special Offers" width="30%" />
+</div>
+
+#### Create New Offer
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="screenshots/create-new-offer.PNG" alt="Create New Offer" width="30%" />
+</div>
+
+### Reports
+#### Product Sales (Admin)
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="screenshots/product-sales.PNG" alt="Product Sales" width="30%" />
+</div>
+
+#### Staff Report
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="screenshots/staff-report.PNG" alt="Staff Report" width="30%" />
+</div>
+
+### Staff Dashboard
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="screenshots/staff-dashboard.PNG" alt="Staff Dashboard" width="30%" />
+</div>
+
+### Customer Visits
+#### Create New Visit - Screenshot 1
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="screenshots/create-visit-1.PNG" alt="Create New Visit 1" width="30%" />
+</div>
+
+#### Create New Visit - Screenshot 2
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="screenshots/create-visit-2.PNG" alt="Create New Visit 2" width="30%" />
+</div>
+
+### Customer Management
+#### Customer List
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="screenshots/customer-list.PNG" alt="Customer List" width="30%" />
+</div>
+
+#### Customer Details
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="screenshots/customer-details.PNG" alt="Customer Details" width="30%" />
+</div>
+
+### Billing
+<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+  <img src="screenshots/bill.PNG" alt="Bill" width="30%" />
+</div>
+
+
 ## 📱 Features
 
 ### Admin Dashboard
@@ -156,9 +285,7 @@ SUPABASE_ANON_KEY=your_supabase_anon_key
 
 4. **Set up the database**
 - Go to your Supabase project dashboard
-- Navigate to SQL Editor
-- Run the schema file: `database/schema.sql`
-- Apply all migrations in order: `database/migrations/001_*.sql`, `002_*.sql`, etc.
+- Setup the database according to Database Schema
 
 5. **Start the development server**
 ```bash
@@ -375,18 +502,3 @@ Ensure production environment has correct Supabase credentials:
 ## 📝 License
 
 This project is proprietary software. All rights reserved.
-
-## 👥 Contributors
-
-- Development Team
-- UI/UX Design Team
-- QA Team
-
-## 📞 Support
-
-For issues and feature requests, please contact the development team.
-
----
-
-**Last Updated**: March 2026
-**Version**: 1.0.0
