@@ -157,6 +157,24 @@ export const StaffDashboardScreen: React.FC<Props> = ({ navigation }) => {
         )}
       </View>
 
+      {/* ── Attendance (shared tablet only) ── */}
+      {isSharedTablet && (
+        <TouchableOpacity
+          style={s.attendanceBtn}
+          onPress={() => navigation.navigate('StaffAttendance')}
+          activeOpacity={0.8}
+        >
+          <View style={[s.attendanceBtnIcon, { backgroundColor: D.amberMuted, borderColor: D.amberBorder }]}>
+            <MaterialCommunityIcons name="clock-check-outline" size={22} color={D.amber} />
+          </View>
+          <View style={s.attendanceBtnText}>
+            <Text style={s.attendanceBtnTitle}>Staff Attendance</Text>
+            <Text style={s.attendanceBtnSub}>Mark check-in / check-out</Text>
+          </View>
+          <MaterialCommunityIcons name="chevron-right" size={20} color={D.textMuted} />
+        </TouchableOpacity>
+      )}
+
       {/* ── Stat Cards ── */}
       <View style={s.statsRow}>
         <View style={[s.statCard, { borderColor: D.greenBorder }]}>
@@ -190,24 +208,6 @@ export const StaffDashboardScreen: React.FC<Props> = ({ navigation }) => {
         </View>
         <MaterialCommunityIcons name="arrow-right" size={22} color="rgba(255,255,255,0.7)" />
       </TouchableOpacity>
-
-      {/* ── Attendance (shared tablet only) ── */}
-      {isSharedTablet && (
-        <TouchableOpacity
-          style={s.attendanceBtn}
-          onPress={() => navigation.navigate('StaffAttendance')}
-          activeOpacity={0.8}
-        >
-          <View style={[s.attendanceBtnIcon, { backgroundColor: D.amberMuted, borderColor: D.amberBorder }]}>
-            <MaterialCommunityIcons name="clock-check-outline" size={22} color={D.amber} />
-          </View>
-          <View style={s.attendanceBtnText}>
-            <Text style={s.attendanceBtnTitle}>Staff Attendance</Text>
-            <Text style={s.attendanceBtnSub}>Mark check-in / check-out</Text>
-          </View>
-          <MaterialCommunityIcons name="chevron-right" size={20} color={D.textMuted} />
-        </TouchableOpacity>
-      )}
 
       {/* ── Quick Actions ── */}
       <SectionLabel icon="lightning-bolt">QUICK ACTIONS</SectionLabel>
