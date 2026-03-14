@@ -7,127 +7,127 @@ A comprehensive salon management application built with React Native and Supabas
 ### Authentication
 #### Login Screen
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/login-screen.PNG" alt="Login Screen" width="30%" />
+  <img src="screenshots/login-screen.PNG" alt="Login Screen" width="45%" />
 </div>
 
 ### Admin Dashboard
 #### Main Dashboard
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/admin-dashboard.PNG" alt="Admin Dashboard" width="30%" />
+  <img src="screenshots/admin-dashboard.PNG" alt="Admin Dashboard" width="45%" />
 </div>
 
 #### Staff Performance
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/staff-performance.PNG" alt="Staff Performance" width="30%" />
+  <img src="screenshots/staff-performance.PNG" alt="Staff Performance" width="45%" />
 </div>
 
 ### Staff Management (Admin)
 #### Manage Staff
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/manage-staff.PNG" alt="Manage Staff" width="30%" />
+  <img src="screenshots/manage-staff.PNG" alt="Manage Staff" width="45%" />
 </div>
 
 #### Add Staff
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/add-staff.PNG" alt="Add Staff" width="30%" />
+  <img src="screenshots/add-staff.PNG" alt="Add Staff" width="45%" />
 </div>
 
 ### Attendance System
 #### Mark Attendance (Staff Dashboard)
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/mark-attendance.PNG" alt="Mark Attendance Before" width="30%" />
+  <img src="screenshots/mark-attendance.PNG" alt="Mark Attendance Before" width="45%" />
 </div>
 
 #### Attendance View (Admin Dashboard with Photo)
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/attendance-admin-photo.PNG" alt="Attendance with Photo" width="30%" />
+  <img src="screenshots/attendance-admin-photo.PNG" alt="Attendance with Photo" width="45%" />
 </div>
 
 ### Services Management (Admin)
 #### Manage Services
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/manage-services.PNG" alt="Manage Services" width="30%" />
+  <img src="screenshots/manage-services.PNG" alt="Manage Services" width="45%" />
 </div>
 
 #### Add Services
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/add-services.PNG" alt="Add Services" width="30%" />
+  <img src="screenshots/add-services.PNG" alt="Add Services" width="45%" />
 </div>
 
 ### Inventory Management (Admin)
 #### Manage Inventory
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/manage-inventory.PNG" alt="Manage Inventory" width="30%" />
+  <img src="screenshots/manage-inventory.PNG" alt="Manage Inventory" width="45%" />
 </div>
 
 #### Add Inventory Items
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/add-inventory-items.PNG" alt="Add Inventory Items" width="30%" />
+  <img src="screenshots/add-inventory-items.PNG" alt="Add Inventory Items" width="45%" />
 </div>
 
 ### Appointments
 #### Appointments List
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/appointments-list.PNG" alt="Appointments List" width="30%" />
+  <img src="screenshots/appointments-list.PNG" alt="Appointments List" width="45%" />
 </div>
 
 #### Book Appointment
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/book-appointment.PNG" alt="Book Appointment" width="30%" />
+  <img src="screenshots/book-appointment.PNG" alt="Book Appointment" width="45%" />
 </div>
 
 ### Special Offers (Admin)
 #### Special Offers List
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/special-offers.PNG" alt="Special Offers" width="30%" />
+  <img src="screenshots/special-offers.PNG" alt="Special Offers" width="45%" />
 </div>
 
 #### Create New Offer
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/create-new-offer.PNG" alt="Create New Offer" width="30%" />
+  <img src="screenshots/create-new-offer.PNG" alt="Create New Offer" width="45%" />
 </div>
 
 ### Reports
 #### Product Sales (Admin)
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/product-sales.PNG" alt="Product Sales" width="30%" />
+  <img src="screenshots/product-sales.PNG" alt="Product Sales" width="45%" />
 </div>
 
 #### Staff Report
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/staff-report.PNG" alt="Staff Report" width="30%" />
+  <img src="screenshots/staff-report.PNG" alt="Staff Report" width="45%" />
 </div>
 
 ### Staff Dashboard
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/staff-dashboard.PNG" alt="Staff Dashboard" width="30%" />
+  <img src="screenshots/staff-dashboard.PNG" alt="Staff Dashboard" width="45%" />
 </div>
 
 ### Customer Visits
 #### Create New Visit - Screenshot 1
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/create-visit-1.PNG" alt="Create New Visit 1" width="30%" />
+  <img src="screenshots/create-visit-1.PNG" alt="Create New Visit 1" width="45%" />
 </div>
 
 #### Create New Visit - Screenshot 2
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/create-visit-2.PNG" alt="Create New Visit 2" width="30%" />
+  <img src="screenshots/create-visit-2.PNG" alt="Create New Visit 2" width="45%" />
 </div>
 
 ### Customer Management
 #### Customer List
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/customer-list.PNG" alt="Customer List" width="30%" />
+  <img src="screenshots/customer-list.PNG" alt="Customer List" width="45%" />
 </div>
 
 #### Customer Details
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/customer-details.PNG" alt="Customer Details" width="30%" />
+  <img src="screenshots/customer-details.PNG" alt="Customer Details" width="45%" />
 </div>
 
 ### Billing
 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/bill.PNG" alt="Bill" width="30%" />
+  <img src="screenshots/bill.PNG" alt="Bill" width="45%" />
 </div>
 
 
