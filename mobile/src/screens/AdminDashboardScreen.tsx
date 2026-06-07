@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,131 +8,205 @@ import {
   Modal,
   TextInput,
   Dimensions,
-} from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useAuth } from '../context/AuthContext';
-import { useData } from '../context/DataContext';
-import { BarChartCard } from '../components/BarChartCard';
-import { RevenueBarChart } from '../components/RevenueBarChart';
-import type { ProductSale, StaffMember } from '../types';
-import { updateStaffGoal } from '../services/supabaseService';
+  Platform,
+} from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useAuth } from "../context/AuthContext";
+import { useData } from "../context/DataContext";
+import type { ProductSale, StaffMember } from "../types";
+import { updateStaffGoal } from "../services/supabaseService";
 
-// ─── Design Tokens ────────────────────────────────────────────────────────────
-// Warm white, high contrast, friendly & legible for non-technical workers
+// ─── Design Tokens — identical to StaffDashboardScreen ───────────────────────
 const D = {
-  bg: '#F7F5F2',
-  surface: '#FFFFFF',
-  primary: '#1A6B3C',
-  primaryLight: '#E8F5EE',
-  amber: '#E07B2A',
-  amberLight: '#FEF3E8',
-  blue: '#1E6FA8',
-  blueLight: '#E8F2FB',
-  rose: '#C0392B',
-  roseLight: '#FDECEA',
-  purple: '#6B3FA0',
-  purpleLight: '#F0EAFB',
-  text: '#111111',
-  textSub: '#444444',
-  textMuted: '#888888',
-  border: '#E2DDD8',
-  green: '#1A6B3C',
-  greenLight: '#E8F5EE',
-  red: '#C0392B',
-  orange: '#E07B2A',
-  orangeLight: '#FEF3E8',
-  r: { sm: 10, md: 14, lg: 18, xl: 24, pill: 100 },
+  bg: "#F7F9FB",
+  surface: "#FFFFFF",
+  surfaceAlt: "#F2F4F6",
+
+  green: "#166534",
+  greenMuted: "rgba(22,101,52,0.10)",
+  greenBorder: "rgba(22,101,52,0.25)",
+
+  border: "#E8EAEC",
+
+  text: "#191C1E",
+  textSub: "#707A6F",
+  textMuted: "#9AA09E",
+
+  red: "#BA1A1A",
+  redMuted: "rgba(186,26,26,0.08)",
+  redBorder: "rgba(186,26,26,0.20)",
+
+  amber: "#B8742A",
+  amberMuted: "rgba(184,116,42,0.10)",
+  amberBorder: "rgba(184,116,42,0.25)",
+
+  radius: { sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, pill: 999 },
 };
 
-const { width: W } = Dimensions.get('window');
-const TILE_W = (W - 40 - 12) / 2;
+const { width: W } = Dimensions.get("window");
+const initials = (name: string) =>
+  name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
-interface Props { navigation: any }
+interface Props {
+  navigation: any;
+}
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const Divider = () => <View style={{ height: 1, backgroundColor: '#FFFFFF33', marginVertical: 0 }} />;
-
-const SectionHead = ({ icon, label, color = D.primary }: { icon: string; label: string; color?: string }) => (
-  <View style={sh.row}>
-    <View style={[sh.bar, { backgroundColor: color }]} />
-    <MaterialCommunityIcons name={icon as any} size={20} color={color} />
-    <Text style={sh.text}>{label}</Text>
+// ─── SectionLabel — same as StaffDashboardScreen ─────────────────────────────
+const SectionLabel = ({ children }: { children: string }) => (
+  <View style={sl.row}>
+    <View style={sl.line} />
+    <Text style={sl.text}>{children}</Text>
+    <View style={sl.line} />
   </View>
 );
-const sh = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14, marginTop: 6 },
-  bar: { width: 4, height: 22, borderRadius: 2 },
-  text: { fontSize: 18, fontWeight: '800', color: '#111111', letterSpacing: -0.3 },
+const sl = StyleSheet.create({
+  row: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 },
+  line: { flex: 1, height: 1, backgroundColor: D.border },
+  text: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: D.textSub,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
 });
-
-const ActionBtn = ({ icon, label, color, bg, onPress }: { icon: string; label: string; color: string; bg: string; onPress: () => void }) => (
-  <TouchableOpacity style={[ab.btn, { width: TILE_W }]} onPress={onPress} activeOpacity={0.7}>
-    <View style={[ab.iconWrap, { backgroundColor: bg }]}>
-      <MaterialCommunityIcons name={icon as any} size={30} color={color} />
+// ─── Flat bar row for revenue chart ──────────────────────────────────────────
+const BarRow = ({
+  label,
+  value,
+  max,
+}: {
+  label: string;
+  value: number;
+  max: number;
+}) => (
+  <View style={br.row}>
+    <Text style={br.label} numberOfLines={1}>
+      {label}
+    </Text>
+    <View style={br.track}>
+      <View
+        style={[
+          br.fill,
+          {
+            width:
+              `${max > 0 ? Math.min(100, (value / max) * 100) : 0}%` as any,
+          },
+        ]}
+      />
     </View>
-    <Text style={ab.label}>{label}</Text>
-    <View style={[ab.arrow, { backgroundColor: bg }]}>
-      <MaterialCommunityIcons name="arrow-right" size={14} color={color} />
-    </View>
-  </TouchableOpacity>
+    <Text style={br.val}>₹{value.toFixed(0)}</Text>
+  </View>
 );
-const ab = StyleSheet.create({
-  btn: { backgroundColor: '#FFFFFF', borderRadius: D.r.xl, padding: 18, borderWidth: 1.5, borderColor: '#E2DDD8', gap: 10 },
-  iconWrap: { width: 56, height: 56, borderRadius: D.r.md, alignItems: 'center', justifyContent: 'center' },
-  label: { fontSize: 15, fontWeight: '800', color: '#111111', lineHeight: 20 },
-  arrow: { width: 28, height: 28, borderRadius: D.r.sm, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
+const br = StyleSheet.create({
+  row: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 },
+  label: {
+    fontSize: 12,
+    color: D.textSub,
+    fontWeight: "600",
+    width: 64,
+    textAlign: "right",
+  },
+  track: {
+    flex: 1,
+    height: 6,
+    backgroundColor: D.surfaceAlt,
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  fill: { height: "100%", borderRadius: 3, backgroundColor: D.green },
+  val: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: D.text,
+    width: 56,
+    textAlign: "right",
+  },
 });
 
-const ActivityRow = ({ icon, iconColor, iconBg, title, meta, amount, amountColor }: { icon: string; iconColor: string; iconBg: string; title: string; meta: string; amount: string; amountColor?: string }) => (
-  <View style={ar.row}>
-    <View style={[ar.icon, { backgroundColor: iconBg }]}>
-      <MaterialCommunityIcons name={icon as any} size={22} color={iconColor} />
-    </View>
+// ─── Flat activity row — same pattern as visit rows in StaffDashboardScreen ──
+const ActivityRow = ({
+  title,
+  meta,
+  amount,
+  isLast = false,
+}: {
+  title: string;
+  meta: string;
+  amount: string;
+  isLast?: boolean;
+}) => (
+  <View style={[ar.row, isLast && ar.rowLast]}>
+    <View style={ar.dot} />
     <View style={ar.content}>
-      <Text style={ar.title} numberOfLines={1}>{title}</Text>
-      <Text style={ar.meta} numberOfLines={1}>{meta}</Text>
+      <Text style={ar.title} numberOfLines={1}>
+        {title}
+      </Text>
+      <Text style={ar.meta} numberOfLines={1}>
+        {meta}
+      </Text>
     </View>
-    <Text style={[ar.amount, { color: amountColor || D.primary }]}>{amount}</Text>
+    <Text style={ar.amount}>{amount}</Text>
   </View>
 );
 const ar = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: D.r.lg, padding: 14, marginBottom: 8, borderWidth: 1.5, borderColor: '#E2DDD8', gap: 12 },
-  icon: { width: 48, height: 48, borderRadius: D.r.md, alignItems: 'center', justifyContent: 'center' },
-  content: { flex: 1 },
-  title: { fontSize: 15, fontWeight: '700', color: '#111111', marginBottom: 3 },
-  meta: { fontSize: 12, color: '#888888', fontWeight: '500' },
-  amount: { fontSize: 16, fontWeight: '900' },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 11,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F2F4",
+  },
+  rowLast: { borderBottomWidth: 0 },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: D.green,
+    flexShrink: 0,
+  },
+  content: { flex: 1, minWidth: 0 },
+  title: { fontSize: 14, fontWeight: "600", color: D.text },
+  meta: { fontSize: 11, color: D.textMuted, marginTop: 1 },
+  amount: { fontSize: 14, fontWeight: "700", color: D.green, flexShrink: 0 },
 });
-
 // ─── Main Screen ──────────────────────────────────────────────────────────────
-
 export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
   const { user, logout, staffMembers, refreshStaffMembers } = useAuth();
-  const { getAdminRevenueSummary, productSales, inventory, visits, refreshData } = useData();
+  const {
+    getAdminRevenueSummary,
+    productSales,
+    inventory,
+    visits,
+    refreshData,
+  } = useData();
 
   const [goalModalVisible, setGoalModalVisible] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
-  const [goalAmount, setGoalAmount] = useState('');
+  const [goalAmount, setGoalAmount] = useState("");
   const [savingGoal, setSavingGoal] = useState(false);
 
   useEffect(() => {
-    const unsub = navigation.addListener('focus', () => refreshData());
+    const unsub = navigation.addListener("focus", () => refreshData());
     return unsub;
   }, [navigation, refreshData]);
 
   const openGoalModal = (staff: StaffMember) => {
     setSelectedStaff(staff);
-    setGoalAmount(staff.monthlyGoal?.toString() || '');
+    setGoalAmount(staff.monthlyGoal?.toString() || "");
     setGoalModalVisible(true);
   };
-
   const closeGoalModal = () => {
     setGoalModalVisible(false);
     setSelectedStaff(null);
-    setGoalAmount('');
+    setGoalAmount("");
   };
-
   const handleSaveGoal = async () => {
     if (!selectedStaff) return;
     const amount = parseFloat(goalAmount);
@@ -142,14 +216,26 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
       await updateStaffGoal(selectedStaff.id, amount);
       await refreshStaffMembers();
       closeGoalModal();
-    } catch (e) { console.error(e); }
-    finally { setSavingGoal(false); }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSavingGoal(false);
+    }
   };
 
-  if (!user || user.role !== 'admin') {
+  if (!user || user.role !== "admin") {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: D.bg }}>
-        <Text style={{ color: D.red, fontSize: 16, fontWeight: '700' }}>Admin access required.</Text>
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: D.bg,
+        }}
+      >
+        <Text style={{ color: D.red, fontSize: 15, fontWeight: "700" }}>
+          Admin access required.
+        </Text>
       </View>
     );
   }
@@ -157,292 +243,432 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
   const rev = useMemo(() => getAdminRevenueSummary(), [getAdminRevenueSummary]);
   const recentSales = useMemo(() => productSales.slice(0, 4), [productSales]);
   const recentServices = useMemo(
-    () => visits
-      .filter((v: any) => v.services?.length > 0)
-      .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 4),
+    () =>
+      visits
+        .filter((v: any) => v.services?.length > 0)
+        .sort(
+          (a: any, b: any) =>
+            new Date(b.date).getTime() - new Date(a.date).getTime(),
+        )
+        .slice(0, 4),
     [visits],
   );
-  const lowStock = useMemo(() => inventory.filter((i: any) => i.quantity <= i.minThreshold), [inventory]);
-  const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+  const lowStock = useMemo(
+    () => inventory.filter((i: any) => i.quantity <= i.minThreshold),
+    [inventory],
+  );
+
+  const fmtDate = (d: string) =>
+    new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
 
   const now = new Date();
   const curMonth = now.getMonth();
   const curYear = now.getFullYear();
-  const todayStr = now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
+  const todayStr = now.toLocaleDateString("en-IN", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+  const maxStaff = Math.max(...rev.byStaffToday.map((s: any) => s.total), 1);
+
+  const ACTIONS = [
+    { icon: "package-variant", label: "Inventory", nav: "AdminInventory" },
+    { icon: "spa", label: "Services", nav: "AdminServices" },
+    { icon: "percent", label: "Offers", nav: "AdminOffers" },
+    { icon: "cart-outline", label: "Product Sales", nav: "AdminProductSales" },
+    {
+      icon: "clipboard-check-outline",
+      label: "Attendance",
+      nav: "AdminAttendance",
+    },
+    { icon: "credit-card-outline", label: "Udhaar", nav: "AdminUdhaar" },
+    {
+      icon: "chart-bar",
+      label: "Staff Performance",
+      nav: "AdminStaffPerformance",
+    },
+    { icon: "account-group", label: "Manage Staff", nav: "AdminManageStaff" },
+    {
+      icon: "office-building-outline",
+      label: "Assign Branch",
+      nav: "AdminAssignBranch",
+    },
+    { icon: "calendar-clock", label: "Appointments", nav: "AppointmentsList" },
+    { icon: "file-chart", label: "Staff Report", nav: "StaffReport" },
+  ] as const;
 
   return (
-    <ScrollView style={s.scroll} contentContainerStyle={{ paddingBottom: 52 }} showsVerticalScrollIndicator={false}>
-
-      {/* ── Header ── */}
-      <View style={s.header}>
-        <View style={s.headerLeft}>
-          <View style={s.logoBox}>
-            <Text style={s.logoText}>A</Text>
-          </View>
-          <View>
-            <Text style={s.headerDate}>{todayStr}</Text>
-            <Text style={s.headerTitle}>Admin Dashboard</Text>
-          </View>
-        </View>
-        <TouchableOpacity style={s.logoutBtn} onPress={logout} activeOpacity={0.75}>
-          <MaterialCommunityIcons name="logout" size={20} color={D.red} />
-          <Text style={s.logoutText}>Logout</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* ── Hero Revenue Card ── */}
-      <View style={s.heroCard}>
-        <View style={s.heroTopRow}>
-          <View>
-            <Text style={s.heroEyebrow}>💰  TODAY'S TOTAL</Text>
-            <Text style={s.heroAmount}>₹{rev.todayTotal.toFixed(0)}</Text>
-          </View>
-          <View style={s.heroIcon}>
-            <MaterialCommunityIcons name="trending-up" size={22} color="#FFFFFF" />
-          </View>
-        </View>
-        <Divider />
-        <View style={s.heroSubRow}>
-          <View style={s.heroSubCol}>
-            <Text style={s.heroSubLabel}>This Month</Text>
-            <Text style={s.heroSubVal}>₹{rev.monthlyTotal.toFixed(0)}</Text>
-          </View>
-          <View style={s.heroSubSep} />
-          <View style={s.heroSubCol}>
-            <Text style={s.heroSubLabel}>This Year</Text>
-            <Text style={s.heroSubVal}>₹{rev.yearlyTotal.toFixed(0)}</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* ── Payment Breakdown ── */}
-      {rev.paymentBreakdown && (
-        <View style={s.payRow}>
-          {[
-            { label: 'Cash',   icon: 'cash',                val: rev.paymentBreakdown.cash   || 0, color: D.green,  bg: D.greenLight },
-            { label: 'UPI',    icon: 'contactless-payment', val: rev.paymentBreakdown.upi    || 0, color: D.blue,   bg: D.blueLight },
-            { label: 'Card',   icon: 'credit-card',         val: rev.paymentBreakdown.card   || 0, color: D.amber,  bg: D.amberLight },
-            { label: 'Udhaar', icon: 'handshake',           val: rev.paymentBreakdown.udhaar || 0, color: D.rose,   bg: D.roseLight },
-          ].map(p => (
-            <View key={p.label} style={[s.payPill, { backgroundColor: p.bg, borderColor: p.color + '55' }]}>
-              <MaterialCommunityIcons name={p.icon as any} size={18} color={p.color} />
-              <Text style={[s.payAmt, { color: p.color }]}>₹{p.val.toFixed(0)}</Text>
-              <Text style={s.payLabel}>{p.label}</Text>
+    <View style={s.root}>
+      <ScrollView
+        style={s.scroll}
+        contentContainerStyle={s.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ── Profile Row — same as StaffDashboardScreen ── */}
+        <View style={s.profile}>
+          <View style={s.profileLeft}>
+            <View style={s.avatar}>
+              <Text style={s.avatarText}>A</Text>
             </View>
-          ))}
-        </View>
-      )}
-
-      {/* ── Staff Revenue Chart ── */}
-      <View style={s.chartBlock}>
-        <SectionHead icon="account-group" label="Staff Revenue Today" color={D.primary} />
-        <BarChartCard
-          title=""
-          items={rev.byStaffToday.map((st: any) => ({ label: st.staffName, value: st.total }))}
-          formatValue={(v: number) => `₹${v.toFixed(0)}`}
-        />
-      </View>
-
-            {/* ── Quick Actions ── */}
-      <SectionHead icon="apps" label="Quick Actions" color={D.primary} />
-      <View style={s.actionsGrid}>
-        {[
-          { icon: 'package-variant',         label: 'Inventory',         color: D.purple, bg: D.purpleLight, nav: 'AdminInventory' },
-          { icon: 'spa',                      label: 'Services',          color: D.green,  bg: D.greenLight,  nav: 'AdminServices' },
-          { icon: 'percent',                 label: 'Offers',            color: D.amber,  bg: D.amberLight,   nav: 'AdminOffers' },
-          { icon: 'cart-outline',             label: 'Product Sales',     color: D.blue,   bg: D.blueLight,   nav: 'AdminProductSales' },
-          { icon: 'clipboard-check-outline',  label: 'Attendance',        color: D.green,  bg: D.greenLight,  nav: 'AdminAttendance' },
-          { icon: 'credit-card-outline',      label: 'Udhaar',            color: D.rose,   bg: D.roseLight,   nav: 'AdminUdhaar' },
-          { icon: 'chart-bar',                label: 'Staff Performance', color: D.amber,  bg: D.amberLight,  nav: 'AdminStaffPerformance' },
-          { icon: 'account-group',            label: 'Manage Staff',      color: D.green,  bg: D.greenLight,  nav: 'AdminManageStaff' },
-          { icon: 'office-building-outline',  label: 'Assign Branch',     color: D.primary,bg: D.primaryLight,nav: 'AdminAssignBranch' },
-          { icon: 'calendar-clock',           label: 'Appointments',      color: D.blue,   bg: D.blueLight,   nav: 'AppointmentsList' },
-          { icon: 'file-chart',               label: 'Staff Report',      color: D.purple, bg: D.purpleLight, nav: 'StaffReport' },
-        ].map(a => (
-          <ActionBtn key={a.nav} icon={a.icon} label={a.label} color={a.color} bg={a.bg} onPress={() => navigation.navigate(a.nav)} />
-        ))}
-      </View>
-
-      {/* ── Branch chart ── */}
-      {rev.byBranch?.length > 0 && (
-        <View style={s.chartBlock}>
-          <SectionHead icon="office-building" label="Branch Revenue Today" color={D.blue} />
-          <BarChartCard
-            title=""
-            items={rev.byBranch.map((b: any) => ({ label: b.branchName, value: b.todayTotal }))}
-            formatValue={(v: number) => `₹${v.toFixed(0)}`}
-            TouchableWrapper={({ onPress, children }: any) => (
-              <TouchableOpacity onPress={onPress} activeOpacity={0.7}>{children}</TouchableOpacity>
-            )}
-            onPressItem={(i: number) => {
-              const b = rev.byBranch?.[i];
-              if (b?.branchId && b.branchId !== 'default') {
-                navigation.navigate('BranchDetail', { branchId: b.branchId, branchName: b.branchName });
-              }
-            }}
-          />
-        </View>
-      )}
-
-      {/* ── Staff Goals ── */}
-      <View style={s.section}>
-        <View style={s.sectionRow}>
-          <SectionHead icon="target" label="Staff Goals" color={D.amber} />
-          <TouchableOpacity style={s.manageBtn} onPress={() => navigation.navigate('AdminStaffPerformance')}>
-            <Text style={s.manageBtnText}>Manage</Text>
+            <View>
+              <Text style={s.profileDate}>{todayStr}</Text>
+              <Text style={s.profileName}>{user.name}</Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={s.logoutBtn}
+            onPress={logout}
+            activeOpacity={0.8}
+          >
+            <MaterialCommunityIcons
+              name="logout-variant"
+              size={18}
+              color={D.red}
+            />
           </TouchableOpacity>
         </View>
 
-        {staffMembers.map((staff: StaffMember) => {
-          let earned = 0;
-          visits.forEach((v: any) => {
-            const d = new Date(v.date);
-            if (d.getMonth() !== curMonth || d.getFullYear() !== curYear) return;
-            if (v.attendingStaff?.length > 0) {
-              const rec = v.attendingStaff.find((s: any) => s.staffId === staff.id);
-              if (rec) earned += rec.revenueShare;
-            } else if (v.staffId === staff.id) {
-              earned += v.total;
-            }
-          });
+        {/* ── Hero Revenue Card — same green card as staff progress ── */}
+        <View style={s.heroCard}>
+          <View style={s.heroTop}>
+            <View>
+              <Text style={s.heroEyebrow}>TODAY'S TOTAL</Text>
+              <Text style={s.heroAmount}>₹{rev.todayTotal.toFixed(0)}</Text>
+            </View>
+            <View style={s.heroIcon}>
+              <MaterialCommunityIcons
+                name="trending-up"
+                size={20}
+                color="#fff"
+              />
+            </View>
+          </View>
+          <View style={s.heroDivider} />
+          <View style={s.heroSub}>
+            <View style={s.heroSubCol}>
+              <Text style={s.heroSubLabel}>THIS MONTH</Text>
+              <Text style={s.heroSubVal}>₹{rev.monthlyTotal.toFixed(0)}</Text>
+            </View>
+            <View style={s.heroSubSep} />
+            <View style={s.heroSubCol}>
+              <Text style={s.heroSubLabel}>THIS YEAR</Text>
+              <Text style={s.heroSubVal}>₹{rev.yearlyTotal.toFixed(0)}</Text>
+            </View>
+          </View>
+        </View>
 
-          const goal = staff.monthlyGoal || 0;
-          const pct = goal > 0 ? Math.min(100, (earned / goal) * 100) : 0;
-          const initials = staff.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
-          const barColor = pct >= 100 ? D.amber : pct >= 60 ? D.green : D.blue;
+        {/* ── Payment Breakdown ── */}
+        {rev.paymentBreakdown && (
+          <View style={s.payRow}>
+            {(
+              [
+                {
+                  label: "Cash",
+                  icon: "cash",
+                  val: rev.paymentBreakdown.cash || 0,
+                },
+                {
+                  label: "UPI",
+                  icon: "contactless-payment",
+                  val: rev.paymentBreakdown.upi || 0,
+                },
+                {
+                  label: "Card",
+                  icon: "credit-card",
+                  val: rev.paymentBreakdown.card || 0,
+                },
+                {
+                  label: "Udhaar",
+                  icon: "handshake",
+                  val: rev.paymentBreakdown.udhaar || 0,
+                },
+              ] as const
+            ).map((p) => (
+              <View key={p.label} style={s.payPill}>
+                <MaterialCommunityIcons
+                  name={p.icon as any}
+                  size={16}
+                  color={D.green}
+                />
+                <Text style={s.payAmt}>₹{p.val.toFixed(0)}</Text>
+                <Text style={s.payLabel}>{p.label}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
-          return (
-            <View key={staff.id} style={s.goalCard}>
-              <View style={s.goalTopRow}>
+        {/* ── Staff Revenue Chart ── */}
+        <View style={s.sectionHeaderRow}>
+          <View style={{ flex: 1 }}>
+            <SectionLabel>STAFF REVENUE TODAY</SectionLabel>
+          </View>
+        </View>
+        <View style={s.card}>
+          {rev.byStaffToday.map((st: any) => (
+            <BarRow
+              key={st.staffId}
+              label={st.staffName}
+              value={st.total}
+              max={maxStaff}
+            />
+          ))}
+        </View>
+
+        {/* ── Quick Actions ── */}
+        <SectionLabel>QUICK ACTIONS</SectionLabel>
+        <View style={s.actionsGrid}>
+          {ACTIONS.map((a) => (
+            <TouchableOpacity
+              key={a.nav}
+              style={s.actionTile}
+              onPress={() => navigation.navigate(a.nav)}
+              activeOpacity={0.8}
+            >
+              <View style={s.actionIcon}>
+                <MaterialCommunityIcons
+                  name={a.icon as any}
+                  size={22}
+                  color={D.green}
+                />
+              </View>
+              <Text style={s.actionLabel}>{a.label}</Text>
+              <View style={s.actionArrow}>
+                <MaterialCommunityIcons
+                  name="chevron-right"
+                  size={13}
+                  color={D.textSub}
+                />
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* ── Branch Revenue ── */}
+        <View style={s.sectionHeaderRow}>
+          <View style={{ flex: 1 }}>
+            <SectionLabel>BRANCH REVENUE TODAY</SectionLabel>
+          </View>
+        </View>
+
+        {rev.byBranch?.length > 0 && (
+          <View style={s.card}>
+            {rev.byBranch.map((b: any, i: number) => (
+              <TouchableOpacity
+                key={b.branchId}
+                onPress={() => {
+                  if (b.branchId && b.branchId !== "default") {
+                    navigation.navigate("BranchDetail", {
+                      branchId: b.branchId,
+                      branchName: b.branchName,
+                    });
+                  }
+                }}
+                activeOpacity={0.7}
+              >
+                <BarRow
+                  label={b.branchName}
+                  value={b.todayTotal}
+                  max={Math.max(
+                    ...rev.byBranch.map((x: any) => x.todayTotal),
+                    1,
+                  )}
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* ── Staff Goals ── */}
+        <View style={s.sectionHeaderRow}>
+          <View style={{ flex: 1 }}>
+            <SectionLabel>STAFF GOALS</SectionLabel>
+          </View>
+        </View>
+
+        <View style={s.listCard}>
+          {staffMembers.map((staff: StaffMember, index: number) => {
+            let earned = 0;
+            visits.forEach((v: any) => {
+              const d = new Date(v.date);
+              if (d.getMonth() !== curMonth || d.getFullYear() !== curYear)
+                return;
+              if (v.attendingStaff?.length > 0) {
+                const rec = v.attendingStaff.find(
+                  (s: any) => s.staffId === staff.id,
+                );
+                if (rec) earned += rec.revenueShare;
+              } else if (v.staffId === staff.id) {
+                earned += v.total;
+              }
+            });
+            const goal = staff.monthlyGoal || 0;
+            const pct = goal > 0 ? Math.min(100, (earned / goal) * 100) : 0;
+            const isLast = index === staffMembers.length - 1;
+
+            return (
+              <View key={staff.id} style={[s.goalRow, isLast && s.goalRowLast]}>
                 <View style={s.goalAvatar}>
-                  <Text style={s.goalInitials}>{initials}</Text>
+                  <Text style={s.goalInitials}>{initials(staff.name)}</Text>
                 </View>
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={s.goalName}>{staff.name}</Text>
-                  {goal > 0 ? (
-                    <Text style={s.goalNumbers}>
-                      <Text style={{ color: barColor, fontWeight: '800' }}>₹{earned.toFixed(0)}</Text>
-                      <Text style={{ color: D.textMuted }}> / ₹{goal}</Text>
-                    </Text>
-                  ) : (
-                    <Text style={{ color: D.textMuted, fontSize: 13, fontWeight: '500' }}>No goal set yet</Text>
+                <View style={{ flex: 1, gap: 6 }}>
+                  <View style={s.goalRowTop}>
+                    <Text style={s.goalName}>{staff.name}</Text>
+                    {goal > 0 ? (
+                      <Text style={s.goalNums}>
+                        <Text style={s.goalEarned}>₹{earned.toFixed(0)}</Text>
+                        <Text style={s.goalOf}> / ₹{goal}</Text>
+                      </Text>
+                    ) : (
+                      <Text style={s.goalNone}>No goal set</Text>
+                    )}
+                  </View>
+                  {goal > 0 && (
+                    <View style={s.goalTrack}>
+                      <View style={[s.goalFill, { width: `${pct}%` as any }]} />
+                    </View>
                   )}
                 </View>
-                <TouchableOpacity style={s.editBtn} onPress={() => openGoalModal(staff)}>
-                  <MaterialCommunityIcons name="pencil" size={16} color={D.amber} />
+                <TouchableOpacity
+                  style={s.editBtn}
+                  onPress={() => openGoalModal(staff)}
+                >
+                  <MaterialCommunityIcons
+                    name="pencil"
+                    size={13}
+                    color={D.green}
+                  />
                   <Text style={s.editBtnText}>Edit</Text>
                 </TouchableOpacity>
               </View>
-              {goal > 0 && (
-                <View style={s.goalBarTrack}>
-                  <View style={[s.goalBarFill, { width: `${pct}%` as any, backgroundColor: barColor }]} />
-                </View>
-              )}
-              {goal === 0 && (
-                <TouchableOpacity style={s.setGoalBanner} onPress={() => openGoalModal(staff)}>
-                  <MaterialCommunityIcons name="target" size={18} color={D.amber} />
-                  <Text style={s.setGoalBannerText}>Tap to set a monthly goal</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          );
-        })}
-      </View>
+            );
+          })}
+        </View>
 
-      {/* ── Low Stock ── */}
-      <View style={s.section}>
-        <View style={s.sectionRow}>
-          <SectionHead icon="alert-circle" label="Low Stock Items" color={D.orange} />
-          {lowStock.length > 0 && (
-            <View style={s.warnBadge}>
-              <Text style={s.warnBadgeText}>{lowStock.length} item{lowStock.length > 1 ? 's' : ''}</Text>
-            </View>
-          )}
-          <TouchableOpacity style={s.manageBtn} onPress={() => navigation.navigate('AdminInventory')}>
-            <Text style={s.manageBtnText}>Manage</Text>
-          </TouchableOpacity>
+        {/* ── Low Stock ── */}
+        <View style={s.sectionHeaderRow}>
+          <View style={{ flex: 1 }}>
+            <SectionLabel>LOW STOCK</SectionLabel>
+          </View>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+              flexShrink: 0,
+            }}
+          >
+            {lowStock.length > 0 && (
+              <View style={s.warnBadge}>
+                <Text style={s.warnBadgeText}>
+                  {lowStock.length} item{lowStock.length > 1 ? "s" : ""}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
 
         {lowStock.length === 0 ? (
           <View style={s.emptyBlock}>
-            <Text style={s.emptyEmoji}>✅</Text>
-            <Text style={s.emptyText}>All items are well stocked</Text>
+            <MaterialCommunityIcons
+              name="check-circle-outline"
+              size={26}
+              color={D.textMuted}
+            />
+            <Text style={s.emptyText}>All items well stocked</Text>
           </View>
         ) : (
-          lowStock.map((item: any) => (
-            <View key={item.id} style={s.stockRow}>
-              <View style={[s.stockIcon, { backgroundColor: item.quantity === 0 ? D.roseLight : D.amberLight }]}>
-                <MaterialCommunityIcons name="package-variant" size={22} color={item.quantity === 0 ? D.red : D.amber} />
-              </View>
-              <Text style={s.stockName}>{item.name}</Text>
-              <View style={[s.stockTag, { backgroundColor: item.quantity === 0 ? D.roseLight : D.amberLight, borderColor: (item.quantity === 0 ? D.red : D.amber) + '55' }]}>
-                <Text style={[s.stockTagText, { color: item.quantity === 0 ? D.red : D.amber }]}>
-                  {item.quantity === 0 ? 'OUT OF STOCK' : `${item.quantity} left`}
-                </Text>
-              </View>
-            </View>
-          ))
-        )}
-      </View>
-
-      {/* ── Recent Services ── */}
-      <View style={s.section}>
-        <SectionHead icon="spa" label="Recent Services" color={D.purple} />
-        {recentServices.length === 0 ? (
-          <View style={s.emptyBlock}>
-            <Text style={s.emptyEmoji}>💆</Text>
-            <Text style={s.emptyText}>No services recorded yet</Text>
-          </View>
-        ) : (
-          recentServices.map((item: any, i: number) => {
-            const staffName = item.attendingStaff?.length > 0
-              ? item.attendingStaff.map((st: any) => st.staffName).join(', ')
-              : item.staffName || 'Unknown';
-            const total = item.services.reduce((acc: number, sv: any) => acc + (sv.price || 0), 0);
-            const names = item.services.map((sv: any) => sv.name || sv.serviceName).filter(Boolean).join(', ');
+          lowStock.map((item: any, i: number) => {
+            const out = item.quantity === 0;
             return (
-              <ActivityRow
-                key={item.id || i}
-                icon="spa"
-                iconColor={D.purple}
-                iconBg={D.purpleLight}
-                title={names || 'Service Visit'}
-                meta={`${item.customerName || 'Walk-in'}  •  ${staffName}  •  ${fmtDate(item.date)}`}
-                amount={`₹${total.toFixed(0)}`}
-                amountColor={D.purple}
-              />
+              <View
+                key={item.id}
+                style={[
+                  s.stockRow,
+                  i === lowStock.length - 1 && s.stockRowLast,
+                ]}
+              >
+                <View style={s.stockDot} />
+                <Text style={s.stockName}>{item.name}</Text>
+                <View style={[s.stockTag, out && s.stockTagOut]}>
+                  <Text style={[s.stockTagText, out && s.stockTagTextOut]}>
+                    {out ? "Out of stock" : `${item.quantity} left`}
+                  </Text>
+                </View>
+              </View>
             );
           })
         )}
-      </View>
 
-      {/* ── Recent Product Sales ── */}
-      <View style={s.section}>
-        <SectionHead icon="shopping" label="Recent Product Sales" color={D.blue} />
+        {/* ── Recent Services ── */}
+        <SectionLabel>RECENT SERVICES</SectionLabel>
+        {recentServices.length === 0 ? (
+          <View style={s.emptyBlock}>
+            <MaterialCommunityIcons name="spa" size={26} color={D.textMuted} />
+            <Text style={s.emptyText}>No services recorded yet</Text>
+          </View>
+        ) : (
+          <View style={s.listCard}>
+            {recentServices.map((item: any, i: number) => {
+              const staffName =
+                item.attendingStaff?.length > 0
+                  ? item.attendingStaff
+                      .map((st: any) => st.staffName)
+                      .join(", ")
+                  : item.staffName || "Unknown";
+              const total = item.services.reduce(
+                (acc: number, sv: any) => acc + (sv.price || 0),
+                0,
+              );
+              const names = item.services
+                .map((sv: any) => sv.name || sv.serviceName)
+                .filter(Boolean)
+                .join(", ");
+              return (
+                <ActivityRow
+                  key={item.id || i}
+                  title={names || "Service Visit"}
+                  meta={`${item.customerName || "Walk-in"} · ${staffName} · ${fmtDate(item.date)}`}
+                  amount={`₹${total.toFixed(0)}`}
+                  isLast={i === recentServices.length - 1}
+                />
+              );
+            })}
+          </View>
+        )}
+
+        {/* ── Recent Product Sales ── */}
+        <SectionLabel>RECENT PRODUCT SALES</SectionLabel>
         {recentSales.length === 0 ? (
           <View style={s.emptyBlock}>
-            <Text style={s.emptyEmoji}>🛍️</Text>
+            <MaterialCommunityIcons
+              name="shopping-outline"
+              size={26}
+              color={D.textMuted}
+            />
             <Text style={s.emptyText}>No product sales yet</Text>
           </View>
         ) : (
-          recentSales.map((item: ProductSale, i: number) => (
-            <ActivityRow
-              key={item.id || i}
-              icon="package-variant"
-              iconColor={D.blue}
-              iconBg={D.blueLight}
-              title={item.productName}
-              meta={`${item.quantity} × ₹${item.unitPrice}  •  ${item.staffName}  •  ${fmtDate(item.date)}`}
-              amount={`₹${item.totalPrice.toFixed(0)}`}
-              amountColor={D.blue}
-            />
-          ))
+          <View style={s.listCard}>
+            {recentSales.map((item: ProductSale, i: number) => (
+              <ActivityRow
+                key={item.id || i}
+                title={item.productName}
+                meta={`${item.quantity} × ₹${item.unitPrice} · ${item.staffName} · ${fmtDate(item.date)}`}
+                amount={`₹${item.totalPrice.toFixed(0)}`}
+                isLast={i === recentSales.length - 1}
+              />
+            ))}
+          </View>
         )}
-      </View>
+      </ScrollView>
 
       {/* ── Goal Modal ── */}
-      <Modal visible={goalModalVisible} transparent animationType="slide" onRequestClose={closeGoalModal}>
+      <Modal
+        visible={goalModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={closeGoalModal}
+      >
         <View style={m.overlay}>
           <View style={m.sheet}>
             <View style={m.handle} />
@@ -451,7 +677,7 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
               <View style={m.staffRow}>
                 <View style={m.staffAvatar}>
                   <Text style={m.staffInitials}>
-                    {selectedStaff.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)}
+                    {initials(selectedStaff.name)}
                   </Text>
                 </View>
                 <Text style={m.staffName}>{selectedStaff.name}</Text>
@@ -467,7 +693,7 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
                 keyboardType="numeric"
                 placeholder="0"
                 placeholderTextColor={D.textMuted}
-                selectionColor={D.primary}
+                selectionColor={D.green}
               />
             </View>
             <TouchableOpacity
@@ -476,8 +702,14 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
               disabled={savingGoal}
               activeOpacity={0.8}
             >
-              <MaterialCommunityIcons name="check-circle" size={22} color="#fff" />
-              <Text style={m.saveBtnText}>{savingGoal ? 'Saving...' : 'Save Goal'}</Text>
+              <MaterialCommunityIcons
+                name="check-circle"
+                size={20}
+                color="#fff"
+              />
+              <Text style={m.saveBtnText}>
+                {savingGoal ? "Saving…" : "Save Goal"}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity style={m.cancelBtn} onPress={closeGoalModal}>
               <Text style={m.cancelText}>Cancel</Text>
@@ -485,100 +717,443 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </View>
       </Modal>
-
-    </ScrollView>
+    </View>
   );
 };
 
-// ─── Main Styles ──────────────────────────────────────────────────────────────
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: '#F7F5F2', paddingTop: 52, paddingHorizontal: 20 },
+  root: { flex: 1, backgroundColor: D.bg },
 
-  // Header
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  logoBox: { width: 46, height: 46, borderRadius: 14, backgroundColor: '#1A6B3C', alignItems: 'center', justifyContent: 'center' },
-  logoText: { color: '#FFFFFF', fontSize: 22, fontWeight: '900' },
-  headerDate: { fontSize: 11, color: '#888888', fontWeight: '600', marginBottom: 1 },
-  headerTitle: { fontSize: 20, fontWeight: '900', color: '#111111', letterSpacing: -0.5 },
-  logoutBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FDECEA', borderRadius: 100, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1.5, borderColor: '#C0392B44' },
-  logoutText: { color: '#C0392B', fontSize: 14, fontWeight: '800' },
+  // Top bar — identical to StaffDashboardScreen
+  topBar: {
+    backgroundColor: D.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: D.border,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    ...Platform.select({
+      ios: { paddingTop: 56 },
+      android: { paddingTop: 14 },
+    }),
+  },
+  topBarTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: D.text,
+    letterSpacing: -0.3,
+  },
+  logoutBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: D.radius.md,
+    backgroundColor: D.redMuted,
+    borderWidth: 1,
+    borderColor: D.redBorder,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-  // Hero
-  heroCard: { backgroundColor: '#1A6B3C', borderRadius: 24, padding: 22, marginBottom: 16 },
-  heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 },
-  heroEyebrow: { color: '#FFFFFF99', fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 4 },
-  heroAmount: { color: '#FFFFFF', fontSize: 40, fontWeight: '900', letterSpacing: -1.5 },
-  heroIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#FFFFFF22', alignItems: 'center', justifyContent: 'center' },
-  heroSubRow: { flexDirection: 'row', paddingTop: 16 },
+  scroll: { flex: 1 },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 52,
+    gap: 10,
+  },
+
+  // Profile — identical pattern to StaffDashboardScreen
+  profile: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  profileLeft: { flexDirection: "row", alignItems: "center", gap: 14 },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: D.radius.lg,
+    backgroundColor: D.green,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: { color: "#fff", fontSize: 20, fontWeight: "800" },
+  profileDate: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: D.textSub,
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+    marginBottom: 2,
+  },
+  profileName: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: D.text,
+    letterSpacing: -0.5,
+    marginBottom: 4,
+  },
+  adminBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    alignSelf: "flex-start",
+    backgroundColor: D.greenMuted,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: D.radius.pill,
+    borderWidth: 1,
+    borderColor: D.greenBorder,
+  },
+  adminBadgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: D.green,
+  },
+  adminBadgeText: { fontSize: 11, fontWeight: "700", color: D.green },
+
+  // Hero card — same green block as staff progress card
+  heroCard: {
+    backgroundColor: D.green,
+    borderRadius: D.radius.xxl,
+    padding: 20,
+  },
+  heroTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 18,
+  },
+  heroEyebrow: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.60)",
+    letterSpacing: 1.8,
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  heroAmount: {
+    fontSize: 38,
+    fontWeight: "800",
+    color: "#fff",
+    letterSpacing: -1.5,
+  },
+  heroIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: D.radius.md,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroDivider: {
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    marginBottom: 16,
+  },
+  heroSub: { flexDirection: "row" },
   heroSubCol: { flex: 1 },
-  heroSubSep: { width: 1, backgroundColor: '#FFFFFF33', marginHorizontal: 16 },
-  heroSubLabel: { color: '#FFFFFFAA', fontSize: 11, fontWeight: '600', marginBottom: 4 },
-  heroSubVal: { color: '#FFFFFF', fontSize: 20, fontWeight: '900', letterSpacing: -0.5 },
+  heroSubSep: {
+    width: 1,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    marginHorizontal: 16,
+  },
+  heroSubLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.60)",
+    textTransform: "uppercase",
+    letterSpacing: 1.5,
+    marginBottom: 3,
+  },
+  heroSubVal: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#fff",
+    letterSpacing: -0.5,
+  },
 
-  // Payment pills
-  payRow: { flexDirection: 'row', gap: 8, marginBottom: 24 },
-  payPill: { flex: 1, borderRadius: 14, padding: 10, alignItems: 'center', borderWidth: 1.5, gap: 3 },
-  payAmt: { fontSize: 13, fontWeight: '900' },
-  payLabel: { fontSize: 10, color: '#888888', fontWeight: '700' },
+  // Payment pills — neutral, single colour
+  payRow: { flexDirection: "row", gap: 8 },
+  payPill: {
+    flex: 1,
+    backgroundColor: D.surface,
+    borderRadius: D.radius.md,
+    borderWidth: 1,
+    borderColor: D.border,
+    padding: 10,
+    alignItems: "center",
+    gap: 3,
+  },
+  payAmt: { fontSize: 12, fontWeight: "800", color: D.text },
+  payLabel: { fontSize: 10, fontWeight: "600", color: D.textMuted },
 
-  // Chart block
-  chartBlock: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 16, marginBottom: 20, borderWidth: 1.5, borderColor: '#E2DDD8' },
+  // Generic surface card
+  card: {
+    backgroundColor: D.surface,
+    borderRadius: D.radius.xl,
+    borderWidth: 1,
+    borderColor: D.border,
+    padding: 16,
+  },
 
-  // Actions grid
-  actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 28 },
+  // Quick actions
+  actionsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  actionTile: {
+    width: (W - 32 - 10) / 2,
+    backgroundColor: D.surface,
+    borderRadius: D.radius.xl,
+    borderWidth: 1,
+    borderColor: D.border,
+    padding: 16,
+    gap: 10,
+  },
+  actionIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: D.radius.md,
+    backgroundColor: D.greenMuted,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: D.text,
+    lineHeight: 20,
+  },
+  actionArrow: {
+    width: 24,
+    height: 24,
+    borderRadius: D.radius.sm,
+    backgroundColor: D.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "flex-start",
+  },
 
-  // Section
-  section: { marginBottom: 28 },
-  sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  manageBtn: { backgroundColor: '#E8F5EE', borderRadius: 100, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1.5, borderColor: '#1A6B3C44', marginBottom: 14 },
-  manageBtnText: { color: '#1A6B3C', fontSize: 13, fontWeight: '800' },
+  // Section header row (label + manage button side by side)
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 0,
+    marginTop: 16,
+  },
 
-  // Goal card
-  goalCard: { backgroundColor: '#FFFFFF', borderRadius: 18, padding: 16, marginBottom: 10, borderWidth: 1.5, borderColor: '#E2DDD8' },
-  goalTopRow: { flexDirection: 'row', alignItems: 'center' },
-  goalAvatar: { width: 50, height: 50, borderRadius: 14, backgroundColor: '#E8F5EE', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#1A6B3C44' },
-  goalInitials: { color: '#1A6B3C', fontSize: 16, fontWeight: '900' },
-  goalName: { fontSize: 16, fontWeight: '800', color: '#111111', marginBottom: 2 },
-  goalNumbers: { fontSize: 14 },
-  editBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FEF3E8', borderRadius: 100, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1.5, borderColor: '#E07B2A55' },
-  editBtnText: { color: '#E07B2A', fontSize: 13, fontWeight: '800' },
-  goalBarTrack: { height: 8, backgroundColor: '#E2DDD8', borderRadius: 4, overflow: 'hidden', marginTop: 14 },
-  goalBarFill: { height: '100%', borderRadius: 4 },
-  setGoalBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FEF3E8', borderRadius: 14, padding: 12, marginTop: 12, borderWidth: 1.5, borderColor: '#E07B2A55' },
-  setGoalBannerText: { color: '#E07B2A', fontSize: 14, fontWeight: '700' },
+  // Single white card wrapping a flat list (goals, services, products)
+  listCard: {
+    backgroundColor: D.surface,
+    borderRadius: D.radius.xl,
+    borderWidth: 1,
+    borderColor: D.border,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+  },
 
-  // Stock
-  warnBadge: { backgroundColor: '#FEF3E8', borderRadius: 100, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1.5, borderColor: '#E07B2A55', marginBottom: 14, marginLeft: -4 },
-  warnBadgeText: { color: '#E07B2A', fontSize: 12, fontWeight: '800' },
-  stockRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 18, padding: 14, marginBottom: 8, borderWidth: 1.5, borderColor: '#E2DDD8', gap: 12 },
-  stockIcon: { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  stockName: { flex: 1, fontSize: 15, fontWeight: '700', color: '#111111' },
-  stockTag: { borderRadius: 100, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1.5 },
-  stockTagText: { fontSize: 12, fontWeight: '800', letterSpacing: 0.3 },
+  // Goal rows inside the single card
+  goalRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F2F4",
+  },
+  goalRowLast: { borderBottomWidth: 0 },
+  goalRowTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 0,
+  },
+  goalAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: D.green,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  goalInitials: { color: "#fff", fontSize: 12, fontWeight: "700" },
+  goalName: { fontSize: 14, fontWeight: "700", color: D.text },
+  goalNums: { fontSize: 12 },
+  goalEarned: { fontWeight: "800", color: D.green },
+  goalOf: { color: D.textMuted },
+  goalNone: { fontSize: 12, color: D.textMuted },
+  editBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: D.greenMuted,
+    borderWidth: 1,
+    borderColor: D.greenBorder,
+    borderRadius: D.radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    flexShrink: 0,
+  },
+  editBtnText: { color: D.green, fontSize: 11, fontWeight: "700" },
+  goalTrack: {
+    height: 5,
+    backgroundColor: D.surfaceAlt,
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  goalFill: { height: "100%", borderRadius: 3, backgroundColor: D.green },
+
+  // Low stock — flat rows like visit list
+  stockRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 11,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F2F4",
+  },
+  stockRowLast: { borderBottomWidth: 0 },
+  stockDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: D.amber,
+    flexShrink: 0,
+  },
+  stockName: { flex: 1, fontSize: 14, fontWeight: "600", color: D.text },
+  stockTag: {
+    backgroundColor: D.amberMuted,
+    borderRadius: D.radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: D.amberBorder,
+  },
+  stockTagText: { fontSize: 11, fontWeight: "700", color: D.amber },
+  stockTagOut: { backgroundColor: D.redMuted, borderColor: D.redBorder },
+  stockTagTextOut: { color: D.red },
+
+  // Warn badge
+  warnBadge: {
+    backgroundColor: D.amberMuted,
+    borderRadius: D.radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: D.amberBorder,
+  },
+  warnBadgeText: { color: D.amber, fontSize: 11, fontWeight: "700" },
 
   // Empty
-  emptyBlock: { alignItems: 'center', justifyContent: 'center', paddingVertical: 28, backgroundColor: '#FFFFFF', borderRadius: 18, borderWidth: 1.5, borderColor: '#E2DDD8' },
-  emptyEmoji: { fontSize: 32, marginBottom: 8 },
-  emptyText: { fontSize: 15, color: '#888888', fontWeight: '600' },
+  emptyBlock: {
+    backgroundColor: D.surface,
+    borderRadius: D.radius.lg,
+    borderWidth: 1,
+    borderColor: D.border,
+    paddingVertical: 28,
+    alignItems: "center",
+    gap: 8,
+  },
+  emptyText: { fontSize: 13, color: D.textMuted, fontWeight: "600" },
 });
 
 // ─── Modal Styles ─────────────────────────────────────────────────────────────
 const m = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, paddingBottom: 40, borderWidth: 1.5, borderColor: '#E2DDD8', borderBottomWidth: 0 },
-  handle: { width: 44, height: 5, backgroundColor: '#E2DDD8', borderRadius: 3, alignSelf: 'center', marginBottom: 22 },
-  title: { fontSize: 22, fontWeight: '900', color: '#111111', marginBottom: 16, letterSpacing: -0.5 },
-  staffRow: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#E8F5EE', borderRadius: 18, padding: 14, marginBottom: 22, borderWidth: 1.5, borderColor: '#1A6B3C33' },
-  staffAvatar: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#1A6B3C', alignItems: 'center', justifyContent: 'center' },
-  staffInitials: { color: '#fff', fontSize: 15, fontWeight: '900' },
-  staffName: { fontSize: 16, fontWeight: '800', color: '#111111' },
-  inputLabel: { fontSize: 13, fontWeight: '700', color: '#444444', marginBottom: 8 },
-  inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F7F5F2', borderRadius: 18, borderWidth: 2, borderColor: '#1A6B3C', paddingHorizontal: 16, marginBottom: 22 },
-  rupeeSign: { fontSize: 26, fontWeight: '800', color: '#1A6B3C', marginRight: 6 },
-  input: { flex: 1, fontSize: 32, fontWeight: '900', color: '#111111', paddingVertical: 16 },
-  saveBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: '#1A6B3C', borderRadius: 18, paddingVertical: 18, marginBottom: 10 },
-  saveBtnText: { color: '#fff', fontSize: 17, fontWeight: '900' },
-  cancelBtn: { alignItems: 'center', paddingVertical: 14 },
-  cancelText: { color: '#888888', fontSize: 15, fontWeight: '700' },
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "flex-end",
+  },
+  sheet: {
+    backgroundColor: D.surface,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 24,
+    paddingBottom: 40,
+    borderWidth: 1,
+    borderColor: D.border,
+    borderBottomWidth: 0,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    backgroundColor: D.border,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: D.text,
+    marginBottom: 14,
+    letterSpacing: -0.4,
+  },
+  staffRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: D.greenMuted,
+    borderRadius: D.radius.lg,
+    padding: 14,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: D.greenBorder,
+  },
+  staffAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: D.radius.md,
+    backgroundColor: D.green,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  staffInitials: { color: "#fff", fontSize: 14, fontWeight: "800" },
+  staffName: { fontSize: 15, fontWeight: "700", color: D.text },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: D.textSub,
+    marginBottom: 8,
+  },
+  inputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: D.surfaceAlt,
+    borderRadius: D.radius.lg,
+    borderWidth: 2,
+    borderColor: D.green,
+    paddingHorizontal: 16,
+    marginBottom: 20,
+  },
+  rupeeSign: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: D.green,
+    marginRight: 6,
+  },
+  input: {
+    flex: 1,
+    fontSize: 30,
+    fontWeight: "800",
+    color: D.text,
+    paddingVertical: 14,
+  },
+  saveBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    backgroundColor: D.green,
+    borderRadius: D.radius.lg,
+    paddingVertical: 16,
+    marginBottom: 10,
+  },
+  saveBtnText: { color: "#fff", fontSize: 16, fontWeight: "800" },
+  cancelBtn: { alignItems: "center", paddingVertical: 12 },
+  cancelText: { color: D.textMuted, fontSize: 14, fontWeight: "600" },
 });
