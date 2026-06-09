@@ -1287,7 +1287,7 @@ const s = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 24,
     paddingTop: 10,
-    paddingBottom: Platform.select({ ios: 28, android: 12, default: 12 }),
+    paddingBottom: Platform.select({ ios: 28, android: 28, default: 28 }),
     gap: 0,
   },
   navBtn: {

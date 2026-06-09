@@ -271,30 +271,62 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
   });
   const maxStaff = Math.max(...rev.byStaffToday.map((s: any) => s.total), 1);
 
-  const ACTIONS = [
-    { icon: "package-variant", label: "Inventory", nav: "AdminInventory" },
-    { icon: "spa", label: "Services", nav: "AdminServices" },
-    { icon: "percent", label: "Offers", nav: "AdminOffers" },
-    { icon: "cart-outline", label: "Product Sales", nav: "AdminProductSales" },
+  const ACTION_GROUPS = [
     {
-      icon: "clipboard-check-outline",
-      label: "Attendance",
-      nav: "AdminAttendance",
+      category: "Salon",
+      actions: [
+        { icon: "spa", label: "Services", nav: "AdminServices" },
+        { icon: "percent", label: "Offers", nav: "AdminOffers" },
+        { icon: "package-variant", label: "Inventory", nav: "AdminInventory" },
+      ],
     },
-    { icon: "credit-card-outline", label: "Udhaar", nav: "AdminUdhaar" },
     {
-      icon: "chart-bar",
-      label: "Staff Performance",
-      nav: "AdminStaffPerformance",
+      category: "Finance",
+      actions: [
+        {
+          icon: "cart-outline",
+          label: "Product Sales",
+          nav: "AdminProductSales",
+        },
+        { icon: "credit-card-outline", label: "Udhaar", nav: "AdminUdhaar" },
+        {
+          icon: "calendar-clock",
+          label: "Appointments",
+          nav: "AppointmentsList",
+        },
+      ],
     },
-    { icon: "account-group", label: "Manage Staff", nav: "AdminManageStaff" },
     {
-      icon: "office-building-outline",
-      label: "Assign Branch",
-      nav: "AdminAssignBranch",
+      category: "Team",
+      actions: [
+        {
+          icon: "clipboard-check-outline",
+          label: "Attendance",
+          nav: "AdminAttendance",
+        },
+        {
+          icon: "account-group",
+          label: "Manage Staff",
+          nav: "AdminManageStaff",
+        },
+        {
+          icon: "office-building-outline",
+          label: "Branches",
+          nav: "AdminAssignBranch",
+        },
+      ],
     },
-    { icon: "calendar-clock", label: "Appointments", nav: "AppointmentsList" },
-    { icon: "file-chart", label: "Staff Report", nav: "StaffReport" },
+    {
+      category: "Insights",
+      actions: [
+        {
+          icon: "chart-bar",
+          label: "Performance",
+          nav: "AdminStaffPerformance",
+        },
+        { icon: "file-chart", label: "Staff Report", nav: "StaffReport" },
+      ],
+    },
   ] as const;
 
   return (
@@ -312,7 +344,7 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
             </View>
             <View>
               <Text style={s.profileDate}>{todayStr}</Text>
-              <Text style={s.profileName}>{user.name}</Text>
+              <Text style={s.profileName}>{user.name} Dashboard</Text>
             </View>
           </View>
           <TouchableOpacity
@@ -403,6 +435,7 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
             <SectionLabel>STAFF REVENUE TODAY</SectionLabel>
           </View>
         </View>
+
         <View style={s.card}>
           {rev.byStaffToday.map((st: any) => (
             <BarRow
@@ -414,33 +447,56 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
           ))}
         </View>
 
-        {/* ── Quick Actions ── */}
-        <SectionLabel>QUICK ACTIONS</SectionLabel>
-        <View style={s.actionsGrid}>
-          {ACTIONS.map((a) => (
-            <TouchableOpacity
-              key={a.nav}
-              style={s.actionTile}
-              onPress={() => navigation.navigate(a.nav)}
-              activeOpacity={0.8}
-            >
-              <View style={s.actionIcon}>
-                <MaterialCommunityIcons
-                  name={a.icon as any}
-                  size={22}
-                  color={D.green}
-                />
+        {/* ── Quick Actions — grouped by category ── */}
+        <View style={s.sectionHeaderRow}>
+          <View style={{ flex: 1 }}>
+            <SectionLabel>QUICK ACTIONS</SectionLabel>
+          </View>
+        </View>
+
+        <View style={s.actionsWrap}>
+          {ACTION_GROUPS.map((group) => {
+            // Chunk into rows of 3
+            const chunks: (typeof group.actions)[number][][] = [];
+            for (let i = 0; i < group.actions.length; i += 3)
+              chunks.push([...group.actions].slice(i, i + 3));
+            return (
+              <View key={group.category} style={s.actionGroup}>
+                {/* Category label — centred */}
+                <Text style={s.actionGroupLabel}>
+                  {group.category.toUpperCase()}
+                </Text>
+                {chunks.map((row, ri) => (
+                  <View key={ri} style={s.actionRow}>
+                    {row.map((a) => (
+                      <TouchableOpacity
+                        key={a.nav}
+                        style={s.actionTile}
+                        onPress={() => navigation.navigate(a.nav)}
+                        activeOpacity={0.8}
+                      >
+                        <View style={s.actionIcon}>
+                          <MaterialCommunityIcons
+                            name={a.icon as any}
+                            size={20}
+                            color={D.green}
+                          />
+                        </View>
+                        <Text style={s.actionLabel} numberOfLines={2}>
+                          {a.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                    {/* Fill empty slots in last row so tiles stay same width */}
+                    {row.length < 3 &&
+                      Array.from({ length: 3 - row.length }).map((_, i) => (
+                        <View key={`empty-${i}`} style={s.actionTileGhost} />
+                      ))}
+                  </View>
+                ))}
               </View>
-              <Text style={s.actionLabel}>{a.label}</Text>
-              <View style={s.actionArrow}>
-                <MaterialCommunityIcons
-                  name="chevron-right"
-                  size={13}
-                  color={D.textSub}
-                />
-              </View>
-            </TouchableOpacity>
-          ))}
+            );
+          })}
         </View>
 
         {/* ── Branch Revenue ── */}
@@ -600,7 +656,11 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
         )}
 
         {/* ── Recent Services ── */}
-        <SectionLabel>RECENT SERVICES</SectionLabel>
+        <View style={s.sectionHeaderRow}>
+          <View style={{ flex: 1 }}>
+            <SectionLabel>RECENT SERVICES</SectionLabel>
+          </View>
+        </View>
         {recentServices.length === 0 ? (
           <View style={s.emptyBlock}>
             <MaterialCommunityIcons name="spa" size={26} color={D.textMuted} />
@@ -637,7 +697,12 @@ export const AdminDashboardScreen: React.FC<Props> = ({ navigation }) => {
         )}
 
         {/* ── Recent Product Sales ── */}
-        <SectionLabel>RECENT PRODUCT SALES</SectionLabel>
+        <View style={s.sectionHeaderRow}>
+          <View style={{ flex: 1 }}>
+            <SectionLabel>RECENT PRODUCT SALES</SectionLabel>
+          </View>
+        </View>
+
         {recentSales.length === 0 ? (
           <View style={s.emptyBlock}>
             <MaterialCommunityIcons
@@ -901,49 +966,69 @@ const s = StyleSheet.create({
     padding: 16,
   },
 
-  // Quick actions
-  actionsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  actionTile: {
-    width: (W - 32 - 10) / 2,
+  // Quick actions — grouped, 3 columns
+  actionsWrap: { gap: 10 },
+  actionGroup: {
     backgroundColor: D.surface,
     borderRadius: D.radius.xl,
     borderWidth: 1,
     borderColor: D.border,
-    padding: 16,
+    padding: 14,
     gap: 10,
   },
+  actionGroupLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: D.green,
+    letterSpacing: 1.8,
+    textAlign: "center",
+  },
+  actionRow: { flexDirection: "row", gap: 8 },
+  actionTile: {
+    flex: 1,
+    alignItems: "center",
+    gap: 7,
+    backgroundColor: D.surfaceAlt,
+    borderRadius: D.radius.lg,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
+  actionTileGhost: { flex: 1 },
   actionIcon: {
-    width: 46,
-    height: 46,
+    width: 38,
+    height: 38,
     borderRadius: D.radius.md,
     backgroundColor: D.greenMuted,
     alignItems: "center",
     justifyContent: "center",
   },
   actionLabel: {
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 10,
+    fontWeight: "600",
     color: D.text,
+    textAlign: "center",
     lineHeight: 20,
   },
-  actionArrow: {
-    width: 24,
-    height: 24,
-    borderRadius: D.radius.sm,
-    backgroundColor: D.surfaceAlt,
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "flex-start",
-  },
+  actionArrow: {},
 
   // Section header row (label + manage button side by side)
   sectionHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 0,
-    marginTop: 16,
+    marginBottom: -5,
+    marginTop: 20,
   },
+  manageBtn: {
+    backgroundColor: D.greenMuted,
+    borderWidth: 1,
+    borderColor: D.greenBorder,
+    borderRadius: D.radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    flexShrink: 0,
+  },
+  manageBtnText: { color: D.green, fontSize: 12, fontWeight: "700" },
 
   // Single white card wrapping a flat list (goals, services, products)
   listCard: {

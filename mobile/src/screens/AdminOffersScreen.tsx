@@ -966,7 +966,7 @@ const s = StyleSheet.create({
     borderTopColor: D.border,
     paddingHorizontal: 16,
     paddingTop: 10,
-    paddingBottom: Platform.select({ ios: 32, android: 14, default: 14 }),
+    paddingBottom: Platform.select({ ios: 32, android: 25, default: 25 }),
   },
   addBtn: {
     flexDirection: "row",
