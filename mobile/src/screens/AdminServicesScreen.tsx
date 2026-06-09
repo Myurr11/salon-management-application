@@ -1,73 +1,104 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from "react";
 import {
-  View, Text, StyleSheet, ScrollView, TextInput,
-  TouchableOpacity, Modal, Alert, ActivityIndicator,
-} from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useData } from '../context/DataContext';
-import type { Service } from '../types';
-import * as supabaseService from '../services/supabaseService';
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  Modal,
+  Alert,
+  ActivityIndicator,
+  Platform,
+} from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useData } from "../context/DataContext";
+import type { Service } from "../types";
+import * as supabaseService from "../services/supabaseService";
 
-// ─── Design Tokens ────────────────────────────────────────────────────────────
+// ─── Design Tokens — shared system ───────────────────────────────────────────
 const D = {
-  bg: '#F7F5F2',
-  surface: '#FFFFFF',
-  border: '#E8E3DB',
+  bg: "#F7F9FB",
+  surface: "#FFFFFF",
+  surfaceAlt: "#F2F4F6",
 
-  green: '#2D9A5F',
-  greenMuted: '#2D9A5F15',
-  greenBorder: '#2D9A5F40',
+  green: "#166534",
+  greenMuted: "rgba(22,101,52,0.10)",
+  greenBorder: "rgba(22,101,52,0.25)",
 
-  gold: '#C9A84C',
-  goldMuted: '#C9A84C18',
-  goldBorder: '#C9A84C44',
+  border: "#E8EAEC",
 
-  text: '#1A1814',
-  textSub: '#6B6560',
-  textMuted: '#A09A8F',
+  text: "#191C1E",
+  textSub: "#707A6F",
+  textMuted: "#9AA09E",
 
-  blue: '#3A7EC8',
-  blueMuted: '#3A7EC815',
-  blueBorder: '#3A7EC833',
+  red: "#BA1A1A",
+  redMuted: "rgba(186,26,26,0.08)",
+  redBorder: "rgba(186,26,26,0.20)",
 
-  red: '#D94F4F',
-  redMuted: '#D94F4F15',
-  redBorder: '#D94F4F33',
+  amber: "#B8742A",
+  amberMuted: "rgba(184,116,42,0.10)",
+  amberBorder: "rgba(184,116,42,0.25)",
 
-  amber: '#D4872A',
-  amberMuted: '#D4872A15',
-  amberBorder: '#D4872A33',
-
-  shadow: 'rgba(0,0,0,0.06)',
-  radius: { sm: 8, md: 12, lg: 16, xl: 20, pill: 999 },
+  radius: { sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, pill: 999 },
 };
 
-interface Props { navigation: any; }
+interface Props {
+  navigation: any;
+}
+
+// ─── SectionLabel ─────────────────────────────────────────────────────────────
+const SectionLabel = ({ children }: { children: string }) => (
+  <View style={sl.row}>
+    <View style={sl.line} />
+    <Text style={sl.text}>{children}</Text>
+    <View style={sl.line} />
+  </View>
+);
+const sl = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 12,
+  },
+  line: { flex: 1, height: 1, backgroundColor: D.border },
+  text: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: D.textSub,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
+});
 
 export const AdminServicesScreen: React.FC<Props> = ({ navigation }) => {
   const { services, refreshData } = useData();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [menuService, setMenuService] = useState<Service | null>(null);
   const [editingService, setEditingService] = useState<Service | null>(null);
-  const [serviceName, setServiceName] = useState('');
-  const [servicePrice, setServicePrice] = useState('');
-  const [serviceDescription, setServiceDescription] = useState('');
+  const [serviceName, setServiceName] = useState("");
+  const [servicePrice, setServicePrice] = useState("");
+  const [serviceDescription, setServiceDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const filteredServices = useMemo(() => {
     if (!searchQuery.trim()) return services;
     const q = searchQuery.toLowerCase();
-    return services.filter(s =>
-      s.name.toLowerCase().includes(q) ||
-      s.description?.toLowerCase().includes(q)
+    return services.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        s.description?.toLowerCase().includes(q),
     );
   }, [services, searchQuery]);
 
   const openAddModal = () => {
     setEditingService(null);
-    setServiceName('');
-    setServicePrice('');
-    setServiceDescription('');
+    setServiceName("");
+    setServicePrice("");
+    setServiceDescription("");
     setModalVisible(true);
   };
 
@@ -75,93 +106,92 @@ export const AdminServicesScreen: React.FC<Props> = ({ navigation }) => {
     setEditingService(service);
     setServiceName(service.name);
     setServicePrice(service.price.toString());
-    setServiceDescription(service.description || '');
+    setServiceDescription(service.description || "");
     setModalVisible(true);
+  };
+
+  const openMenu = (service: Service) => {
+    setMenuService(service);
+    setMenuVisible(true);
   };
 
   const handleSubmit = async () => {
     if (!serviceName.trim()) {
-      Alert.alert('Error', 'Please enter a service name');
+      Alert.alert("Error", "Please enter a service name");
       return;
     }
     if (!servicePrice.trim() || isNaN(parseFloat(servicePrice))) {
-      Alert.alert('Error', 'Please enter a valid price');
+      Alert.alert("Error", "Please enter a valid price");
       return;
     }
-
     setSubmitting(true);
     try {
       if (editingService) {
-        // Update existing service
         await supabaseService.updateService(editingService.id, {
           name: serviceName.trim(),
           price: parseFloat(servicePrice),
           description: serviceDescription.trim() || undefined,
         });
-        Alert.alert('Success', 'Service updated successfully');
       } else {
-        // Create new service
         await supabaseService.createService({
           name: serviceName.trim(),
           price: parseFloat(servicePrice),
           description: serviceDescription.trim() || undefined,
         });
-        Alert.alert('Success', 'Service added successfully');
       }
       await refreshData();
       setModalVisible(false);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to save service');
+      Alert.alert("Error", error.message || "Failed to save service");
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDelete = (service: Service) => {
-    Alert.alert(
-      'Delete Service',
-      `Are you sure you want to delete "${service.name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await supabaseService.deleteService(service.id);
-              await refreshData();
-              Alert.alert('Success', 'Service deleted successfully');
-            } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to delete service');
-            }
-          },
+    Alert.alert("Delete Service", `Delete "${service.name}"?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await supabaseService.deleteService(service.id);
+            await refreshData();
+          } catch (error: any) {
+            Alert.alert("Error", error.message || "Failed to delete service");
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   return (
-    <View style={s.container}>
-      {/* Header */}
-      <View style={s.header}>
-        <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
-          <MaterialCommunityIcons name="arrow-left" size={22} color={D.text} />
+    <View style={s.root}>
+      {/* ── Top Bar ── */}
+      <View style={s.topBar}>
+        <TouchableOpacity
+          style={s.backBtn}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <MaterialCommunityIcons name="arrow-left" size={20} color={D.text} />
         </TouchableOpacity>
-        <View style={s.headerIconBox}>
-          <MaterialCommunityIcons name="spa" size={22} color={D.green} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={s.headerTitle}>Services</Text>
-          <Text style={s.headerSub}>{services.length} services offered</Text>
+        <Text style={s.topBarTitle}>Services</Text>
+        <View style={s.topBarCount}>
+          <Text style={s.topBarCountText}>{services.length}</Text>
         </View>
       </View>
 
-      {/* Search Bar */}
+      {/* ── Search ── */}
       <View style={s.searchWrap}>
         <View style={s.searchBar}>
-          <View style={s.searchIcon}>
-            <MaterialCommunityIcons name="magnify" size={18} color={D.textMuted} />
-          </View>
+          <MaterialCommunityIcons
+            name="magnify"
+            size={18}
+            color={D.textMuted}
+            style={{ marginLeft: 12 }}
+          />
           <TextInput
             style={s.searchInput}
             placeholder="Search services…"
@@ -170,96 +200,250 @@ export const AdminServicesScreen: React.FC<Props> = ({ navigation }) => {
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity style={s.searchClear} onPress={() => setSearchQuery('')}>
-              <MaterialCommunityIcons name="close-circle" size={16} color={D.textMuted} />
+            <TouchableOpacity
+              onPress={() => setSearchQuery("")}
+              style={{ paddingHorizontal: 12 }}
+            >
+              <MaterialCommunityIcons
+                name="close-circle"
+                size={16}
+                color={D.textMuted}
+              />
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      {/* Services List */}
+      {/* ── List ── */}
       {filteredServices.length === 0 ? (
-        <View style={s.emptyBlock}>
-          <View style={s.emptyIconBox}>
-            <MaterialCommunityIcons name="spa" size={36} color={D.textMuted} />
+        <View style={s.emptyWrap}>
+          <View style={s.emptyIcon}>
+            <MaterialCommunityIcons name="spa" size={32} color={D.textMuted} />
           </View>
           <Text style={s.emptyTitle}>
-            {searchQuery ? `No results for "${searchQuery}"` : 'No services yet'}
+            {searchQuery
+              ? `No results for "${searchQuery}"`
+              : "No services yet"}
           </Text>
           <Text style={s.emptyHint}>
-            {searchQuery ? 'Try a different search term' : 'Add your first service using the + button'}
+            {searchQuery
+              ? "Try a different search"
+              : 'Tap "Add Service" below to get started'}
           </Text>
         </View>
       ) : (
-        <ScrollView style={s.list} showsVerticalScrollIndicator={false}>
-          {filteredServices.map((service) => (
-            <View key={service.id} style={s.card}>
-              <View style={s.cardStripe} />
-              <View style={s.cardInner}>
-                <View style={s.cardTop}>
-                  <View style={[s.cardIconBox, { backgroundColor: D.greenMuted, borderColor: D.greenBorder }]}>
-                    <MaterialCommunityIcons name="spa" size={22} color={D.green} />
+        <ScrollView
+          style={s.scroll}
+          contentContainerStyle={s.listContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <SectionLabel>ALL SERVICES</SectionLabel>
+
+          {/* Single white card wrapping all rows */}
+          <View style={s.listCard}>
+            {filteredServices.map((service, index) => {
+              const isLast = index === filteredServices.length - 1;
+              return (
+                <View key={service.id} style={[s.row, isLast && s.rowLast]}>
+                  {/* Icon */}
+                  <View style={s.rowIcon}>
+                    <MaterialCommunityIcons
+                      name="spa"
+                      size={18}
+                      color={D.green}
+                    />
                   </View>
-                  <View style={s.cardMainInfo}>
-                    <Text style={s.cardName} numberOfLines={1}>{service.name}</Text>
-                    {service.description && (
-                      <Text style={s.cardDesc} numberOfLines={2}>{service.description}</Text>
-                    )}
+
+                  {/* Content */}
+                  <View style={s.rowBody}>
+                    <Text style={s.rowName} numberOfLines={1}>
+                      {service.name}
+                    </Text>
+                    {service.description ? (
+                      <Text style={s.rowDesc} numberOfLines={1}>
+                        {service.description}
+                      </Text>
+                    ) : null}
                   </View>
-                  <View style={s.cardPriceBox}>
-                    <Text style={s.cardPrice}>₹{service.price}</Text>
-                  </View>
-                </View>
-                <View style={s.cardActions}>
+
+                  {/* Price */}
+                  <Text style={s.rowPrice}>₹{service.price}</Text>
+
+                  {/* Three-dot */}
                   <TouchableOpacity
-                    style={[s.actionBtn, s.actionBtnBlue]}
-                    onPress={() => openEditModal(service)}
-                    activeOpacity={0.75}
+                    style={s.dotsBtn}
+                    onPress={() => openMenu(service)}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <MaterialCommunityIcons name="pencil-outline" size={15} color={D.blue} />
-                    <Text style={[s.actionBtnText, { color: D.blue }]}>Edit</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[s.actionBtn, s.actionBtnRed]}
-                    onPress={() => handleDelete(service)}
-                    activeOpacity={0.75}
-                  >
-                    <MaterialCommunityIcons name="delete-outline" size={15} color={D.red} />
-                    <Text style={[s.actionBtnText, { color: D.red }]}>Delete</Text>
+                    <MaterialCommunityIcons
+                      name="dots-vertical"
+                      size={20}
+                      color={D.textMuted}
+                    />
                   </TouchableOpacity>
                 </View>
-              </View>
-            </View>
-          ))}
+              );
+            })}
+          </View>
         </ScrollView>
       )}
 
-      {/* Add Button */}
-      <TouchableOpacity style={s.fab} onPress={openAddModal} activeOpacity={0.8}>
-        <MaterialCommunityIcons name="plus" size={28} color="#FFF" />
-      </TouchableOpacity>
+      {/* ── Bottom Bar ── */}
+      <View style={s.bottomBar}>
+        <TouchableOpacity
+          style={s.addBtn}
+          onPress={openAddModal}
+          activeOpacity={0.85}
+        >
+          <MaterialCommunityIcons name="plus" size={20} color="#fff" />
+          <Text style={s.addBtnText}>Add Service</Text>
+        </TouchableOpacity>
+      </View>
 
-      {/* Add/Edit Modal */}
-      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
-        <View style={s.modalOverlay}>
-          <View style={s.modalContent}>
-            <View style={s.modalHeader}>
-              <View style={[s.modalIconBox, { backgroundColor: D.greenMuted, borderColor: D.greenBorder }]}>
-                <MaterialCommunityIcons name="spa" size={24} color={D.green} />
+      {/* ── Three-dot Action Menu ── */}
+      <Modal
+        visible={menuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <TouchableOpacity
+          style={s.menuOverlay}
+          activeOpacity={1}
+          onPress={() => setMenuVisible(false)}
+        >
+          <View style={s.menuSheet}>
+            <View style={s.menuHandle} />
+            <Text style={s.menuItemName} numberOfLines={1}>
+              {menuService?.name}
+            </Text>
+            <View style={s.menuDivider} />
+
+            <TouchableOpacity
+              style={s.menuOption}
+              activeOpacity={0.7}
+              onPress={() => {
+                setMenuVisible(false);
+                if (menuService) openEditModal(menuService);
+              }}
+            >
+              <View
+                style={[s.menuOptionIcon, { backgroundColor: D.greenMuted }]}
+              >
+                <MaterialCommunityIcons
+                  name="pencil-outline"
+                  size={20}
+                  color={D.green}
+                />
               </View>
-              <Text style={s.modalTitle}>{editingService ? 'Edit Service' : 'Add New Service'}</Text>
-              <TouchableOpacity style={s.modalClose} onPress={() => setModalVisible(false)}>
-                <MaterialCommunityIcons name="close" size={20} color={D.textSub} />
+              <View style={s.menuOptionText}>
+                <Text style={s.menuOptionTitle}>Edit Service</Text>
+                <Text style={s.menuOptionSub}>
+                  Update name, price or description
+                </Text>
+              </View>
+              <MaterialCommunityIcons
+                name="chevron-right"
+                size={16}
+                color={D.textMuted}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[s.menuOption, { borderBottomWidth: 0 }]}
+              activeOpacity={0.7}
+              onPress={() => {
+                setMenuVisible(false);
+                if (menuService) handleDelete(menuService);
+              }}
+            >
+              <View style={[s.menuOptionIcon, { backgroundColor: D.redMuted }]}>
+                <MaterialCommunityIcons
+                  name="delete-outline"
+                  size={20}
+                  color={D.red}
+                />
+              </View>
+              <View style={s.menuOptionText}>
+                <Text style={[s.menuOptionTitle, { color: D.red }]}>
+                  Delete Service
+                </Text>
+                <Text style={s.menuOptionSub}>Remove from service list</Text>
+              </View>
+              <MaterialCommunityIcons
+                name="chevron-right"
+                size={16}
+                color={D.textMuted}
+              />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ── Add / Edit Modal ── */}
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={s.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setModalVisible(false)}
+        >
+          <TouchableOpacity activeOpacity={1} style={s.sheet}>
+            <View style={s.handle} />
+
+            {/* Sheet header */}
+            <View style={s.sheetHeader}>
+              <View style={s.sheetIconBox}>
+                <MaterialCommunityIcons
+                  name={
+                    editingService ? "pencil-outline" : "plus-circle-outline"
+                  }
+                  size={18}
+                  color={D.green}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.sheetTitle}>
+                  {editingService ? "Edit Service" : "Add New Service"}
+                </Text>
+                <Text style={s.sheetSub}>
+                  {editingService
+                    ? "Update details below"
+                    : "Fill in the details below"}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={s.closeBtn}
+                onPress={() => setModalVisible(false)}
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={18}
+                  color={D.textSub}
+                />
               </TouchableOpacity>
             </View>
 
-            <View style={s.formGroup}>
-              <Text style={s.formLabel}>Service Name *</Text>
-              <View style={s.inputWrap}>
-                <MaterialCommunityIcons name="text-box-outline" size={18} color={D.textMuted} />
+            <SectionLabel>SERVICE DETAILS</SectionLabel>
+
+            {/* Name */}
+            <View style={s.fieldGroup}>
+              <Text style={s.fieldLabel}>Service Name</Text>
+              <View style={s.fieldBox}>
+                <MaterialCommunityIcons
+                  name="spa"
+                  size={16}
+                  color={D.textMuted}
+                  style={s.fieldIcon}
+                />
                 <TextInput
-                  style={s.input}
-                  placeholder="e.g., Haircut, Facial Treatment…"
+                  style={s.fieldInput}
+                  placeholder="e.g. Haircut, Facial…"
                   placeholderTextColor={D.textMuted}
                   value={serviceName}
                   onChangeText={setServiceName}
@@ -268,13 +452,19 @@ export const AdminServicesScreen: React.FC<Props> = ({ navigation }) => {
               </View>
             </View>
 
-            <View style={s.formGroup}>
-              <Text style={s.formLabel}>Price (₹) *</Text>
-              <View style={s.inputWrap}>
-                <MaterialCommunityIcons name="currency-inr" size={18} color={D.textMuted} />
+            {/* Price */}
+            <View style={s.fieldGroup}>
+              <Text style={s.fieldLabel}>Price (₹)</Text>
+              <View style={s.fieldBox}>
+                <MaterialCommunityIcons
+                  name="currency-inr"
+                  size={16}
+                  color={D.textMuted}
+                  style={s.fieldIcon}
+                />
                 <TextInput
-                  style={s.input}
-                  placeholder="e.g., 500"
+                  style={s.fieldInput}
+                  placeholder="e.g. 500"
                   placeholderTextColor={D.textMuted}
                   value={servicePrice}
                   onChangeText={setServicePrice}
@@ -283,48 +473,74 @@ export const AdminServicesScreen: React.FC<Props> = ({ navigation }) => {
               </View>
             </View>
 
-            <View style={s.formGroup}>
-              <Text style={s.formLabel}>Description (optional)</Text>
-              <View style={[s.inputWrap, s.textareaWrap]}>
-                <MaterialCommunityIcons name="note-text-outline" size={18} color={D.textMuted} />
+            {/* Description */}
+            <View style={s.fieldGroup}>
+              <Text style={s.fieldLabel}>
+                Description{" "}
+                <Text style={{ color: D.textMuted, fontWeight: "500" }}>
+                  (optional)
+                </Text>
+              </Text>
+              <View style={[s.fieldBox, { alignItems: "flex-start" }]}>
+                <MaterialCommunityIcons
+                  name="note-text-outline"
+                  size={16}
+                  color={D.textMuted}
+                  style={[s.fieldIcon, { marginTop: 13 }]}
+                />
                 <TextInput
-                  style={[s.input, s.textarea]}
-                  placeholder="Brief description of the service…"
+                  style={[
+                    s.fieldInput,
+                    { minHeight: 72, textAlignVertical: "top", paddingTop: 12 },
+                  ]}
+                  placeholder="Brief description…"
                   placeholderTextColor={D.textMuted}
                   value={serviceDescription}
                   onChangeText={setServiceDescription}
                   multiline
-                  textAlignVertical="top"
                 />
               </View>
             </View>
 
-            <View style={s.modalButtons}>
+            {/* Buttons */}
+            <View style={s.sheetBtnRow}>
               <TouchableOpacity
-                style={[s.modalBtn, s.modalBtnCancel]}
+                style={s.cancelBtn}
                 onPress={() => setModalVisible(false)}
-                activeOpacity={0.75}
               >
-                <Text style={s.modalBtnText}>Cancel</Text>
+                <Text style={s.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[s.modalBtn, s.modalBtnSave, (!serviceName.trim() || !servicePrice.trim()) && { opacity: 0.5 }]}
+                style={[
+                  s.saveBtn,
+                  (!serviceName.trim() || !servicePrice.trim()) && {
+                    opacity: 0.5,
+                  },
+                ]}
                 onPress={handleSubmit}
-                disabled={!serviceName.trim() || !servicePrice.trim()}
+                disabled={
+                  !serviceName.trim() || !servicePrice.trim() || submitting
+                }
                 activeOpacity={0.85}
               >
                 {submitting ? (
-                  <ActivityIndicator color="#FFF" size="small" />
+                  <ActivityIndicator color="#fff" size="small" />
                 ) : (
                   <>
-                    <MaterialCommunityIcons name="check" size={18} color="#FFF" />
-                    <Text style={s.modalBtnText}>{editingService ? 'Update' : 'Add'} Service</Text>
+                    <MaterialCommunityIcons
+                      name={editingService ? "check" : "plus"}
+                      size={16}
+                      color="#fff"
+                    />
+                    <Text style={s.saveBtnText}>
+                      {editingService ? "Save Changes" : "Add Service"}
+                    </Text>
                   </>
                 )}
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
@@ -332,133 +548,328 @@ export const AdminServicesScreen: React.FC<Props> = ({ navigation }) => {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: D.bg },
+  root: { flex: 1, backgroundColor: D.bg },
 
-  // Header
-  header: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: D.surface, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16,
-    borderBottomWidth: 1, borderBottomColor: D.border,
+  // Top bar
+  topBar: {
+    backgroundColor: D.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: D.border,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    ...Platform.select({
+      ios: { paddingTop: 56 },
+      android: { paddingTop: 14 },
+    }),
   },
   backBtn: {
-    width: 40, height: 40, borderRadius: D.radius.md,
-    backgroundColor: D.bg, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: D.border,
+    width: 36,
+    height: 36,
+    borderRadius: D.radius.md,
+    backgroundColor: D.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  headerIconBox: {
-    width: 44, height: 44, borderRadius: D.radius.md,
-    backgroundColor: D.greenMuted, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: D.greenBorder,
+  topBarTitle: {
+    flex: 1,
+    fontSize: 17,
+    fontWeight: "700",
+    color: D.text,
+    letterSpacing: -0.3,
   },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: D.text, letterSpacing: -0.4 },
-  headerSub: { fontSize: 12, color: D.textMuted, marginTop: 1 },
+  topBarCount: {
+    backgroundColor: D.greenMuted,
+    borderRadius: D.radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: D.greenBorder,
+  },
+  topBarCountText: { fontSize: 12, fontWeight: "700", color: D.green },
 
   // Search
-  searchWrap: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 8 },
+  searchWrap: {
+    backgroundColor: D.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: D.border,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
   searchBar: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: D.surface, borderRadius: D.radius.md,
-    borderWidth: 1, borderColor: D.border, overflow: 'hidden',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: D.surfaceAlt,
+    borderRadius: D.radius.lg,
+    borderWidth: 1,
+    borderColor: D.border,
   },
-  searchIcon: { width: 42, height: 44, alignItems: 'center', justifyContent: 'center', borderRightWidth: 1, borderRightColor: D.border },
-  searchInput: { flex: 1, paddingHorizontal: 12, fontSize: 14, color: D.text },
-  searchClear: { paddingHorizontal: 10 },
-
-  // List
-  list: { flex: 1, paddingHorizontal: 20, paddingBottom: 100 },
-  emptyBlock: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
-  emptyIconBox: {
-    width: 80, height: 80, borderRadius: D.radius.xl,
-    backgroundColor: D.surface, borderWidth: 1, borderColor: D.border,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 16,
-  },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: D.text, marginBottom: 6 },
-  emptyHint: { fontSize: 13, color: D.textMuted, textAlign: 'center' },
-
-  // Card
-  card: {
-    flexDirection: 'row', backgroundColor: D.surface, borderRadius: D.radius.xl,
-    borderWidth: 1, borderColor: D.border, marginBottom: 10, overflow: 'hidden',
-    shadowColor: D.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 4, elevation: 2,
-  },
-  cardStripe: { width: 4, backgroundColor: D.green },
-  cardInner: { flex: 1, padding: 14 },
-  cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 12 },
-  cardIconBox: {
-    width: 42, height: 42, borderRadius: D.radius.md,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 1,
-  },
-  cardMainInfo: { flex: 1 },
-  cardName: { fontSize: 15, fontWeight: '700', color: D.text, marginBottom: 4 },
-  cardDesc: { fontSize: 12, color: D.textSub, lineHeight: 18 },
-  cardPriceBox: { alignItems: 'flex-end' },
-  cardPrice: { fontSize: 18, fontWeight: '800', color: D.green, letterSpacing: -0.5 },
-  cardActions: { flexDirection: 'row', gap: 8 },
-  actionBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 12, paddingVertical: 8,
-    borderRadius: D.radius.md, borderWidth: 1,
-  },
-  actionBtnBlue: { backgroundColor: D.blueMuted, borderColor: D.blueBorder },
-  actionBtnRed: { backgroundColor: D.redMuted, borderColor: D.redBorder },
-  actionBtnText: { fontSize: 12, fontWeight: '700' },
-
-  // FAB
-  fab: {
-    position: 'absolute', right: 20, bottom: 24,
-    width: 56, height: 56, borderRadius: 28,
-    backgroundColor: D.green, alignItems: 'center', justifyContent: 'center',
-    shadowColor: D.green, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 8,
+  searchInput: {
+    flex: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 11,
+    fontSize: 14,
+    color: D.text,
   },
 
-  // Modal
+  // Scroll + list
+  scroll: { flex: 1 },
+  listContent: { padding: 16, paddingBottom: 110 },
+
+  // Single white card
+  listCard: {
+    backgroundColor: D.surface,
+    borderRadius: D.radius.xl,
+    borderWidth: 1,
+    borderColor: D.border,
+  },
+
+  // Flat rows
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 13,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F2F4",
+  },
+  rowLast: { borderBottomWidth: 0 },
+  rowIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: D.greenMuted,
+    borderWidth: 1,
+    borderColor: D.greenBorder,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  rowBody: { flex: 1, minWidth: 0 },
+  rowName: { fontSize: 14, fontWeight: "700", color: D.text },
+  rowDesc: { fontSize: 12, color: D.textMuted, marginTop: 2 },
+  rowPrice: { fontSize: 14, fontWeight: "800", color: D.green, flexShrink: 0 },
+  dotsBtn: {
+    width: 30,
+    height: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+
+  // Empty
+  emptyWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 40,
+  },
+  emptyIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: D.radius.xl,
+    backgroundColor: D.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: D.border,
+    marginBottom: 14,
+  },
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: D.text,
+    marginBottom: 6,
+  },
+  emptyHint: { fontSize: 13, color: D.textMuted, textAlign: "center" },
+
+  // Bottom bar
+  bottomBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: D.surface,
+    borderTopWidth: 1,
+    borderTopColor: D.border,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: Platform.select({ ios: 32, android: 14, default: 14 }),
+  },
+  addBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: D.green,
+    borderRadius: D.radius.pill,
+    paddingVertical: 14,
+  },
+  addBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+
+  // Three-dot menu
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "flex-end",
+  },
+  menuSheet: {
+    backgroundColor: D.surface,
+    borderTopLeftRadius: D.radius.xxl,
+    borderTopRightRadius: D.radius.xxl,
+    paddingTop: 12,
+    paddingBottom: Platform.select({ ios: 36, android: 20, default: 20 }),
+    borderTopWidth: 1,
+    borderColor: D.border,
+  },
+  menuHandle: {
+    width: 36,
+    height: 4,
+    backgroundColor: D.border,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  menuItemName: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: D.textMuted,
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+  menuDivider: { height: 1, backgroundColor: D.border, marginBottom: 4 },
+  menuOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F2F4",
+  },
+  menuOptionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: D.radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  menuOptionText: { flex: 1 },
+  menuOptionTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: D.text,
+    marginBottom: 2,
+  },
+  menuOptionSub: { fontSize: 12, color: D.textMuted },
+
+  // Add/Edit sheet
   modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'center', alignItems: 'center', padding: 24,
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "flex-end",
   },
-  modalContent: {
-    backgroundColor: D.surface, borderRadius: D.radius.xl,
-    padding: 24, width: '100%', maxWidth: 420,
-    borderWidth: 1, borderColor: D.border,
+  sheet: {
+    backgroundColor: D.surface,
+    borderTopLeftRadius: D.radius.xxl,
+    borderTopRightRadius: D.radius.xxl,
+    padding: 20,
+    paddingBottom: Platform.select({ ios: 36, android: 24, default: 24 }),
+    borderTopWidth: 1,
+    borderColor: D.border,
   },
-  modalHeader: {
-    flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20,
+  handle: {
+    width: 36,
+    height: 4,
+    backgroundColor: D.border,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 18,
   },
-  modalIconBox: {
-    width: 44, height: 44, borderRadius: D.radius.md,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 1,
+  sheetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 20,
   },
-  modalTitle: { flex: 1, fontSize: 18, fontWeight: '800', color: D.text, letterSpacing: -0.3 },
-  modalClose: {
-    width: 36, height: 36, borderRadius: D.radius.sm,
-    backgroundColor: D.bg, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: D.border,
+  sheetIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: D.radius.md,
+    backgroundColor: D.greenMuted,
+    borderWidth: 1,
+    borderColor: D.greenBorder,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sheetTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: D.text,
+    letterSpacing: -0.3,
+  },
+  sheetSub: { fontSize: 12, color: D.textMuted, marginTop: 1 },
+  closeBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: D.radius.sm,
+    backgroundColor: D.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
-  // Form
-  formGroup: { marginBottom: 16 },
-  formLabel: { fontSize: 12, fontWeight: '700', color: D.text, marginBottom: 8, letterSpacing: 0.3 },
-  inputWrap: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: D.bg, borderRadius: D.radius.md,
-    borderWidth: 1, borderColor: D.border, overflow: 'hidden',
+  // Form fields
+  fieldGroup: { marginBottom: 12 },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: D.text,
+    marginBottom: 6,
   },
-  input: { flex: 1, paddingHorizontal: 12, paddingVertical: 12, fontSize: 15, color: D.text },
-  textareaWrap: { alignItems: 'flex-start' },
-  textarea: { minHeight: 80, textAlignVertical: 'top', paddingTop: 12 },
+  fieldBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: D.surfaceAlt,
+    borderRadius: D.radius.md,
+    borderWidth: 1.5,
+    borderColor: D.border,
+    overflow: "hidden",
+  },
+  fieldIcon: { marginLeft: 12 },
+  fieldInput: {
+    flex: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: D.text,
+    fontWeight: "500",
+  },
 
-  // Modal buttons
-  modalButtons: { flexDirection: 'row', gap: 10, marginTop: 8 },
-  modalBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    paddingVertical: 14, borderRadius: D.radius.lg, borderWidth: 1,
+  // Sheet buttons
+  sheetBtnRow: { flexDirection: "row", gap: 10, marginTop: 8 },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: D.radius.lg,
+    backgroundColor: D.surfaceAlt,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: D.border,
   },
-  modalBtnCancel: {
-    flex: 1, backgroundColor: D.bg, borderColor: D.border,
+  cancelBtnText: { fontSize: 14, fontWeight: "700", color: D.textSub },
+  saveBtn: {
+    flex: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: D.radius.lg,
+    backgroundColor: D.green,
   },
-  modalBtnSave: {
-    flex: 2, backgroundColor: D.green, borderColor: D.greenBorder,
-    shadowColor: D.green, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
-  },
-  modalBtnText: { fontSize: 15, fontWeight: '800', color: D.text },
+  saveBtnText: { color: "#fff", fontSize: 14, fontWeight: "800" },
 });
