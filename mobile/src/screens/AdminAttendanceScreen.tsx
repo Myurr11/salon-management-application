@@ -1,100 +1,179 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from "react";
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity,
-  Modal, Image, ScrollView, ActivityIndicator,
-} from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useAuth } from '../context/AuthContext';
-import { DatePickerField } from '../components/DatePickerField';
-import { useData } from '../context/DataContext';
-import { colors, theme } from '../theme';
-import type { Attendance } from '../types';
-import * as attendancePhotoService from '../services/attendancePhotoService';
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  Modal,
+  Image,
+  ScrollView,
+  ActivityIndicator,
+  Platform,
+} from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useAuth } from "../context/AuthContext";
+import { DatePickerField } from "../components/DatePickerField";
+import { useData } from "../context/DataContext";
+import type { Attendance } from "../types";
+import * as attendancePhotoService from "../services/attendancePhotoService";
 
-// ─── Design Tokens ────────────────────────────────────────────────────────────
+// ─── Design Tokens — shared system ───────────────────────────────────────────
 const D = {
-  bg: '#F7F5F2',
-  surface: '#FFFFFF',
-  border: '#E8E3DB',
+  bg: "#F7F9FB",
+  surface: "#FFFFFF",
+  surfaceAlt: "#F2F4F6",
 
-  green: '#2D9A5F',
-  greenMuted: '#2D9A5F15',
-  greenBorder: '#2D9A5F40',
+  green: "#166534",
+  greenMuted: "rgba(22,101,52,0.10)",
+  greenBorder: "rgba(22,101,52,0.25)",
 
-  gold: '#C9A84C',
-  goldMuted: '#C9A84C18',
-  goldBorder: '#C9A84C44',
+  border: "#E8EAEC",
 
-  text: '#1A1814',
-  textSub: '#6B6560',
-  textMuted: '#A09A8F',
+  text: "#191C1E",
+  textSub: "#707A6F",
+  textMuted: "#9AA09E",
 
-  blue: '#3A7EC8',
-  blueMuted: '#3A7EC815',
-  blueBorder: '#3A7EC833',
+  red: "#BA1A1A",
+  redMuted: "rgba(186,26,26,0.08)",
+  redBorder: "rgba(186,26,26,0.20)",
 
-  amber: '#D4872A',
-  amberMuted: '#D4872A15',
-  amberBorder: '#D4872A33',
+  amber: "#B8742A",
+  amberMuted: "rgba(184,116,42,0.10)",
+  amberBorder: "rgba(184,116,42,0.25)",
 
-  red: '#D94F4F',
-  redMuted: '#D94F4F15',
-  redBorder: '#D94F4F33',
+  blue: "#1B5FA6",
+  blueMuted: "rgba(27,95,166,0.10)",
+  blueBorder: "rgba(27,95,166,0.25)",
 
-  purple: '#7C5CBF',
-  purpleMuted: '#7C5CBF15',
-  purpleBorder: '#7C5CBF33',
-
-  shadow: 'rgba(0,0,0,0.06)',
-  radius: { sm: 8, md: 12, lg: 16, xl: 20, pill: 999 },
+  radius: { sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, pill: 999 },
 };
 
 // ─── Status config ────────────────────────────────────────────────────────────
 const getStatusCfg = (status: string) => {
   switch (status) {
-    case 'present':  return { label: 'Present',  color: D.green,  bg: D.greenMuted,  border: D.greenBorder,  icon: 'check-circle-outline'  };
-    case 'late':     return { label: 'Late',      color: D.amber,  bg: D.amberMuted,  border: D.amberBorder,  icon: 'clock-alert-outline'   };
-    case 'half_day': return { label: 'Half Day',  color: D.blue,   bg: D.blueMuted,   border: D.blueBorder,   icon: 'circle-half-full'       };
-    case 'absent':   return { label: 'Absent',    color: D.red,    bg: D.redMuted,    border: D.redBorder,    icon: 'close-circle-outline'  };
-    default:         return { label: 'Unknown',   color: D.textMuted, bg: D.bg, border: D.border, icon: 'help-circle-outline' };
+    case "present":
+      return {
+        label: "Present",
+        color: D.green,
+        bg: D.greenMuted,
+        border: D.greenBorder,
+        icon: "check-circle-outline",
+      };
+    case "late":
+      return {
+        label: "Late",
+        color: D.amber,
+        bg: D.amberMuted,
+        border: D.amberBorder,
+        icon: "clock-alert-outline",
+      };
+    case "half_day":
+      return {
+        label: "Half Day",
+        color: D.blue,
+        bg: D.blueMuted,
+        border: D.blueBorder,
+        icon: "circle-half-full",
+      };
+    case "absent":
+      return {
+        label: "Absent",
+        color: D.red,
+        bg: D.redMuted,
+        border: D.redBorder,
+        icon: "close-circle-outline",
+      };
+    default:
+      return {
+        label: "Unknown",
+        color: D.textMuted,
+        bg: D.surfaceAlt,
+        border: D.border,
+        icon: "help-circle-outline",
+      };
   }
 };
 
-// ─── Avatar colors ────────────────────────────────────────────────────────────
-const AVATAR_COLORS = ['#1e3a5f', '#0d9488', '#059669', '#2563eb', '#7c3aed'];
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const AVATAR_COLORS = ["#1E3A5F", "#0D9488", "#059669", "#2563EB", "#7C3AED"];
 const avatarColor = (name: string) => {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
   return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
 };
 const initials = (name: string) =>
-  name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
-const formatTime = (t?: string) => {
-  if (!t) return null;
-  return new Date(t).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-};
+const formatTime = (t?: string) =>
+  t
+    ? new Date(t).toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
 
 const calcHours = (checkIn?: string, checkOut?: string) => {
   if (!checkIn || !checkOut) return null;
-  const diff = new Date(checkOut).getTime() - new Date(checkIn).getTime();
-  return (diff / 3600000).toFixed(1);
+  return (
+    (new Date(checkOut).getTime() - new Date(checkIn).getTime()) /
+    3600000
+  ).toFixed(1);
 };
 
-interface Props { navigation: any; }
+// ─── SectionLabel ─────────────────────────────────────────────────────────────
+const SectionLabel = ({ children }: { children: string }) => (
+  <View style={sl.row}>
+    <View style={sl.line} />
+    <Text style={sl.text}>{children}</Text>
+    <View style={sl.line} />
+  </View>
+);
+const sl = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 12,
+  },
+  line: { flex: 1, height: 1, backgroundColor: D.border },
+  text: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: D.textSub,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
+});
+
+interface Props {
+  navigation: any;
+}
 
 export const AdminAttendanceScreen: React.FC<Props> = ({ navigation }) => {
   const { user, staffMembers } = useAuth();
   const { getAttendance } = useData();
 
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(
+    new Date().toISOString().split("T")[0],
+  );
   const [records, setRecords] = useState<Attendance[]>([]);
   const [loading, setLoading] = useState(true);
-  const [photoMap, setPhotoMap] = useState<Record<string, attendancePhotoService.AttendancePhotoMeta[]>>({});
-  const [selectedPhoto, setSelectedPhoto] = useState<attendancePhotoService.AttendancePhotoMeta | null>(null);
+  const [photoMap, setPhotoMap] = useState<
+    Record<string, attendancePhotoService.AttendancePhotoMeta[]>
+  >({});
+  const [selectedPhoto, setSelectedPhoto] =
+    useState<attendancePhotoService.AttendancePhotoMeta | null>(null);
 
-  useEffect(() => { loadAttendance(); }, [selectedStaffId, selectedDate]);
+  useEffect(() => {
+    loadAttendance();
+  }, [selectedStaffId, selectedDate]);
 
   const loadAttendance = async () => {
     try {
@@ -104,132 +183,153 @@ export const AdminAttendanceScreen: React.FC<Props> = ({ navigation }) => {
       const data = await getAttendance(filters);
       setRecords(data);
       await attendancePhotoService.cleanupOldPhotos().catch(() => {});
-      const map: Record<string, attendancePhotoService.AttendancePhotoMeta[]> = {};
+      const map: Record<string, attendancePhotoService.AttendancePhotoMeta[]> =
+        {};
       for (const r of data) {
-        const photos = await attendancePhotoService.getPhotosForAttendance(r.staffId, r.attendanceDate);
+        const photos = await attendancePhotoService.getPhotosForAttendance(
+          r.staffId,
+          r.attendanceDate,
+        );
         if (photos.length > 0) map[r.id] = photos;
       }
       setPhotoMap(map);
     } catch (e) {
-      console.error('Error loading attendance:', e);
+      console.error("Error loading attendance:", e);
     } finally {
       setLoading(false);
     }
   };
 
-  // Summary counts
   const summary = useMemo(() => {
-    const present  = records.filter(r => r.status === 'present').length;
-    const late     = records.filter(r => r.status === 'late').length;
-    const halfDay  = records.filter(r => r.status === 'half_day').length;
-    const absent   = records.filter(r => r.status === 'absent').length;
+    const present = records.filter((r) => r.status === "present").length;
+    const late = records.filter((r) => r.status === "late").length;
+    const halfDay = records.filter((r) => r.status === "half_day").length;
+    const absent = records.filter((r) => r.status === "absent").length;
     const totalHrs = records.reduce((s, r) => {
-      const h = parseFloat(calcHours(r.checkInTime, r.checkOutTime) ?? '0');
+      const h = parseFloat(calcHours(r.checkInTime, r.checkOutTime) ?? "0");
       return s + (isNaN(h) ? 0 : h);
     }, 0);
     return { present, late, halfDay, absent, totalHrs };
   }, [records]);
 
   const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    new Date(d).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
 
-  if (!user || user.role !== 'admin') {
+  if (!user || user.role !== "admin") {
     return (
-      <View style={[s.center, { flex: 1, backgroundColor: D.bg }]}>
-        <View style={s.restrictedBox}>
-          <MaterialCommunityIcons name="shield-alert-outline" size={32} color={D.textMuted} />
+      <View style={s.center}>
+        <View style={s.emptyIcon}>
+          <MaterialCommunityIcons
+            name="shield-alert-outline"
+            size={28}
+            color={D.textMuted}
+          />
         </View>
-        <Text style={s.restrictedTitle}>Admin Access Required</Text>
+        <Text style={s.emptyTitle}>Admin Access Required</Text>
       </View>
     );
   }
 
-  const renderItem = ({ item }: { item: Attendance }) => {
+  // ── Render attendance row ──
+  const renderItem = ({ item, index }: { item: Attendance; index: number }) => {
     const cfg = getStatusCfg(item.status);
     const photos = photoMap[item.id] ?? [];
-    const checkIn  = formatTime(item.checkInTime);
+    const checkIn = formatTime(item.checkInTime);
     const checkOut = formatTime(item.checkOutTime);
-    const hours    = calcHours(item.checkInTime, item.checkOutTime);
+    const hours = calcHours(item.checkInTime, item.checkOutTime);
+    const isLast = index === records.length - 1;
 
     return (
-      <View style={s.card}>
-        {/* Left stripe */}
-        <View style={[s.cardStripe, { backgroundColor: cfg.color }]} />
+      <View style={[ar.row, isLast && ar.rowLast]}>
+        {/* Avatar */}
+        <View
+          style={[ar.avatar, { backgroundColor: avatarColor(item.staffName) }]}
+        >
+          <Text style={ar.avatarText}>{initials(item.staffName)}</Text>
+        </View>
 
-        <View style={s.cardInner}>
-          {/* Top row */}
-          <View style={s.cardTop}>
-            <View style={[s.cardAvatar, { backgroundColor: avatarColor(item.staffName) }]}>
-              <Text style={s.cardAvatarText}>{initials(item.staffName)}</Text>
-            </View>
-            <View style={s.cardStaffInfo}>
-              <Text style={s.cardStaffName}>{item.staffName}</Text>
-              <Text style={s.cardDate}>{formatDate(item.attendanceDate)}</Text>
-            </View>
-            <View style={[s.statusPill, { backgroundColor: cfg.bg, borderColor: cfg.border }]}>
-              <MaterialCommunityIcons name={cfg.icon as any} size={12} color={cfg.color} />
-              <Text style={[s.statusPillText, { color: cfg.color }]}>{cfg.label}</Text>
+        {/* Centre content */}
+        <View style={ar.body}>
+          {/* Name + status */}
+          <View style={ar.nameRow}>
+            <Text style={ar.name} numberOfLines={1}>
+              {item.staffName}
+            </Text>
+            <View
+              style={[
+                ar.statusPill,
+                { backgroundColor: cfg.bg, borderColor: cfg.border },
+              ]}
+            >
+              <View style={[ar.statusDot, { backgroundColor: cfg.color }]} />
+              <Text style={[ar.statusText, { color: cfg.color }]}>
+                {cfg.label}
+              </Text>
             </View>
           </View>
 
-          {/* Time blocks */}
-          <View style={s.timeRow}>
+          {/* Time row */}
+          <View style={ar.timeRow}>
             {/* Check in */}
-            <View style={[s.timeBlock, checkIn && { borderColor: D.greenBorder, backgroundColor: D.greenMuted }]}>
-              <View style={[s.timeBlockIcon, { backgroundColor: checkIn ? D.greenMuted : D.bg }]}>
-                <MaterialCommunityIcons name="login-variant" size={15} color={checkIn ? D.green : D.textMuted} />
-              </View>
-              <Text style={s.timeBlockLabel}>CHECK IN</Text>
-              <Text style={[s.timeBlockValue, checkIn ? { color: D.green } : { color: D.textMuted }]}>
-                {checkIn ?? '--:--'}
+            <View style={ar.timeItem}>
+              <MaterialCommunityIcons
+                name="login-variant"
+                size={12}
+                color={checkIn ? D.green : D.textMuted}
+              />
+              <Text
+                style={[ar.timeVal, { color: checkIn ? D.green : D.textMuted }]}
+              >
+                {checkIn ?? "--:--"}
               </Text>
             </View>
 
-            <MaterialCommunityIcons name="arrow-right" size={16} color={D.border} style={{ marginTop: 14 }} />
+            <Text style={ar.timeSep}>→</Text>
 
             {/* Check out */}
-            <View style={[s.timeBlock,
-              checkOut && { borderColor: D.blueBorder, backgroundColor: D.blueMuted },
-              checkIn && !checkOut && { borderColor: D.amberBorder, backgroundColor: D.amberMuted },
-            ]}>
-              <View style={[s.timeBlockIcon, {
-                backgroundColor: checkOut ? D.blueMuted : checkIn ? D.amberMuted : D.bg,
-              }]}>
-                <MaterialCommunityIcons
-                  name="logout-variant" size={15}
-                  color={checkOut ? D.blue : checkIn ? D.amber : D.textMuted}
-                />
-              </View>
-              <Text style={s.timeBlockLabel}>CHECK OUT</Text>
-              <Text style={[s.timeBlockValue,
-                checkOut ? { color: D.blue } : checkIn ? { color: D.amber } : { color: D.textMuted },
-              ]}>
-                {checkOut ?? (checkIn ? 'Pending' : '--:--')}
+            <View style={ar.timeItem}>
+              <MaterialCommunityIcons
+                name="logout-variant"
+                size={12}
+                color={checkOut ? D.blue : checkIn ? D.amber : D.textMuted}
+              />
+              <Text
+                style={[
+                  ar.timeVal,
+                  {
+                    color: checkOut ? D.blue : checkIn ? D.amber : D.textMuted,
+                  },
+                ]}
+              >
+                {checkOut ?? (checkIn ? "Pending" : "--:--")}
               </Text>
             </View>
 
-            {/* Hours */}
-            <View style={[s.timeBlock, hours && { borderColor: D.purpleBorder, backgroundColor: D.purpleMuted }]}>
-              <View style={[s.timeBlockIcon, { backgroundColor: hours ? D.purpleMuted : D.bg }]}>
-                <MaterialCommunityIcons name="timer-outline" size={15} color={hours ? D.purple : D.textMuted} />
-              </View>
-              <Text style={s.timeBlockLabel}>HOURS</Text>
-              <Text style={[s.timeBlockValue, hours ? { color: D.purple } : { color: D.textMuted }]}>
-                {hours ? `${hours}h` : '--'}
-              </Text>
-            </View>
+            {hours && (
+              <>
+                <Text style={ar.timeSep}>·</Text>
+                <Text style={[ar.timeVal, { color: D.textSub }]}>{hours}h</Text>
+              </>
+            )}
           </View>
 
           {/* Photo badge */}
           {photos.length > 0 && (
             <TouchableOpacity
-              style={s.photoBadge}
+              style={ar.photoBadge}
               onPress={() => setSelectedPhoto(photos[photos.length - 1])}
-              activeOpacity={0.8}
+              activeOpacity={0.7}
             >
-              <MaterialCommunityIcons name="camera-outline" size={13} color={D.blue} />
-              <Text style={s.photoBadgeText}>View attendance photo</Text>
-              <MaterialCommunityIcons name="chevron-right" size={13} color={D.blue} />
+              <MaterialCommunityIcons
+                name="camera-outline"
+                size={12}
+                color={D.green}
+              />
+              <Text style={ar.photoBadgeText}>View photo</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -238,89 +338,141 @@ export const AdminAttendanceScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <View style={s.container}>
-
-      {/* ── Header ── */}
-      <View style={s.header}>
-        <View style={s.headerGlow} />
-        <View style={s.headerLeft}>
-          <View style={s.headerIconBox}>
-            <MaterialCommunityIcons name="clipboard-clock-outline" size={22} color={D.green} />
+    <View style={s.root}>
+      {/* ── Top Bar ── */}
+      <View style={s.topBar}>
+        <TouchableOpacity
+          style={s.backBtn}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <MaterialCommunityIcons name="arrow-left" size={20} color={D.text} />
+        </TouchableOpacity>
+        <Text style={s.topBarTitle}>Attendance</Text>
+        {!loading && records.length > 0 && (
+          <View style={s.hrsBadge}>
+            <Text style={s.hrsBadgeLabel}>Total hrs</Text>
+            <Text style={s.hrsBadgeVal}>{summary.totalHrs.toFixed(1)}h</Text>
           </View>
-          <View>
-            <Text style={s.headerTitle}>Attendance</Text>
-            <Text style={s.headerSub}>{formatDate(selectedDate)}</Text>
-          </View>
-        </View>
-        <View style={s.headerHrsBadge}>
-          <Text style={s.headerHrsLabel}>TOTAL HRS</Text>
-          <Text style={s.headerHrsValue}>{summary.totalHrs.toFixed(1)}h</Text>
-        </View>
+        )}
       </View>
 
-      {/* ── Filters ── */}
+      {/* ── Filters panel ── */}
       <View style={s.filtersPanel}>
-        {/* Date picker */}
-        <View style={s.filterDateRow}>
-          <View style={s.filterDateIcon}>
-            <MaterialCommunityIcons name="calendar-outline" size={16} color={D.green} />
+        {/* Date row */}
+        <View style={s.dateRow}>
+          <View style={s.dateIcon}>
+            <MaterialCommunityIcons
+              name="calendar-outline"
+              size={16}
+              color={D.green}
+            />
           </View>
           <DatePickerField
             value={selectedDate}
             onChange={setSelectedDate}
             placeholder="Select date"
-            style={s.datePickerField}
+            style={s.datePicker}
           />
         </View>
 
         {/* Staff chips */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.staffChips}>
-          {[{ id: null, name: 'All Staff' }, ...staffMembers].map((staff: any) => {
-            const active = selectedStaffId === staff.id;
-            return (
-              <TouchableOpacity
-                key={staff.id ?? 'all'}
-                style={[s.staffChip, active && s.staffChipActive]}
-                onPress={() => setSelectedStaffId(staff.id)}
-                activeOpacity={0.8}
-              >
-                {staff.id && (
-                  <View style={[s.staffChipAvatar, { backgroundColor: active ? D.green : avatarColor(staff.name) }]}>
-                    <Text style={s.staffChipAvatarText}>{initials(staff.name)}</Text>
-                  </View>
-                )}
-                {!staff.id && (
-                  <MaterialCommunityIcons
-                    name="account-group-outline" size={14}
-                    color={active ? D.green : D.textMuted}
-                  />
-                )}
-                <Text style={[s.staffChipText, active && s.staffChipTextActive]}>
-                  {staff.id ? staff.name.split(' ')[0] : 'All Staff'}
-                </Text>
-                {active && <MaterialCommunityIcons name="check" size={12} color={D.green} />}
-              </TouchableOpacity>
-            );
-          })}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={s.chipsRow}
+        >
+          {[{ id: null, name: "All Staff" }, ...staffMembers].map(
+            (staff: any) => {
+              const active = selectedStaffId === staff.id;
+              return (
+                <TouchableOpacity
+                  key={staff.id ?? "all"}
+                  style={[s.chip, active && s.chipActive]}
+                  onPress={() => setSelectedStaffId(staff.id)}
+                  activeOpacity={0.8}
+                >
+                  {staff.id ? (
+                    <View
+                      style={[
+                        s.chipAvatar,
+                        {
+                          backgroundColor: active
+                            ? D.green
+                            : avatarColor(staff.name),
+                        },
+                      ]}
+                    >
+                      <Text style={s.chipAvatarText}>
+                        {initials(staff.name)}
+                      </Text>
+                    </View>
+                  ) : (
+                    <MaterialCommunityIcons
+                      name="account-group-outline"
+                      size={14}
+                      color={active ? D.green : D.textMuted}
+                    />
+                  )}
+                  <Text style={[s.chipText, active && s.chipTextActive]}>
+                    {staff.id ? staff.name.split(" ")[0] : "All"}
+                  </Text>
+                  {active && (
+                    <MaterialCommunityIcons
+                      name="check"
+                      size={11}
+                      color={D.green}
+                    />
+                  )}
+                </TouchableOpacity>
+              );
+            },
+          )}
         </ScrollView>
       </View>
 
-      {/* ── Summary band ── */}
+      {/* ── Summary strip ── */}
       {!loading && records.length > 0 && (
-        <View style={s.summaryBand}>
+        <View style={s.summaryStrip}>
           {[
-            { label: 'Present',  value: summary.present,  color: D.green,  bg: D.greenMuted,  border: D.greenBorder,  icon: 'check-circle-outline' },
-            { label: 'Late',     value: summary.late,     color: D.amber,  bg: D.amberMuted,  border: D.amberBorder,  icon: 'clock-alert-outline'  },
-            { label: 'Half Day', value: summary.halfDay,  color: D.blue,   bg: D.blueMuted,   border: D.blueBorder,   icon: 'circle-half-full'      },
-            { label: 'Absent',   value: summary.absent,   color: D.red,    bg: D.redMuted,    border: D.redBorder,    icon: 'close-circle-outline' },
-          ].map(stat => (
-            <View key={stat.label} style={[s.summaryCard, { borderColor: stat.border }]}>
-              <View style={[s.summaryIcon, { backgroundColor: stat.bg }]}>
-                <MaterialCommunityIcons name={stat.icon as any} size={14} color={stat.color} />
+            {
+              label: "Present",
+              value: summary.present,
+              color: D.green,
+              bg: D.greenMuted,
+              border: D.greenBorder,
+            },
+            {
+              label: "Late",
+              value: summary.late,
+              color: D.amber,
+              bg: D.amberMuted,
+              border: D.amberBorder,
+            },
+            {
+              label: "Half Day",
+              value: summary.halfDay,
+              color: D.blue,
+              bg: D.blueMuted,
+              border: D.blueBorder,
+            },
+            {
+              label: "Absent",
+              value: summary.absent,
+              color: D.red,
+              bg: D.redMuted,
+              border: D.redBorder,
+            },
+          ].map((stat, i) => (
+            <React.Fragment key={stat.label}>
+              {i > 0 && <View style={s.stripDivider} />}
+              <View style={s.stripStat}>
+                <Text style={[s.stripVal, { color: stat.color }]}>
+                  {stat.value}
+                </Text>
+                <Text style={s.stripLabel}>{stat.label}</Text>
               </View>
-              <Text style={[s.summaryValue, { color: stat.color }]}>{stat.value}</Text>
-              <Text style={s.summaryLabel}>{stat.label}</Text>
-            </View>
+            </React.Fragment>
           ))}
         </View>
       )}
@@ -333,72 +485,127 @@ export const AdminAttendanceScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       ) : records.length === 0 ? (
         <View style={s.center}>
-          <View style={s.emptyIconBox}>
-            <MaterialCommunityIcons name="clipboard-text-clock-outline" size={36} color={D.textMuted} />
+          <View style={s.emptyIcon}>
+            <MaterialCommunityIcons
+              name="clipboard-text-clock-outline"
+              size={28}
+              color={D.textMuted}
+            />
           </View>
           <Text style={s.emptyTitle}>No records found</Text>
-          <Text style={s.emptyHint}>No attendance was marked for this date / staff filter</Text>
+          <Text style={s.emptyHint}>
+            No attendance marked for this date or staff filter
+          </Text>
         </View>
       ) : (
         <FlatList
           data={records}
-          keyExtractor={item => item.id}
+          keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={s.listContent}
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            <SectionLabel>{formatDate(selectedDate)}</SectionLabel>
+          }
+          // Single white card — first/last rows get radius via FlatList wrapper
+          style={s.flatList}
         />
       )}
 
-      {/* ── Photo modal ── */}
+      {/* ── Photo Modal ── */}
       <Modal
         visible={!!selectedPhoto}
-        animationType="fade"
+        animationType="slide"
         transparent
         onRequestClose={() => setSelectedPhoto(null)}
       >
-        <View style={s.photoBackdrop}>
-          <View style={s.photoSheet}>
-            {/* Handle */}
-            <View style={s.photoHandle} />
+        <View style={s.modalOverlay}>
+          <View style={s.sheet}>
+            <View style={s.handle} />
 
             {selectedPhoto && (
               <>
-                {/* Caption header */}
                 <View style={s.photoCaptionRow}>
-                  <View style={[s.photoCaptionAvatar, { backgroundColor: avatarColor(selectedPhoto.staffName ?? '') }]}>
-                    <Text style={s.photoCaptionAvatarText}>{initials(selectedPhoto.staffName ?? '?')}</Text>
+                  <View
+                    style={[
+                      s.photoCaptionAvatar,
+                      {
+                        backgroundColor: avatarColor(
+                          selectedPhoto.staffName ?? "",
+                        ),
+                      },
+                    ]}
+                  >
+                    <Text style={s.photoCaptionAvatarText}>
+                      {initials(selectedPhoto.staffName ?? "?")}
+                    </Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.photoCaptionName}>{selectedPhoto.staffName ?? 'Staff'}</Text>
+                    <Text style={s.photoCaptionName}>
+                      {selectedPhoto.staffName ?? "Staff"}
+                    </Text>
                     <View style={s.photoCaptionMeta}>
-                      <View style={[s.photoTypePill, {
-                        backgroundColor: selectedPhoto.type === 'checkIn' ? D.greenMuted : D.blueMuted,
-                        borderColor: selectedPhoto.type === 'checkIn' ? D.greenBorder : D.blueBorder,
-                      }]}>
+                      <View
+                        style={[
+                          s.typePill,
+                          {
+                            backgroundColor:
+                              selectedPhoto.type === "checkIn"
+                                ? D.greenMuted
+                                : D.blueMuted,
+                            borderColor:
+                              selectedPhoto.type === "checkIn"
+                                ? D.greenBorder
+                                : D.blueBorder,
+                          },
+                        ]}
+                      >
                         <MaterialCommunityIcons
-                          name={selectedPhoto.type === 'checkIn' ? 'login-variant' : 'logout-variant'}
+                          name={
+                            selectedPhoto.type === "checkIn"
+                              ? "login-variant"
+                              : "logout-variant"
+                          }
                           size={11}
-                          color={selectedPhoto.type === 'checkIn' ? D.green : D.blue}
+                          color={
+                            selectedPhoto.type === "checkIn" ? D.green : D.blue
+                          }
                         />
-                        <Text style={[s.photoTypePillText, { color: selectedPhoto.type === 'checkIn' ? D.green : D.blue }]}>
-                          {selectedPhoto.type === 'checkIn' ? 'Check In' : 'Check Out'}
+                        <Text
+                          style={[
+                            s.typePillText,
+                            {
+                              color:
+                                selectedPhoto.type === "checkIn"
+                                  ? D.green
+                                  : D.blue,
+                            },
+                          ]}
+                        >
+                          {selectedPhoto.type === "checkIn"
+                            ? "Check In"
+                            : "Check Out"}
                         </Text>
                       </View>
-                      <Text style={s.photoCaptionDate}>{selectedPhoto.attendanceDate}</Text>
+                      <Text style={s.photoCaptionDate}>
+                        {selectedPhoto.attendanceDate}
+                      </Text>
                     </View>
                   </View>
                 </View>
 
-                {/* Photo */}
                 <Image
                   source={{ uri: selectedPhoto.fileUri }}
                   style={s.photoImage}
                   resizeMode="cover"
                 />
 
-                {/* Close */}
-                <TouchableOpacity style={s.photoCloseBtn} onPress={() => setSelectedPhoto(null)} activeOpacity={0.85}>
-                  <Text style={s.photoCloseBtnText}>Close</Text>
+                <TouchableOpacity
+                  style={s.closeBtn}
+                  onPress={() => setSelectedPhoto(null)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={s.closeBtnText}>Close</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -409,154 +616,333 @@ export const AdminAttendanceScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// ─── Attendance row styles ─────────────────────────────────────────────────────
+const ar = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    backgroundColor: D.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F2F4",
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: D.border,
+  },
+  rowLast: {
+    borderBottomWidth: 1,
+    borderBottomColor: D.border,
+    borderBottomLeftRadius: D.radius.xl,
+    borderBottomRightRadius: D.radius.xl,
+  },
+  avatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  avatarText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+  body: { flex: 1, minWidth: 0, gap: 5 },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  name: { fontSize: 14, fontWeight: "700", color: D.text, flex: 1 },
+  statusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: D.radius.pill,
+    borderWidth: 1,
+    flexShrink: 0,
+  },
+  statusDot: { width: 5, height: 5, borderRadius: 3 },
+  statusText: { fontSize: 10, fontWeight: "700" },
+  timeRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  timeItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  timeVal: { fontSize: 12, fontWeight: "600", color: D.textSub },
+  timeSep: { fontSize: 12, color: D.textMuted },
+  photoBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    alignSelf: "flex-start",
+    backgroundColor: D.greenMuted,
+    borderRadius: D.radius.pill,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: D.greenBorder,
+  },
+  photoBadgeText: { fontSize: 11, fontWeight: "600", color: D.green },
+});
+
+// ─── Main Styles ──────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: D.bg },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
+  root: { flex: 1, backgroundColor: D.bg },
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 40,
+  },
 
-  // Restricted
-  restrictedBox: { width: 72, height: 72, borderRadius: D.radius.xl, backgroundColor: D.surface, borderWidth: 1, borderColor: D.border, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-  restrictedTitle: { fontSize: 16, fontWeight: '700', color: D.text },
-
-  // Header
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: D.surface, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16,
-    borderBottomWidth: 1, borderBottomColor: D.border, overflow: 'hidden', position: 'relative',
+  // Top bar
+  topBar: {
+    backgroundColor: D.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: D.border,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    ...Platform.select({
+      ios: { paddingTop: 56 },
+      android: { paddingTop: 14 },
+    }),
   },
-  headerGlow: { position: 'absolute', top: -50, right: -50, width: 160, height: 160, borderRadius: 80, backgroundColor: D.greenMuted },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerIconBox: {
-    width: 44, height: 44, borderRadius: D.radius.md,
-    backgroundColor: D.greenMuted, borderWidth: 1, borderColor: D.greenBorder,
-    alignItems: 'center', justifyContent: 'center',
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: D.radius.md,
+    backgroundColor: D.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: D.text, letterSpacing: -0.4 },
-  headerSub: { fontSize: 12, color: D.textMuted, marginTop: 1 },
-  headerHrsBadge: {
-    alignItems: 'flex-end', backgroundColor: D.purpleMuted,
-    borderRadius: D.radius.md, paddingHorizontal: 12, paddingVertical: 8,
-    borderWidth: 1, borderColor: D.purpleBorder,
+  topBarTitle: {
+    flex: 1,
+    fontSize: 17,
+    fontWeight: "700",
+    color: D.text,
+    letterSpacing: -0.3,
   },
-  headerHrsLabel: { fontSize: 9, fontWeight: '700', color: D.purple, letterSpacing: 1.5 },
-  headerHrsValue: { fontSize: 16, fontWeight: '800', color: D.purple, letterSpacing: -0.3 },
+  hrsBadge: {
+    backgroundColor: D.greenMuted,
+    borderRadius: D.radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: D.greenBorder,
+    alignItems: "center",
+  },
+  hrsBadgeLabel: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: D.green,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  hrsBadgeVal: { fontSize: 14, fontWeight: "800", color: D.green },
 
   // Filters
   filtersPanel: {
-    backgroundColor: D.surface, borderBottomWidth: 1, borderBottomColor: D.border,
-    paddingTop: 14, paddingBottom: 12,
+    backgroundColor: D.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: D.border,
+    paddingTop: 12,
+    paddingBottom: 10,
   },
-  filterDateRow: {
-    flexDirection: 'row', alignItems: 'center',
-    marginHorizontal: 20, marginBottom: 12,
-    backgroundColor: D.bg, borderRadius: D.radius.md,
-    borderWidth: 1, borderColor: D.border, overflow: 'hidden',
+  dateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginBottom: 10,
+    backgroundColor: D.surfaceAlt,
+    borderRadius: D.radius.md,
+    borderWidth: 1,
+    borderColor: D.border,
+    overflow: "hidden",
   },
-  filterDateIcon: {
-    width: 42, height: 44, alignItems: 'center', justifyContent: 'center',
-    borderRightWidth: 1, borderRightColor: D.border, backgroundColor: D.greenMuted,
+  dateIcon: {
+    width: 40,
+    height: 42,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRightWidth: 1,
+    borderRightColor: D.border,
+    backgroundColor: D.greenMuted,
   },
-  datePickerField: {
-    flex: 1, paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 14, color: D.text, borderWidth: 0,
+  datePicker: {
+    flex: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    fontSize: 14,
+    color: D.text,
+    borderWidth: 0,
   },
-  staffChips: { paddingHorizontal: 20, gap: 8 },
-  staffChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 12, paddingVertical: 8,
-    backgroundColor: D.bg, borderRadius: D.radius.pill,
-    borderWidth: 1, borderColor: D.border,
+  chipsRow: { paddingHorizontal: 16, gap: 8 },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    backgroundColor: D.surfaceAlt,
+    borderRadius: D.radius.pill,
+    borderWidth: 1,
+    borderColor: D.border,
   },
-  staffChipActive: { backgroundColor: D.greenMuted, borderColor: D.greenBorder },
-  staffChipAvatar: { width: 22, height: 22, borderRadius: 5, alignItems: 'center', justifyContent: 'center' },
-  staffChipAvatarText: { color: '#FFF', fontSize: 9, fontWeight: '800' },
-  staffChipText: { fontSize: 12, fontWeight: '600', color: D.textMuted },
-  staffChipTextActive: { color: D.green },
+  chipActive: { backgroundColor: D.greenMuted, borderColor: D.greenBorder },
+  chipAvatar: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chipAvatarText: { color: "#fff", fontSize: 8, fontWeight: "800" },
+  chipText: { fontSize: 12, fontWeight: "600", color: D.textMuted },
+  chipTextActive: { color: D.green, fontWeight: "700" },
 
-  // Summary
-  summaryBand: {
-    flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingVertical: 12,
-    backgroundColor: D.surface, borderBottomWidth: 1, borderBottomColor: D.border,
+  // Summary strip
+  summaryStrip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: D.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: D.border,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
-  summaryCard: {
-    flex: 1, alignItems: 'center', backgroundColor: D.bg,
-    borderRadius: D.radius.lg, borderWidth: 1, padding: 10,
+  stripDivider: { width: 1, height: 28, backgroundColor: D.border },
+  stripStat: { flex: 1, alignItems: "center", gap: 2 },
+  stripVal: { fontSize: 18, fontWeight: "800", letterSpacing: -0.5 },
+  stripLabel: {
+    fontSize: 10,
+    color: D.textMuted,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
   },
-  summaryIcon: { width: 28, height: 28, borderRadius: D.radius.sm, alignItems: 'center', justifyContent: 'center', marginBottom: 5 },
-  summaryValue: { fontSize: 17, fontWeight: '800', letterSpacing: -0.3, marginBottom: 2 },
-  summaryLabel: { fontSize: 9, color: D.textMuted, fontWeight: '600', letterSpacing: 0.3, textAlign: 'center' },
 
-  // List
-  listContent: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 48 },
+  // FlatList
+  flatList: { flex: 1 },
+  listContent: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 40,
+  },
 
-  // Card
-  card: {
-    flexDirection: 'row', backgroundColor: D.surface, borderRadius: D.radius.xl,
-    borderWidth: 1, borderColor: D.border, marginBottom: 10, overflow: 'hidden',
-    shadowColor: D.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 4, elevation: 2,
+  // Single white card — first row gets top radius via inline style on FlatList header approach
+  // We rely on the ar.row side-borders + ar.rowLast bottom radius
+  // Top radius applied via a transparent header View trick
+  listCardTop: {
+    height: D.radius.xl,
+    backgroundColor: D.surface,
+    borderTopLeftRadius: D.radius.xl,
+    borderTopRightRadius: D.radius.xl,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: D.border,
+    marginHorizontal: 16,
   },
-  cardStripe: { width: 4 },
-  cardInner: { flex: 1, padding: 14 },
-  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  cardAvatar: { width: 44, height: 44, borderRadius: D.radius.md, alignItems: 'center', justifyContent: 'center' },
-  cardAvatarText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
-  cardStaffInfo: { flex: 1 },
-  cardStaffName: { fontSize: 15, fontWeight: '800', color: D.text, letterSpacing: -0.2 },
-  cardDate: { fontSize: 11, color: D.textMuted, marginTop: 2 },
-  statusPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 9, paddingVertical: 5, borderRadius: D.radius.pill, borderWidth: 1,
-  },
-  statusPillText: { fontSize: 11, fontWeight: '700' },
-
-  // Time blocks
-  timeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginBottom: 10 },
-  timeBlock: {
-    flex: 1, alignItems: 'center', backgroundColor: D.bg,
-    borderRadius: D.radius.lg, borderWidth: 1, borderColor: D.border, paddingVertical: 10,
-  },
-  timeBlockIcon: { width: 30, height: 30, borderRadius: D.radius.sm, alignItems: 'center', justifyContent: 'center', marginBottom: 5 },
-  timeBlockLabel: { fontSize: 8, color: D.textMuted, fontWeight: '700', letterSpacing: 1, marginBottom: 4 },
-  timeBlockValue: { fontSize: 13, fontWeight: '800', letterSpacing: -0.2 },
-
-  // Photo badge
-  photoBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
-    backgroundColor: D.blueMuted, borderRadius: D.radius.pill,
-    paddingHorizontal: 10, paddingVertical: 6,
-    borderWidth: 1, borderColor: D.blueBorder,
-  },
-  photoBadgeText: { fontSize: 12, fontWeight: '600', color: D.blue },
 
   // Empty / loading
-  emptyIconBox: { width: 80, height: 80, borderRadius: D.radius.xl, backgroundColor: D.surface, borderWidth: 1, borderColor: D.border, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: D.text, marginBottom: 6 },
-  emptyHint: { fontSize: 13, color: D.textMuted, textAlign: 'center', lineHeight: 19 },
-  loadingText: { fontSize: 14, color: D.textMuted, marginTop: 12, fontWeight: '500' },
+  emptyIcon: {
+    width: 68,
+    height: 68,
+    borderRadius: D.radius.xl,
+    backgroundColor: D.surface,
+    borderWidth: 1,
+    borderColor: D.border,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: D.text,
+    marginBottom: 6,
+  },
+  emptyHint: {
+    fontSize: 13,
+    color: D.textMuted,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  loadingText: {
+    fontSize: 13,
+    color: D.textMuted,
+    marginTop: 12,
+    fontWeight: "500",
+  },
 
   // Photo modal
-  photoBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  photoSheet: {
-    backgroundColor: D.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    padding: 20, paddingBottom: 36, borderTopWidth: 1, borderColor: D.border,
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.40)",
+    justifyContent: "flex-end",
   },
-  photoHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: D.border, alignSelf: 'center', marginBottom: 20 },
-  photoCaptionRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
-  photoCaptionAvatar: { width: 44, height: 44, borderRadius: D.radius.md, alignItems: 'center', justifyContent: 'center' },
-  photoCaptionAvatarText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
-  photoCaptionName: { fontSize: 16, fontWeight: '800', color: D.text, marginBottom: 5 },
-  photoCaptionMeta: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  photoTypePill: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 8, paddingVertical: 3, borderRadius: D.radius.pill, borderWidth: 1,
+  sheet: {
+    backgroundColor: D.surface,
+    borderTopLeftRadius: D.radius.xxl,
+    borderTopRightRadius: D.radius.xxl,
+    padding: 20,
+    paddingBottom: Platform.select({ ios: 40, android: 28, default: 28 }),
+    borderTopWidth: 1,
+    borderColor: D.border,
   },
-  photoTypePillText: { fontSize: 11, fontWeight: '700' },
-  photoCaptionDate: { fontSize: 11, color: D.textMuted, fontWeight: '500' },
-  photoImage: { width: '100%', height: 280, borderRadius: D.radius.xl, marginBottom: 16 },
-  photoCloseBtn: {
-    backgroundColor: D.text, borderRadius: D.radius.xl,
-    paddingVertical: 14, alignItems: 'center',
-    shadowColor: D.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
+  handle: {
+    width: 36,
+    height: 4,
+    backgroundColor: D.border,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 18,
   },
-  photoCloseBtnText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
+  photoCaptionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 16,
+  },
+  photoCaptionAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: D.radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  photoCaptionAvatarText: { color: "#fff", fontSize: 15, fontWeight: "800" },
+  photoCaptionName: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: D.text,
+    marginBottom: 5,
+  },
+  photoCaptionMeta: { flexDirection: "row", alignItems: "center", gap: 8 },
+  typePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: D.radius.pill,
+    borderWidth: 1,
+  },
+  typePillText: { fontSize: 11, fontWeight: "700" },
+  photoCaptionDate: { fontSize: 11, color: D.textMuted },
+  photoImage: {
+    width: "100%",
+    height: 260,
+    borderRadius: D.radius.xl,
+    marginBottom: 16,
+  },
+  closeBtn: {
+    backgroundColor: D.green,
+    borderRadius: D.radius.lg,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  closeBtnText: { color: "#fff", fontSize: 15, fontWeight: "800" },
 });

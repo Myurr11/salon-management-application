@@ -1,429 +1,499 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from "react";
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Modal, TextInput, Alert, ActivityIndicator,
-} from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useAuth } from '../context/AuthContext';
-import { useData } from '../context/DataContext';
-import { colors, theme, shadows } from '../theme';
-import * as supabaseService from '../services/supabaseService';
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+  Platform,
+} from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useAuth } from "../context/AuthContext";
+import { useData } from "../context/DataContext";
+import * as supabaseService from "../services/supabaseService";
 
-// ─── Design Tokens ────────────────────────────────────────────────────────────
+// ─── Design Tokens — shared system ───────────────────────────────────────────
 const D = {
-  bg: '#F7F5F2',
-  surface: '#FFFFFF',
-  surfaceWarm: '#FFFDF9',
-  border: '#E8E3DB',
-  gold: '#C9A84C',
-  goldMuted: '#C9A84C18',
-  goldBorder: '#C9A84C44',
-  text: '#1A1814',
-  textSub: '#6B6560',
-  textMuted: '#A09A8F',
-  green: '#2D9A5F',
-  greenMuted: '#2D9A5F15',
-  greenBorder: '#2D9A5F33',
-  blue: '#3A7EC8',
-  blueMuted: '#3A7EC815',
-  blueBorder: '#3A7EC833',
-  purple: '#7C5CBF',
-  purpleMuted: '#7C5CBF15',
-  purpleBorder: '#7C5CBF33',
-  amber: '#D4872A',
-  amberMuted: '#D4872A15',
-  amberBorder: '#D4872A33',
-  red: '#D94F4F',
-  redMuted: '#D94F4F15',
-  shadow: 'rgba(0,0,0,0.06)',
-  radius: { sm: 8, md: 12, lg: 16, xl: 20, pill: 999 },
+  bg: "#F7F9FB",
+  surface: "#FFFFFF",
+  surfaceAlt: "#F2F4F6",
+
+  green: "#166534",
+  greenMuted: "rgba(22,101,52,0.10)",
+  greenBorder: "rgba(22,101,52,0.25)",
+
+  border: "#E8EAEC",
+
+  text: "#191C1E",
+  textSub: "#707A6F",
+  textMuted: "#9AA09E",
+
+  red: "#BA1A1A",
+  redMuted: "rgba(186,26,26,0.08)",
+  redBorder: "rgba(186,26,26,0.20)",
+
+  amber: "#B8742A",
+  amberMuted: "rgba(184,116,42,0.10)",
+  amberBorder: "rgba(184,116,42,0.25)",
+
+  radius: { sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, pill: 999 },
 };
 
-interface Props { navigation: any; }
+interface Props {
+  navigation: any;
+}
 
-// ─── Section Label ────────────────────────────────────────────────────────────
+// ─── SectionLabel ─────────────────────────────────────────────────────────────
 const SectionLabel = ({ children }: { children: string }) => (
   <View style={sl.row}>
-    <View style={sl.dash} />
+    <View style={sl.line} />
     <Text style={sl.text}>{children}</Text>
     <View style={sl.line} />
   </View>
 );
 const sl = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14, marginTop: 4 },
-  dash: { width: 16, height: 2, backgroundColor: D.gold, borderRadius: 1 },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 12,
+  },
   line: { flex: 1, height: 1, backgroundColor: D.border },
-  text: { color: D.gold, fontSize: 10, fontWeight: '700', letterSpacing: 2.5 },
+  text: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: D.textSub,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
 });
 
-// ─── Rank medal colours ───────────────────────────────────────────────────────
-const RANK_COLORS = [
-  { bg: '#FFF4D6', border: '#F5C842', text: '#A07800' },  // #1 gold
-  { bg: '#F2F4F8', border: '#A8B4C4', text: '#4A5568' },  // #2 silver
-  { bg: '#FFF0EB', border: '#E8A07A', text: '#8B4513' },  // #3 bronze
-];
-const rankColor = (i: number) => RANK_COLORS[i] ?? { bg: D.bg, border: D.border, text: D.textMuted };
+const initials = (name: string) =>
+  name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
-// ─── Mini stat cell ───────────────────────────────────────────────────────────
-const StatCell: React.FC<{ icon: string; iconColor: string; iconBg: string; value: string; label: string }> = ({
-  icon, iconColor, iconBg, value, label,
-}) => (
-  <View style={sc.cell}>
-    <View style={[sc.iconBox, { backgroundColor: iconBg }]}>
-      <MaterialCommunityIcons name={icon as any} size={16} color={iconColor} />
-    </View>
-    <Text style={sc.value}>{value}</Text>
-    <Text style={sc.label}>{label}</Text>
-  </View>
-);
-const sc = StyleSheet.create({
-  cell: { flex: 1, alignItems: 'center', gap: 4 },
-  iconBox: { width: 32, height: 32, borderRadius: D.radius.sm, alignItems: 'center', justifyContent: 'center' },
-  value: { fontSize: 14, fontWeight: '800', color: D.text, letterSpacing: -0.3 },
-  label: { fontSize: 10, color: D.textMuted, fontWeight: '600', letterSpacing: 0.3 },
-});
+const AVATAR_COLORS = ["#1E3A5F", "#0D9488", "#059669", "#2563EB", "#7C3AED"];
+const avatarColor = (name: string) => {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+};
 
-// ─── Main Screen ──────────────────────────────────────────────────────────────
-export const AdminStaffPerformanceScreen: React.FC<Props> = ({ navigation }) => {
+export const AdminStaffPerformanceScreen: React.FC<Props> = ({
+  navigation,
+}) => {
   const { user, staffMembers, refreshStaffMembers } = useAuth();
   const { visits } = useData();
+
   const [goalModalVisible, setGoalModalVisible] = useState(false);
-  const [selectedStaffForGoal, setSelectedStaffForGoal] = useState<string | null>(null);
-  const [selectedStaffName, setSelectedStaffName] = useState('');
-  const [goalInput, setGoalInput] = useState('');
+  const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
+  const [selectedStaffName, setSelectedStaffName] = useState("");
+  const [goalInput, setGoalInput] = useState("");
   const [savingGoal, setSavingGoal] = useState(false);
-  const [goalInputFocused, setGoalInputFocused] = useState(false);
 
   const staffStats = useMemo(() => {
-    const map: Record<string, {
-      name: string; customers: number; revenue: number;
-      servicesCount: number; productsCount: number; monthlyGoal: number;
-    }> = {};
-    staffMembers.forEach(s => {
-      map[s.id] = { name: s.name, customers: 0, revenue: 0, servicesCount: 0, productsCount: 0, monthlyGoal: s.monthlyGoal || 0 };
+    const map: Record<
+      string,
+      {
+        name: string;
+        customers: number;
+        revenue: number;
+        servicesCount: number;
+        productsCount: number;
+        monthlyGoal: number;
+      }
+    > = {};
+    staffMembers.forEach((s) => {
+      map[s.id] = {
+        name: s.name,
+        customers: 0,
+        revenue: 0,
+        servicesCount: 0,
+        productsCount: 0,
+        monthlyGoal: s.monthlyGoal || 0,
+      };
     });
-    visits.forEach(v => {
+    visits.forEach((v: any) => {
       if (map[v.staffId]) {
         map[v.staffId].customers += 1;
         map[v.staffId].revenue += v.total;
         map[v.staffId].servicesCount += v.services.length;
-        map[v.staffId].productsCount += v.products.reduce((sum: number, p: any) => sum + p.quantity, 0);
+        map[v.staffId].productsCount += v.products.reduce(
+          (s: number, p: any) => s + p.quantity,
+          0,
+        );
       }
-      if (v.attendingStaff) {
-        v.attendingStaff.forEach((staff: any) => {
-          if (map[staff.staffId] && staff.staffId !== v.staffId) {
-            map[staff.staffId].customers += 1;
-            map[staff.staffId].revenue += staff.revenueShare;
-          }
-        });
-      }
+      v.attendingStaff?.forEach((st: any) => {
+        if (map[st.staffId] && st.staffId !== v.staffId) {
+          map[st.staffId].customers += 1;
+          map[st.staffId].revenue += st.revenueShare;
+        }
+      });
     });
     return Object.entries(map)
       .map(([staffId, stats]) => ({
         staffId,
         ...stats,
         avgBill: stats.customers > 0 ? stats.revenue / stats.customers : 0,
-        goalProgress: stats.monthlyGoal > 0 ? Math.min(100, (stats.revenue / stats.monthlyGoal) * 100) : 0,
+        goalProgress:
+          stats.monthlyGoal > 0
+            ? Math.min(100, (stats.revenue / stats.monthlyGoal) * 100)
+            : 0,
       }))
       .sort((a, b) => b.revenue - a.revenue);
   }, [visits, staffMembers]);
 
-  const totalRevenue = useMemo(() => staffStats.reduce((s, st) => s + st.revenue, 0), [staffStats]);
-  const totalCustomers = useMemo(() => staffStats.reduce((s, st) => s + st.customers, 0), [staffStats]);
+  const totalRevenue = useMemo(
+    () => staffStats.reduce((s, st) => s + st.revenue, 0),
+    [staffStats],
+  );
+  const totalCustomers = useMemo(
+    () => staffStats.reduce((s, st) => s + st.customers, 0),
+    [staffStats],
+  );
 
-  const openGoalModal = (staffId: string, name: string, currentGoal: number) => {
-    setSelectedStaffForGoal(staffId);
+  const openGoalModal = (staffId: string, name: string, current: number) => {
+    setSelectedStaffId(staffId);
     setSelectedStaffName(name);
-    setGoalInput(currentGoal > 0 ? currentGoal.toString() : '');
+    setGoalInput(current > 0 ? current.toString() : "");
     setGoalModalVisible(true);
   };
 
   const saveGoal = async () => {
-    if (!selectedStaffForGoal) return;
-    const goalValue = parseFloat(goalInput);
-    if (isNaN(goalValue) || goalValue < 0) {
-      Alert.alert('Invalid Goal', 'Please enter a valid amount.');
+    if (!selectedStaffId) return;
+    const val = parseFloat(goalInput);
+    if (isNaN(val) || val < 0) {
+      Alert.alert("Invalid Goal", "Please enter a valid amount.");
       return;
     }
     setSavingGoal(true);
     try {
-      await supabaseService.updateStaffGoal(selectedStaffForGoal, goalValue);
+      await supabaseService.updateStaffGoal(selectedStaffId, val);
       await refreshStaffMembers();
       setGoalModalVisible(false);
     } catch {
-      Alert.alert('Error', 'Failed to update goal.');
+      Alert.alert("Error", "Failed to update goal.");
     } finally {
       setSavingGoal(false);
     }
   };
 
-  if (!user || user.role !== 'admin') {
+  if (!user || user.role !== "admin") {
     return (
-      <View style={[s.center, { flex: 1, backgroundColor: D.bg }]}>
-        <Text style={{ color: D.red }}>Admin access required.</Text>
+      <View style={s.center}>
+        <Text style={{ color: D.red, fontSize: 15, fontWeight: "700" }}>
+          Admin access required.
+        </Text>
       </View>
     );
   }
 
-  const getInitials = (name: string) =>
-    name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-
   return (
-    <View style={s.container}>
-      {/* ── Header ── */}
-      <View style={s.header}>
-        <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
-          <MaterialCommunityIcons name="arrow-left" size={22} color={D.text} />
+    <View style={s.root}>
+      {/* ── Top Bar ── */}
+      <View style={s.topBar}>
+        <TouchableOpacity
+          style={s.backBtn}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <MaterialCommunityIcons name="arrow-left" size={20} color={D.text} />
         </TouchableOpacity>
-        <View style={s.headerIconBox}>
-          <MaterialCommunityIcons name="chart-bar" size={22} color={D.gold} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={s.headerTitle}>Staff Performance</Text>
-          <Text style={s.headerSub}>{staffStats.length} staff members</Text>
+        <Text style={s.topBarTitle}>Staff Performance</Text>
+        <View style={s.topBarCount}>
+          <Text style={s.topBarCountText}>{staffStats.length}</Text>
         </View>
       </View>
 
-      {/* ── Summary Band ── */}
-      <View style={s.summaryBand}>
-        <View style={[s.summaryCard, { borderColor: D.greenBorder }]}>
-          <View style={[s.summaryIcon, { backgroundColor: D.greenMuted }]}>
-            <MaterialCommunityIcons name="currency-inr" size={18} color={D.green} />
-          </View>
-          <Text style={s.summaryValue}>₹{(totalRevenue / 1000).toFixed(1)}k</Text>
-          <Text style={s.summaryLabel}>Total Revenue</Text>
+      {/* ── Summary strip ── */}
+      <View style={s.summaryStrip}>
+        <View style={s.stripStat}>
+          <Text style={s.stripVal}>₹{(totalRevenue / 1000).toFixed(1)}k</Text>
+          <Text style={s.stripLabel}>Revenue</Text>
         </View>
-        <View style={[s.summaryCard, { borderColor: D.blueBorder }]}>
-          <View style={[s.summaryIcon, { backgroundColor: D.blueMuted }]}>
-            <MaterialCommunityIcons name="account-group-outline" size={18} color={D.blue} />
-          </View>
-          <Text style={s.summaryValue}>{totalCustomers}</Text>
-          <Text style={s.summaryLabel}>Total Customers</Text>
+        <View style={s.stripDivider} />
+        <View style={s.stripStat}>
+          <Text style={s.stripVal}>{totalCustomers}</Text>
+          <Text style={s.stripLabel}>Customers</Text>
         </View>
-        <View style={[s.summaryCard, { borderColor: D.amberBorder }]}>
-          <View style={[s.summaryIcon, { backgroundColor: D.amberMuted }]}>
-            <MaterialCommunityIcons name="account-multiple-outline" size={18} color={D.amber} />
-          </View>
-          <Text style={s.summaryValue}>{staffStats.length}</Text>
-          <Text style={s.summaryLabel}>Active Staff</Text>
+        <View style={s.stripDivider} />
+        <View style={s.stripStat}>
+          <Text style={s.stripVal}>{staffStats.length}</Text>
+          <Text style={s.stripLabel}>Staff</Text>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={s.list} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={s.listContent}
+        showsVerticalScrollIndicator={false}
+      >
         <SectionLabel>PERFORMANCE RANKING</SectionLabel>
 
-        {staffStats.map((st, index) => {
-          const rc = rankColor(index);
-          const progressColor = st.goalProgress >= 100 ? D.gold
-            : st.goalProgress >= 60 ? D.green
-            : D.blue;
-          const isTop3 = index < 3;
+        {/* Single white card wrapping all staff rows */}
+        <View style={s.listCard}>
+          {staffStats.map((st, index) => {
+            const isLast = index === staffStats.length - 1;
+            const progressColor =
+              st.goalProgress >= 100
+                ? D.amber
+                : st.goalProgress >= 60
+                  ? D.green
+                  : D.textSub;
+            const rankEmoji =
+              index === 0
+                ? "🥇"
+                : index === 1
+                  ? "🥈"
+                  : index === 2
+                    ? "🥉"
+                    : null;
 
-          return (
-            <View key={st.staffId} style={s.card}>
-              {/* Rank stripe */}
-              <View style={[s.rankStripe, { backgroundColor: rc.border }]} />
-
-              <View style={s.cardInner}>
-                {/* ── Card Header ── */}
-                <View style={s.cardHead}>
-                  {/* Avatar */}
-                  <View style={[s.avatar, { backgroundColor: rc.bg, borderColor: rc.border }]}>
-                    <Text style={[s.avatarText, { color: rc.text }]}>{getInitials(st.name)}</Text>
+            return (
+              <View
+                key={st.staffId}
+                style={[s.staffRow, isLast && s.staffRowLast]}
+              >
+                {/* ── Top row: avatar + name + revenue ── */}
+                <View style={s.staffTop}>
+                  <View
+                    style={[
+                      s.avatar,
+                      { backgroundColor: avatarColor(st.name) },
+                    ]}
+                  >
+                    <Text style={s.avatarText}>{initials(st.name)}</Text>
                   </View>
 
-                  {/* Name + rank */}
-                  <View style={s.cardHeadInfo}>
-                    <Text style={s.staffName}>{st.name}</Text>
-                    <View style={[s.rankBadge, { backgroundColor: rc.bg, borderColor: rc.border }]}>
-                      {isTop3 && (
-                        <MaterialCommunityIcons
-                          name="trophy"
-                          size={11}
-                          color={rc.text}
-                          style={{ marginRight: 3 }}
-                        />
+                  <View style={s.staffInfo}>
+                    <View style={s.staffNameRow}>
+                      <Text style={s.staffName}>{st.name}</Text>
+                      {rankEmoji && (
+                        <Text style={s.rankEmoji}>{rankEmoji}</Text>
                       )}
-                      <Text style={[s.rankBadgeText, { color: rc.text }]}>Rank #{index + 1}</Text>
                     </View>
+                    <Text style={s.staffRank}>Rank #{index + 1}</Text>
                   </View>
 
-                  {/* Revenue */}
                   <View style={s.revenueCol}>
-                    <Text style={s.revenueValue}>₹{st.revenue.toFixed(0)}</Text>
+                    <Text style={s.revenueVal}>₹{st.revenue.toFixed(0)}</Text>
                     <Text style={s.revenueLabel}>revenue</Text>
                   </View>
                 </View>
 
-                {/* ── Stat Grid ── */}
-                <View style={s.divider} />
-                <View style={s.statGrid}>
-                  <StatCell
-                    icon="account-group-outline"
-                    iconColor={D.blue}
-                    iconBg={D.blueMuted}
-                    value={String(st.customers)}
-                    label="Customers"
-                  />
-                  <View style={s.statSep} />
-                  <StatCell
-                    icon="spa"
-                    iconColor={D.purple}
-                    iconBg={D.purpleMuted}
-                    value={String(st.servicesCount)}
-                    label="Services"
-                  />
-                  <View style={s.statSep} />
-                  <StatCell
-                    icon="package-variant"
-                    iconColor={D.green}
-                    iconBg={D.greenMuted}
-                    value={String(st.productsCount)}
-                    label="Products"
-                  />
-                  <View style={s.statSep} />
-                  <StatCell
-                    icon="cash-multiple"
-                    iconColor={D.amber}
-                    iconBg={D.amberMuted}
-                    value={`₹${st.avgBill.toFixed(0)}`}
-                    label="Avg Bill"
-                  />
+                {/* ── Mini stats ── */}
+                <View style={s.miniStats}>
+                  <View style={s.miniStat}>
+                    <Text style={s.miniStatVal}>{st.customers}</Text>
+                    <Text style={s.miniStatLabel}>Customers</Text>
+                  </View>
+                  <View style={s.miniStatDivider} />
+                  <View style={s.miniStat}>
+                    <Text style={s.miniStatVal}>{st.servicesCount}</Text>
+                    <Text style={s.miniStatLabel}>Services</Text>
+                  </View>
+                  <View style={s.miniStatDivider} />
+                  <View style={s.miniStat}>
+                    <Text style={s.miniStatVal}>{st.productsCount}</Text>
+                    <Text style={s.miniStatLabel}>Products</Text>
+                  </View>
+                  <View style={s.miniStatDivider} />
+                  <View style={s.miniStat}>
+                    <Text style={s.miniStatVal}>₹{st.avgBill.toFixed(0)}</Text>
+                    <Text style={s.miniStatLabel}>Avg Bill</Text>
+                  </View>
                 </View>
 
-                {/* ── Goal Section ── */}
-                <View style={s.divider} />
-                <View style={s.goalBlock}>
-                  <View style={s.goalTopRow}>
-                    <View style={s.goalLabelRow}>
-                      <MaterialCommunityIcons name="target" size={15} color={D.gold} />
-                      <Text style={s.goalTitle}>Monthly Goal</Text>
-                    </View>
-                    <TouchableOpacity
-                      style={s.goalEditBtn}
-                      onPress={() => openGoalModal(st.staffId, st.name, st.monthlyGoal)}
-                      activeOpacity={0.75}
-                    >
-                      <MaterialCommunityIcons name="pencil-outline" size={14} color={D.gold} />
-                      <Text style={s.goalEditText}>{st.monthlyGoal > 0 ? 'Edit' : 'Set Goal'}</Text>
-                    </TouchableOpacity>
-                  </View>
-
+                {/* ── Goal row ── */}
+                <View style={s.goalRow}>
                   {st.monthlyGoal > 0 ? (
                     <>
-                      <View style={s.goalAmountRow}>
-                        <Text style={s.goalCurrent}>
-                          <Text style={{ color: progressColor, fontWeight: '800' }}>
+                      <View style={s.goalMeta}>
+                        <Text style={s.goalText}>
+                          <Text
+                            style={{ color: progressColor, fontWeight: "800" }}
+                          >
                             ₹{st.revenue.toFixed(0)}
                           </Text>
-                          <Text style={{ color: D.textMuted }}> of ₹{st.monthlyGoal}</Text>
+                          <Text style={{ color: D.textMuted }}>
+                            {" "}
+                            / ₹{st.monthlyGoal}
+                          </Text>
                         </Text>
-                        <View style={[s.goalPctBadge, { backgroundColor: progressColor + '20', borderColor: progressColor + '44' }]}>
-                          <Text style={[s.goalPctText, { color: progressColor }]}>
+                        <View style={s.goalRight}>
+                          <Text style={[s.goalPct, { color: progressColor }]}>
                             {Math.round(st.goalProgress)}%
                           </Text>
+                          <TouchableOpacity
+                            style={s.editBtn}
+                            onPress={() =>
+                              openGoalModal(st.staffId, st.name, st.monthlyGoal)
+                            }
+                            activeOpacity={0.7}
+                          >
+                            <MaterialCommunityIcons
+                              name="pencil"
+                              size={12}
+                              color={D.green}
+                            />
+                            <Text style={s.editBtnText}>Edit</Text>
+                          </TouchableOpacity>
                         </View>
                       </View>
                       <View style={s.barBg}>
                         <View
-                          style={[s.barFill, {
-                            width: `${Math.min(st.goalProgress, 100)}%` as any,
-                            backgroundColor: progressColor,
-                          }]}
+                          style={[
+                            s.barFill,
+                            {
+                              width:
+                                `${Math.min(st.goalProgress, 100)}%` as any,
+                              backgroundColor: progressColor,
+                            },
+                          ]}
                         />
                       </View>
                       {st.goalProgress >= 100 && (
-                        <View style={s.goalAchievedBanner}>
-                          <MaterialCommunityIcons name="check-decagram" size={14} color={D.gold} />
-                          <Text style={s.goalAchievedText}>Goal achieved! 🎉</Text>
+                        <View style={s.achievedBanner}>
+                          <MaterialCommunityIcons
+                            name="check-circle-outline"
+                            size={13}
+                            color={D.green}
+                          />
+                          <Text style={s.achievedText}>Goal achieved! 🎉</Text>
                         </View>
                       )}
                     </>
                   ) : (
                     <TouchableOpacity
-                      style={s.noGoalBtn}
+                      style={s.setGoalBtn}
                       onPress={() => openGoalModal(st.staffId, st.name, 0)}
-                      activeOpacity={0.75}
+                      activeOpacity={0.7}
                     >
-                      <MaterialCommunityIcons name="target" size={16} color={D.textMuted} />
-                      <Text style={s.noGoalText}>Tap to set a monthly goal</Text>
-                      <MaterialCommunityIcons name="chevron-right" size={16} color={D.textMuted} />
+                      <MaterialCommunityIcons
+                        name="target"
+                        size={14}
+                        color={D.green}
+                      />
+                      <Text style={s.setGoalText}>Set a monthly goal</Text>
+                      <MaterialCommunityIcons
+                        name="chevron-right"
+                        size={14}
+                        color={D.green}
+                      />
                     </TouchableOpacity>
                   )}
                 </View>
               </View>
-            </View>
-          );
-        })}
+            );
+          })}
+        </View>
 
-        <View style={{ height: 32 }} />
+        <View style={{ height: 40 }} />
       </ScrollView>
 
       {/* ── Goal Modal ── */}
-      <Modal visible={goalModalVisible} transparent animationType="fade" onRequestClose={() => setGoalModalVisible(false)}>
+      <Modal
+        visible={goalModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setGoalModalVisible(false)}
+      >
         <View style={s.modalOverlay}>
-          <View style={s.modalCard}>
-            {/* Glow blob */}
-            <View style={s.modalGlow} />
+          <View style={s.sheet}>
+            <View style={s.handle} />
 
-            <View style={s.modalHead}>
-              <View style={s.modalTitleIconBox}>
-                <MaterialCommunityIcons name="target" size={20} color={D.gold} />
+            <View style={s.sheetHeader}>
+              <View style={s.sheetIconBox}>
+                <MaterialCommunityIcons
+                  name="target"
+                  size={18}
+                  color={D.green}
+                />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.modalTitle}>Monthly Goal</Text>
-                <Text style={s.modalSub}>{selectedStaffName}</Text>
+                <Text style={s.sheetTitle}>Monthly Goal</Text>
+                <Text style={s.sheetSub}>{selectedStaffName}</Text>
               </View>
-              <TouchableOpacity style={s.modalCloseBtn} onPress={() => setGoalModalVisible(false)}>
-                <MaterialCommunityIcons name="close" size={20} color={D.textSub} />
+              <TouchableOpacity
+                style={s.closeBtn}
+                onPress={() => setGoalModalVisible(false)}
+              >
+                <MaterialCommunityIcons
+                  name="close"
+                  size={18}
+                  color={D.textSub}
+                />
               </TouchableOpacity>
             </View>
 
-            <Text style={s.modalInputLabel}>TARGET AMOUNT (₹)</Text>
-            <View style={[s.modalInputBox, goalInputFocused && s.modalInputBoxFocused]}>
-              <View style={[s.modalInputIcon, goalInputFocused && s.modalInputIconFocused]}>
-                <MaterialCommunityIcons name="currency-inr" size={20} color={goalInputFocused ? D.gold : D.textMuted} />
-              </View>
+            <Text style={s.inputLabel}>Target Amount (₹)</Text>
+            <View style={s.inputBox}>
+              <MaterialCommunityIcons
+                name="currency-inr"
+                size={18}
+                color={D.textMuted}
+                style={{ marginLeft: 14 }}
+              />
               <TextInput
-                style={s.modalInput}
+                style={s.input}
                 keyboardType="numeric"
                 placeholder="e.g. 50000"
                 placeholderTextColor={D.textMuted}
                 value={goalInput}
                 onChangeText={setGoalInput}
-                onFocus={() => setGoalInputFocused(true)}
-                onBlur={() => setGoalInputFocused(false)}
-                selectionColor={D.gold}
+                selectionColor={D.green}
+                autoFocus
               />
             </View>
 
-            {/* Live preview */}
             {goalInput && !isNaN(+goalInput) && +goalInput > 0 && (
-              <View style={s.modalPreview}>
-                <MaterialCommunityIcons name="information-outline" size={14} color={D.gold} />
-                <Text style={s.modalPreviewText}>
-                  Goal set to <Text style={{ color: D.text, fontWeight: '800' }}>₹{(+goalInput).toLocaleString('en-IN')}</Text>
+              <View style={s.previewBanner}>
+                <MaterialCommunityIcons
+                  name="check-circle-outline"
+                  size={14}
+                  color={D.green}
+                />
+                <Text style={s.previewText}>
+                  Goal:{" "}
+                  <Text style={{ color: D.text, fontWeight: "800" }}>
+                    ₹{(+goalInput).toLocaleString("en-IN")}
+                  </Text>
                 </Text>
               </View>
             )}
 
-            <View style={s.modalBtnRow}>
-              <TouchableOpacity style={s.modalCancelBtn} onPress={() => setGoalModalVisible(false)}>
-                <Text style={s.modalCancelText}>Cancel</Text>
+            <View style={s.sheetBtnRow}>
+              <TouchableOpacity
+                style={s.cancelBtn}
+                onPress={() => setGoalModalVisible(false)}
+              >
+                <Text style={s.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[s.modalSaveBtn, savingGoal && { opacity: 0.6 }]}
+                style={[s.saveBtn, savingGoal && { opacity: 0.6 }]}
                 onPress={saveGoal}
                 disabled={savingGoal}
                 activeOpacity={0.85}
               >
-                {savingGoal
-                  ? <ActivityIndicator size="small" color={D.bg} />
-                  : <>
-                      <MaterialCommunityIcons name="check" size={18} color={D.bg} />
-                      <Text style={s.modalSaveText}>Save Goal</Text>
-                    </>
-                }
+                {savingGoal ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <MaterialCommunityIcons
+                      name="check"
+                      size={16}
+                      color="#fff"
+                    />
+                    <Text style={s.saveBtnText}>Save Goal</Text>
+                  </>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -435,185 +505,314 @@ export const AdminStaffPerformanceScreen: React.FC<Props> = ({ navigation }) => 
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: D.bg },
-  center: { alignItems: 'center', justifyContent: 'center' },
+  root: { flex: 1, backgroundColor: D.bg },
+  center: { flex: 1, alignItems: "center", justifyContent: "center" },
 
-  // Header
-  header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16,
-    backgroundColor: D.surface, borderBottomWidth: 1, borderBottomColor: D.border, gap: 10,
+  // Top bar
+  topBar: {
+    backgroundColor: D.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: D.border,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    ...Platform.select({
+      ios: { paddingTop: 56 },
+      android: { paddingTop: 14 },
+    }),
   },
   backBtn: {
-    width: 40, height: 40, borderRadius: D.radius.md,
-    backgroundColor: D.bg, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: D.border,
+    width: 36,
+    height: 36,
+    borderRadius: D.radius.md,
+    backgroundColor: D.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  headerIconBox: {
-    width: 44, height: 44, borderRadius: D.radius.md,
-    backgroundColor: D.goldMuted, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: D.goldBorder,
+  topBarTitle: {
+    flex: 1,
+    fontSize: 17,
+    fontWeight: "700",
+    color: D.text,
+    letterSpacing: -0.3,
   },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: D.text, letterSpacing: -0.3 },
-  headerSub: { fontSize: 12, color: D.textMuted, marginTop: 1 },
+  topBarCount: {
+    backgroundColor: D.greenMuted,
+    borderRadius: D.radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: D.greenBorder,
+  },
+  topBarCountText: { fontSize: 12, fontWeight: "700", color: D.green },
 
-  // Summary band
-  summaryBand: {
-    flexDirection: 'row', gap: 10, paddingHorizontal: 20, paddingVertical: 16,
-    backgroundColor: D.surfaceWarm, borderBottomWidth: 1, borderBottomColor: D.border,
+  // Summary strip
+  summaryStrip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: D.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: D.border,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
-  summaryCard: {
-    flex: 1, backgroundColor: D.surface, borderRadius: D.radius.lg,
-    padding: 12, alignItems: 'center', borderWidth: 1,
-    shadowColor: D.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 4, elevation: 2,
+  stripStat: { flex: 1, alignItems: "center", gap: 2 },
+  stripDivider: { width: 1, height: 28, backgroundColor: D.border },
+  stripVal: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: D.text,
+    letterSpacing: -0.5,
   },
-  summaryIcon: {
-    width: 34, height: 34, borderRadius: D.radius.sm,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 6,
+  stripLabel: {
+    fontSize: 10,
+    color: D.textMuted,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
-  summaryValue: { fontSize: 16, fontWeight: '800', color: D.text, letterSpacing: -0.5 },
-  summaryLabel: { fontSize: 10, color: D.textMuted, fontWeight: '600', marginTop: 2, letterSpacing: 0.3 },
 
   // List
-  list: { paddingHorizontal: 20, paddingTop: 20 },
+  listContent: { padding: 16, paddingBottom: 52 },
 
-  // Card
-  card: {
-    flexDirection: 'row', backgroundColor: D.surface, borderRadius: D.radius.xl,
-    marginBottom: 14, borderWidth: 1, borderColor: D.border, overflow: 'hidden',
-    shadowColor: D.shadow, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 1, shadowRadius: 8, elevation: 3,
+  // Single white card
+  listCard: {
+    backgroundColor: D.surface,
+    borderRadius: D.radius.xl,
+    borderWidth: 1,
+    borderColor: D.border,
   },
-  rankStripe: { width: 5 },
-  cardInner: { flex: 1, padding: 16 },
 
-  // Card head
-  cardHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  // Staff rows
+  staffRow: {
+    paddingVertical: 16,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F2F4",
+    gap: 12,
+  },
+  staffRowLast: { borderBottomWidth: 0 },
+
+  // Top: avatar + name + revenue
+  staffTop: { flexDirection: "row", alignItems: "center", gap: 12 },
   avatar: {
-    width: 48, height: 48, borderRadius: D.radius.md,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 2,
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
-  avatarText: { fontSize: 17, fontWeight: '800' },
-  cardHeadInfo: { flex: 1 },
-  staffName: { fontSize: 16, fontWeight: '800', color: D.text, marginBottom: 5, letterSpacing: -0.2 },
-  rankBadge: {
-    flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start',
-    paddingHorizontal: 8, paddingVertical: 3, borderRadius: D.radius.pill, borderWidth: 1,
+  avatarText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+  staffInfo: { flex: 1, minWidth: 0 },
+  staffNameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  staffName: { fontSize: 14, fontWeight: "700", color: D.text },
+  rankEmoji: { fontSize: 14 },
+  staffRank: {
+    fontSize: 11,
+    color: D.textMuted,
+    fontWeight: "500",
+    marginTop: 1,
   },
-  rankBadgeText: { fontSize: 11, fontWeight: '700' },
-  revenueCol: { alignItems: 'flex-end' },
-  revenueValue: { fontSize: 18, fontWeight: '800', color: D.green, letterSpacing: -0.5 },
-  revenueLabel: { fontSize: 10, color: D.textMuted, fontWeight: '600', letterSpacing: 0.3, marginTop: 2 },
+  revenueCol: { alignItems: "flex-end", flexShrink: 0 },
+  revenueVal: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: D.green,
+    letterSpacing: -0.5,
+  },
+  revenueLabel: {
+    fontSize: 10,
+    color: D.textMuted,
+    fontWeight: "600",
+    marginTop: 1,
+  },
 
-  // Stat grid
-  divider: { height: 1, backgroundColor: D.border, marginVertical: 14 },
-  statGrid: { flexDirection: 'row', alignItems: 'center' },
-  statSep: { width: 1, height: 36, backgroundColor: D.border, marginHorizontal: 4 },
+  // Mini stats
+  miniStats: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: D.surfaceAlt,
+    borderRadius: D.radius.md,
+    paddingVertical: 10,
+  },
+  miniStat: { flex: 1, alignItems: "center", gap: 2 },
+  miniStatDivider: { width: 1, height: 24, backgroundColor: D.border },
+  miniStatVal: { fontSize: 13, fontWeight: "800", color: D.text },
+  miniStatLabel: {
+    fontSize: 9,
+    color: D.textMuted,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
 
-  // Goal block
-  goalBlock: {},
-  goalTopRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10,
+  // Goal
+  goalRow: { gap: 6 },
+  goalMeta: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
-  goalLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  goalTitle: { fontSize: 13, fontWeight: '700', color: D.text },
-  goalEditBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 10, paddingVertical: 6,
-    backgroundColor: D.goldMuted, borderRadius: D.radius.md,
-    borderWidth: 1, borderColor: D.goldBorder,
+  goalText: { fontSize: 12 },
+  goalRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  goalPct: { fontSize: 12, fontWeight: "800" },
+  editBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: D.greenMuted,
+    borderWidth: 1,
+    borderColor: D.greenBorder,
+    borderRadius: D.radius.pill,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
   },
-  goalEditText: { fontSize: 12, fontWeight: '700', color: D.gold },
-  goalAmountRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8,
-  },
-  goalCurrent: { fontSize: 14 },
-  goalPctBadge: {
-    paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: D.radius.pill, borderWidth: 1,
-  },
-  goalPctText: { fontSize: 12, fontWeight: '800' },
+  editBtnText: { fontSize: 11, fontWeight: "700", color: D.green },
   barBg: {
-    height: 6, backgroundColor: D.border, borderRadius: 3, overflow: 'hidden',
+    height: 5,
+    backgroundColor: D.surfaceAlt,
+    borderRadius: 3,
+    overflow: "hidden",
   },
-  barFill: { height: '100%', borderRadius: 3 },
-  goalAchievedBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    marginTop: 8, paddingHorizontal: 12, paddingVertical: 8,
-    backgroundColor: D.goldMuted, borderRadius: D.radius.md,
-    borderWidth: 1, borderColor: D.goldBorder,
+  barFill: { height: "100%", borderRadius: 3 },
+  achievedBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: D.greenMuted,
+    borderRadius: D.radius.md,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: D.greenBorder,
   },
-  goalAchievedText: { fontSize: 13, fontWeight: '700', color: D.gold },
-  noGoalBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingVertical: 10, paddingHorizontal: 12,
-    backgroundColor: D.bg, borderRadius: D.radius.md,
-    borderWidth: 1, borderColor: D.border, borderStyle: 'dashed',
+  achievedText: { fontSize: 12, fontWeight: "700", color: D.green },
+  setGoalBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: D.greenMuted,
+    borderRadius: D.radius.md,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: D.greenBorder,
   },
-  noGoalText: { flex: 1, fontSize: 13, color: D.textMuted, fontWeight: '500' },
+  setGoalText: { flex: 1, fontSize: 13, fontWeight: "600", color: D.green },
 
   // Modal
   modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'center', alignItems: 'center', padding: 24,
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "flex-end",
   },
-  modalCard: {
-    backgroundColor: D.surface, borderRadius: D.radius.xl,
-    padding: 24, width: '100%', maxWidth: 420,
-    borderWidth: 1, borderColor: D.border, overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.15, shadowRadius: 24, elevation: 12,
+  sheet: {
+    backgroundColor: D.surface,
+    borderTopLeftRadius: D.radius.xxl,
+    borderTopRightRadius: D.radius.xxl,
+    padding: 20,
+    paddingBottom: Platform.select({ ios: 40, android: 28, default: 28 }),
+    borderTopWidth: 1,
+    borderColor: D.border,
   },
-  modalGlow: {
-    position: 'absolute', top: -40, right: -40,
-    width: 120, height: 120, borderRadius: 60, backgroundColor: D.goldMuted,
+  handle: {
+    width: 36,
+    height: 4,
+    backgroundColor: D.border,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 18,
   },
-  modalHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 24 },
-  modalTitleIconBox: {
-    width: 44, height: 44, borderRadius: D.radius.md,
-    backgroundColor: D.goldMuted, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: D.goldBorder,
+  sheetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 20,
   },
-  modalTitle: { fontSize: 17, fontWeight: '800', color: D.text, letterSpacing: -0.3 },
-  modalSub: { fontSize: 12, color: D.textMuted, marginTop: 1 },
-  modalCloseBtn: {
-    width: 36, height: 36, borderRadius: D.radius.sm,
-    backgroundColor: D.bg, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: D.border,
+  sheetIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: D.radius.md,
+    backgroundColor: D.greenMuted,
+    borderWidth: 1,
+    borderColor: D.greenBorder,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  modalInputLabel: {
-    color: D.gold, fontSize: 10, fontWeight: '700', letterSpacing: 2, marginBottom: 8,
+  sheetTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: D.text,
+    letterSpacing: -0.3,
   },
-  modalInputBox: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: D.bg, borderRadius: D.radius.md,
-    borderWidth: 1.5, borderColor: D.border, overflow: 'hidden', marginBottom: 14,
+  sheetSub: { fontSize: 12, color: D.textMuted, marginTop: 1 },
+  closeBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: D.radius.sm,
+    backgroundColor: D.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  modalInputBoxFocused: { borderColor: D.gold },
-  modalInputIcon: {
-    width: 46, height: 52, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: D.surface, borderRightWidth: 1, borderRightColor: D.border,
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: D.text,
+    marginBottom: 8,
   },
-  modalInputIconFocused: { backgroundColor: D.goldMuted, borderRightColor: D.goldBorder },
-  modalInput: {
-    flex: 1, paddingHorizontal: 14, paddingVertical: 14,
-    fontSize: 20, color: D.text, fontWeight: '700',
+  inputBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: D.surfaceAlt,
+    borderRadius: D.radius.md,
+    borderWidth: 1.5,
+    borderColor: D.border,
+    marginBottom: 12,
   },
-  modalPreview: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: D.goldMuted, borderRadius: D.radius.md,
-    paddingHorizontal: 12, paddingVertical: 9,
-    borderWidth: 1, borderColor: D.goldBorder, marginBottom: 20,
+  input: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+    fontSize: 22,
+    color: D.text,
+    fontWeight: "800",
   },
-  modalPreviewText: { fontSize: 13, color: D.textSub, fontWeight: '600' },
-  modalBtnRow: { flexDirection: 'row', gap: 10 },
-  modalCancelBtn: {
-    flex: 1, paddingVertical: 15, borderRadius: D.radius.lg,
-    backgroundColor: D.bg, alignItems: 'center', borderWidth: 1, borderColor: D.border,
+  previewBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: D.greenMuted,
+    borderRadius: D.radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: D.greenBorder,
+    marginBottom: 20,
   },
-  modalCancelText: { fontSize: 15, fontWeight: '700', color: D.textSub },
-  modalSaveBtn: {
-    flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, paddingVertical: 15, borderRadius: D.radius.lg, backgroundColor: D.text,
-    shadowColor: D.text, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
+  previewText: { fontSize: 13, color: D.textSub, fontWeight: "600" },
+  sheetBtnRow: { flexDirection: "row", gap: 10 },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: D.radius.lg,
+    backgroundColor: D.surfaceAlt,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: D.border,
   },
-  modalSaveText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
+  cancelBtnText: { fontSize: 14, fontWeight: "700", color: D.textSub },
+  saveBtn: {
+    flex: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: D.radius.lg,
+    backgroundColor: D.green,
+  },
+  saveBtnText: { color: "#fff", fontSize: 14, fontWeight: "800" },
 });
