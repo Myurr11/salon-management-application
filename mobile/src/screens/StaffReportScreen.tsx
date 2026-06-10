@@ -6,49 +6,37 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
-import { colors, theme } from '../theme';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
-// ─── Design Tokens ────────────────────────────────────────────────────────────
+// ─── Design Tokens — shared system ───────────────────────────────────────────
 const D = {
-  bg: '#F7F5F2',
-  surface: '#FFFFFF',
-  border: '#E8E3DB',
+  bg:          '#F7F9FB',
+  surface:     '#FFFFFF',
+  surfaceAlt:  '#F2F4F6',
 
-  green: '#2D9A5F',
-  greenMuted: '#2D9A5F15',
-  greenBorder: '#2D9A5F40',
+  green:       '#166534',
+  greenMuted:  'rgba(22,101,52,0.10)',
+  greenBorder: 'rgba(22,101,52,0.25)',
 
-  gold: '#C9A84C',
-  goldMuted: '#C9A84C18',
-  goldBorder: '#C9A84C44',
+  border:      '#E8EAEC',
 
-  text: '#1A1814',
-  textSub: '#6B6560',
-  textMuted: '#A09A8F',
+  text:        '#191C1E',
+  textSub:     '#707A6F',
+  textMuted:   '#9AA09E',
 
-  blue: '#3A7EC8',
-  blueMuted: '#3A7EC815',
-  blueBorder: '#3A7EC833',
+  red:         '#BA1A1A',
+  redMuted:    'rgba(186,26,26,0.08)',
+  redBorder:   'rgba(186,26,26,0.20)',
 
-  purple: '#7C5CBF',
-  purpleMuted: '#7C5CBF15',
-  purpleBorder: '#7C5CBF33',
+  amber:       '#B8742A',
+  amberMuted:  'rgba(184,116,42,0.10)',
+  amberBorder: 'rgba(184,116,42,0.25)',
 
-  amber: '#D4872A',
-  amberMuted: '#D4872A15',
-  amberBorder: '#D4872A33',
-
-  red: '#D94F4F',
-  redMuted: '#D94F4F15',
-  redBorder: '#D94F4F33',
-
-  shadow: 'rgba(0,0,0,0.06)',
-  radius: { sm: 8, md: 12, lg: 16, xl: 20, pill: 999 },
+  radius: { sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, pill: 999 },
 };
 
 // ─── Avatar helpers ───────────────────────────────────────────────────────────
-const AVATAR_COLORS = ['#1e3a5f', '#0d9488', '#059669', '#2563eb', '#7c3aed', '#d97706'];
+const AVATAR_COLORS = ['#1E3A5F', '#0D9488', '#059669', '#2563EB', '#7C3AED', '#D97706'];
 const avatarColor = (name: string) => {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
@@ -60,20 +48,26 @@ const initials = (name: string) =>
 const fmtDate = (d: Date) =>
   d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
-// ─── Rank config ──────────────────────────────────────────────────────────────
-const rankCfg = (rank: number) => {
-  if (rank === 1) return { icon: 'trophy',       color: D.gold,   bg: D.goldMuted,   border: D.goldBorder,   label: '#1'  };
-  if (rank === 2) return { icon: 'medal',         color: D.textSub,bg: D.bg,          border: D.border,       label: '#2'  };
-  if (rank === 3) return { icon: 'medal-outline', color: D.amber,  bg: D.amberMuted,  border: D.amberBorder,  label: '#3'  };
-  return               { icon: 'chevron-right',  color: D.textMuted, bg: D.bg,        border: D.border,       label: `#${rank}` };
-};
+// ─── SectionLabel ─────────────────────────────────────────────────────────────
+const SectionLabel = ({ children }: { children: string }) => (
+  <View style={sl.row}>
+    <View style={sl.line} />
+    <Text style={sl.text}>{children}</Text>
+    <View style={sl.line} />
+  </View>
+);
+const sl = StyleSheet.create({
+  row:  { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  line: { flex: 1, height: 1, backgroundColor: D.border },
+  text: { fontSize: 10, fontWeight: '700', color: D.textSub, letterSpacing: 2, textTransform: 'uppercase' },
+});
 
-// ─── Preset ranges ────────────────────────────────────────────────────────────
+// ─── Preset date ranges ───────────────────────────────────────────────────────
 const PRESETS = [
-  { label: 'Today',    days: 0  },
-  { label: '7 Days',   days: 7  },
-  { label: '30 Days',  days: 30 },
-  { label: '90 Days',  days: 90 },
+  { label: 'Today',   days: 0  },
+  { label: '7 Days',  days: 7  },
+  { label: '30 Days', days: 30 },
+  { label: '90 Days', days: 90 },
 ];
 
 interface StaffReport {
@@ -82,22 +76,21 @@ interface StaffReport {
   totalServices: number; totalProducts: number;
   avgBillValue: number; uniqueCustomers: string[];
 }
-
-interface Props { navigation: any; }
+interface Props { navigation: any }
 
 export const StaffReportScreen: React.FC<Props> = ({ navigation }) => {
   const { user, staffMembers } = useAuth();
   const { visits } = useData();
 
-  const [startDate, setStartDate] = useState<Date>(new Date(Date.now() - 30 * 86400000));
-  const [endDate, setEndDate]     = useState<Date>(new Date());
+  const [startDate, setStartDate]             = useState<Date>(new Date(Date.now() - 30 * 86400000));
+  const [endDate, setEndDate]                 = useState<Date>(new Date());
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker]     = useState(false);
   const [selectedStaffId, setSelectedStaffId] = useState<string | 'all'>('all');
-  const [activePreset, setActivePreset] = useState<number | null>(30);
+  const [activePreset, setActivePreset]       = useState<number | null>(30);
 
   const applyPreset = (days: number) => {
-    const end = new Date();
+    const end   = new Date();
     const start = days === 0 ? new Date() : new Date(Date.now() - days * 86400000);
     start.setHours(0, 0, 0, 0);
     setStartDate(start);
@@ -119,7 +112,7 @@ export const StaffReportScreen: React.FC<Props> = ({ navigation }) => {
       };
     });
 
-    visits.forEach(v => {
+    visits.forEach((v: any) => {
       const d = new Date(v.date);
       if (d < start || d > end) return;
       if (v.attendingStaff && v.attendingStaff.length > 0) {
@@ -127,7 +120,7 @@ export const StaffReportScreen: React.FC<Props> = ({ navigation }) => {
           if (!map[st.staffId]) return;
           const r = map[st.staffId];
           r.totalCustomers++;
-          r.totalRevenue += st.revenueShare;
+          r.totalRevenue  += st.revenueShare;
           r.totalServices += v.services.length;
           r.totalProducts += v.products.reduce((s: number, p: any) => s + p.quantity, 0);
           if (!r.uniqueCustomers.includes(v.customerId)) r.uniqueCustomers.push(v.customerId);
@@ -135,7 +128,7 @@ export const StaffReportScreen: React.FC<Props> = ({ navigation }) => {
       } else if (map[v.staffId]) {
         const r = map[v.staffId];
         r.totalCustomers++;
-        r.totalRevenue += v.total;
+        r.totalRevenue  += v.total;
         r.totalServices += v.services.length;
         r.totalProducts += v.products.reduce((s: number, p: any) => s + p.quantity, 0);
         if (!r.uniqueCustomers.includes(v.customerId)) r.uniqueCustomers.push(v.customerId);
@@ -168,52 +161,69 @@ export const StaffReportScreen: React.FC<Props> = ({ navigation }) => {
 
   if (!user || user.role !== 'admin') {
     return (
-      <View style={[s.center, { flex: 1, backgroundColor: D.bg }]}>
-        <View style={s.restrictedBox}>
-          <MaterialCommunityIcons name="shield-alert-outline" size={32} color={D.textMuted} />
+      <View style={s.center}>
+        <View style={s.emptyIcon}>
+          <MaterialCommunityIcons name="shield-alert-outline" size={28} color={D.textMuted} />
         </View>
-        <Text style={s.restrictedTitle}>Admin Access Required</Text>
+        <Text style={s.emptyTitle}>Admin Access Required</Text>
       </View>
     );
   }
 
-  return (
-    <View style={s.container}>
+  const rankEmoji = (i: number) => i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : null;
 
-      {/* ── Header ── */}
-      <View style={s.header}>
-        <View style={s.headerGlow} />
+  return (
+    <View style={s.root}>
+
+      {/* ── Top Bar ── */}
+      <View style={s.topBar}>
         <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
           <MaterialCommunityIcons name="arrow-left" size={20} color={D.text} />
         </TouchableOpacity>
-        <View style={s.headerCenter}>
-          <View style={s.headerIconBox}>
-            <MaterialCommunityIcons name="chart-bar" size={22} color={D.green} />
+        <Text style={s.topBarTitle}>Staff Report</Text>
+        {totals.revenue > 0 && (
+          <View style={s.revBadge}>
+            <Text style={s.revBadgeLabel}>Revenue</Text>
+            <Text style={s.revBadgeVal}>
+              ₹{totals.revenue >= 1000
+                ? `${(totals.revenue / 1000).toFixed(1)}k`
+                : totals.revenue.toFixed(0)}
+            </Text>
           </View>
-          <View>
-            <Text style={s.headerTitle}>Staff Report</Text>
-            <Text style={s.headerSub}>{fmtDate(startDate)} – {fmtDate(endDate)}</Text>
-          </View>
-        </View>
-        <View style={s.headerRevBadge}>
-          <Text style={s.headerRevLabel}>REVENUE</Text>
-          <Text style={s.headerRevValue}>
-            ₹{totals.revenue >= 1000 ? `${(totals.revenue / 1000).toFixed(1)}k` : totals.revenue.toFixed(0)}
-          </Text>
-        </View>
+        )}
       </View>
 
-      <ScrollView
-        contentContainerStyle={s.scroll}
-        showsVerticalScrollIndicator={false}
-      >
-
-        {/* ── Date range section ── */}
-        <View style={s.sectionHeader}>
-          <View style={s.sectionIconBox}><MaterialCommunityIcons name="calendar-range" size={14} color={D.green} /></View>
-          <Text style={s.sectionLabel}>DATE RANGE</Text>
-          <View style={s.sectionLine} />
+      {/* ── Summary strip ── */}
+      {totals.customers > 0 && (
+        <View style={s.summaryStrip}>
+          <View style={s.stripStat}>
+            <Text style={s.stripVal}>{totals.customers}</Text>
+            <Text style={s.stripLabel}>Customers</Text>
+          </View>
+          <View style={s.stripDivider} />
+          <View style={s.stripStat}>
+            <Text style={s.stripVal}>{totals.services}</Text>
+            <Text style={s.stripLabel}>Services</Text>
+          </View>
+          <View style={s.stripDivider} />
+          <View style={s.stripStat}>
+            <Text style={s.stripVal}>{totals.products}</Text>
+            <Text style={s.stripLabel}>Products</Text>
+          </View>
+          <View style={s.stripDivider} />
+          <View style={s.stripStat}>
+            <Text style={s.stripVal}>
+              {totals.customers > 0 ? `₹${(totals.revenue / totals.customers).toFixed(0)}` : '—'}
+            </Text>
+            <Text style={s.stripLabel}>Avg Bill</Text>
+          </View>
         </View>
+      )}
+
+      <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
+
+        {/* ── Date range ── */}
+        <SectionLabel>DATE RANGE</SectionLabel>
 
         {/* Preset chips */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.presetsRow}>
@@ -231,32 +241,28 @@ export const StaffReportScreen: React.FC<Props> = ({ navigation }) => {
           ))}
         </ScrollView>
 
-        {/* Custom date pickers */}
+        {/* Custom date row */}
         <View style={s.dateRow}>
           <TouchableOpacity
             style={s.datePicker}
             onPress={() => { setShowStartPicker(true); setActivePreset(null); }}
             activeOpacity={0.8}
           >
-            <View style={[s.datePickerIcon, { backgroundColor: D.greenMuted, borderColor: D.greenBorder }]}>
-              <MaterialCommunityIcons name="calendar-start" size={16} color={D.green} />
-            </View>
+            <MaterialCommunityIcons name="calendar-start" size={15} color={D.green} />
             <View>
               <Text style={s.datePickerLabel}>FROM</Text>
               <Text style={s.datePickerValue}>{fmtDate(startDate)}</Text>
             </View>
           </TouchableOpacity>
 
-          <MaterialCommunityIcons name="arrow-right" size={16} color={D.border} />
+          <MaterialCommunityIcons name="arrow-right" size={16} color={D.textMuted} />
 
           <TouchableOpacity
             style={s.datePicker}
             onPress={() => { setShowEndPicker(true); setActivePreset(null); }}
             activeOpacity={0.8}
           >
-            <View style={[s.datePickerIcon, { backgroundColor: D.blueMuted, borderColor: D.blueBorder }]}>
-              <MaterialCommunityIcons name="calendar-end" size={16} color={D.blue} />
-            </View>
+            <MaterialCommunityIcons name="calendar-end" size={15} color={D.green} />
             <View>
               <Text style={s.datePickerLabel}>TO</Text>
               <Text style={s.datePickerValue}>{fmtDate(endDate)}</Text>
@@ -265,26 +271,23 @@ export const StaffReportScreen: React.FC<Props> = ({ navigation }) => {
         </View>
 
         {showStartPicker && (
-          <DateTimePicker value={startDate} mode="date" display="default"
+          <DateTimePicker
+            value={startDate} mode="date" display="default"
             onChange={(_, d) => { setShowStartPicker(Platform.OS === 'ios'); if (d) setStartDate(d); }}
             maximumDate={endDate}
           />
         )}
         {showEndPicker && (
-          <DateTimePicker value={endDate} mode="date" display="default"
+          <DateTimePicker
+            value={endDate} mode="date" display="default"
             onChange={(_, d) => { setShowEndPicker(Platform.OS === 'ios'); if (d) setEndDate(d); }}
             minimumDate={startDate} maximumDate={new Date()}
           />
         )}
 
         {/* ── Staff filter ── */}
-        <View style={[s.sectionHeader, { marginTop: 20 }]}>
-          <View style={s.sectionIconBox}><MaterialCommunityIcons name="account-filter-outline" size={14} color={D.green} /></View>
-          <Text style={s.sectionLabel}>FILTER BY STAFF</Text>
-          <View style={s.sectionLine} />
-        </View>
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.staffChips}>
+        <SectionLabel>FILTER BY STAFF</SectionLabel>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.staffRow}>
           {[{ id: 'all', name: 'All Staff' }, ...staffMembers].map((st: any) => {
             const active = selectedStaffId === st.id;
             return (
@@ -294,123 +297,104 @@ export const StaffReportScreen: React.FC<Props> = ({ navigation }) => {
                 onPress={() => setSelectedStaffId(st.id)}
                 activeOpacity={0.8}
               >
-                {st.id !== 'all' && (
-                  <View style={[s.staffChipAvatar, { backgroundColor: active ? D.green : avatarColor(st.name) }]}>
-                    <Text style={s.staffChipAvatarText}>{initials(st.name)}</Text>
+                {st.id === 'all' ? (
+                  <View style={s.staffChipAllIcon}>
+                    <MaterialCommunityIcons
+                      name="account-group-outline" size={13}
+                      color={active ? D.green : D.textMuted}
+                    />
                   </View>
-                )}
-                {st.id === 'all' && (
-                  <MaterialCommunityIcons name="account-group-outline" size={14} color={active ? D.green : D.textMuted} />
+                ) : (
+                  <View style={[s.staffAvatar, active && s.staffAvatarActive, { backgroundColor: active ? D.green : avatarColor(st.name) }]}>
+                    <Text style={s.staffAvatarText}>{initials(st.name)}</Text>
+                  </View>
                 )}
                 <Text style={[s.staffChipText, active && s.staffChipTextActive]}>
                   {st.id === 'all' ? 'All Staff' : st.name.split(' ')[0]}
                 </Text>
-                {active && <MaterialCommunityIcons name="check" size={12} color={D.green} />}
+                {active && <MaterialCommunityIcons name="check" size={11} color={D.green} />}
               </TouchableOpacity>
             );
           })}
         </ScrollView>
 
-        {/* ── Summary cards ── */}
-        <View style={[s.sectionHeader, { marginTop: 20 }]}>
-          <View style={s.sectionIconBox}><MaterialCommunityIcons name="chart-box-outline" size={14} color={D.green} /></View>
-          <Text style={s.sectionLabel}>SUMMARY</Text>
-          <View style={s.sectionLine} />
-        </View>
-
-        <View style={s.summaryGrid}>
-          {[
-            { icon: 'account-group-outline',   label: 'Customers',       value: totals.customers,              color: D.blue,   bg: D.blueMuted,   border: D.blueBorder   },
-            { icon: 'currency-inr',            label: 'Revenue',         value: `₹${totals.revenue.toFixed(0)}`, color: D.green,  bg: D.greenMuted,  border: D.greenBorder  },
-            { icon: 'spa',                     label: 'Services',        value: totals.services,               color: D.purple, bg: D.purpleMuted, border: D.purpleBorder },
-            { icon: 'package-variant',         label: 'Products Sold',   value: totals.products,               color: D.amber,  bg: D.amberMuted,  border: D.amberBorder  },
-            { icon: 'account-check-outline',   label: 'Unique Clients',  value: totals.unique.size,            color: D.gold,   bg: D.goldMuted,   border: D.goldBorder   },
-            { icon: 'cash-multiple',           label: 'Avg Bill',
-              value: totals.customers > 0 ? `₹${(totals.revenue / totals.customers).toFixed(0)}` : '—',
-              color: D.green, bg: D.greenMuted, border: D.greenBorder },
-          ].map(stat => (
-            <View key={stat.label} style={[s.summaryCard, { borderColor: stat.border }]}>
-              <View style={[s.summaryCardIcon, { backgroundColor: stat.bg }]}>
-                <MaterialCommunityIcons name={stat.icon as any} size={18} color={stat.color} />
-              </View>
-              <Text style={[s.summaryCardValue, { color: stat.color }]}>{stat.value}</Text>
-              <Text style={s.summaryCardLabel}>{stat.label}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* ── Detailed leaderboard ── */}
-        <View style={[s.sectionHeader, { marginTop: 20 }]}>
-          <View style={s.sectionIconBox}><MaterialCommunityIcons name="podium" size={14} color={D.green} /></View>
-          <Text style={s.sectionLabel}>LEADERBOARD</Text>
-          <View style={s.sectionLine} />
-        </View>
+        {/* ── Leaderboard ── */}
+        <SectionLabel>LEADERBOARD</SectionLabel>
 
         {filtered.length === 0 ? (
           <View style={s.emptyBlock}>
-            <View style={s.emptyIconBox}>
-              <MaterialCommunityIcons name="chart-line" size={36} color={D.textMuted} />
+            <View style={s.emptyIcon}>
+              <MaterialCommunityIcons name="chart-line" size={28} color={D.textMuted} />
             </View>
             <Text style={s.emptyTitle}>No data for this period</Text>
             <Text style={s.emptyHint}>Try adjusting the date range or staff filter</Text>
           </View>
         ) : (
-          filtered.map((r, i) => {
-            const rank = rankCfg(i + 1);
-            const color = avatarColor(r.staffName);
-            const maxRev = filtered[0].totalRevenue;
-            const pct = maxRev > 0 ? (r.totalRevenue / maxRev) * 100 : 0;
+          <View style={s.listCard}>
+            {filtered.map((r, i) => {
+              const color  = avatarColor(r.staffName);
+              const maxRev = filtered[0].totalRevenue;
+              const pct    = maxRev > 0 ? (r.totalRevenue / maxRev) * 100 : 0;
+              const emoji  = rankEmoji(i);
+              const isLast = i === filtered.length - 1;
 
-            return (
-              <View key={r.staffId} style={s.reportCard}>
-                {/* Left stripe */}
-                <View style={[s.reportStripe, { backgroundColor: color }]} />
+              return (
+                <View key={r.staffId} style={[s.reportRow, isLast && s.reportRowLast]}>
 
-                <View style={s.reportInner}>
-                  {/* Header row */}
-                  <View style={s.reportCardHeader}>
+                  {/* Avatar + name */}
+                  <View style={s.reportTop}>
                     <View style={[s.reportAvatar, { backgroundColor: color }]}>
                       <Text style={s.reportAvatarText}>{initials(r.staffName)}</Text>
                     </View>
                     <View style={s.reportNameBlock}>
-                      <Text style={s.reportName}>{r.staffName}</Text>
-                      <Text style={s.reportCustomerCount}>{r.totalCustomers} customers · {r.uniqueCustomers.length} unique</Text>
-                    </View>
-                    {/* Rank badge */}
-                    <View style={[s.rankBadge, { backgroundColor: rank.bg, borderColor: rank.border }]}>
-                      <MaterialCommunityIcons name={rank.icon as any} size={13} color={rank.color} />
-                      <Text style={[s.rankBadgeText, { color: rank.color }]}>{rank.label}</Text>
-                    </View>
-                  </View>
-
-                  {/* Revenue progress bar */}
-                  <View style={s.revenueBarRow}>
-                    <Text style={s.revenueBarLabel}>₹{r.totalRevenue.toFixed(0)}</Text>
-                    <Text style={s.revenueBarPct}>{Math.round(pct)}%</Text>
-                  </View>
-                  <View style={s.revenueBarBg}>
-                    <View style={[s.revenueBarFill, { width: `${pct}%` as any, backgroundColor: color }]} />
-                  </View>
-
-                  {/* Stats row */}
-                  <View style={s.statsRow}>
-                    {[
-                      { icon: 'account-outline',   label: 'Customers', value: r.totalCustomers,           color: D.blue   },
-                      { icon: 'spa',               label: 'Services',  value: r.totalServices,            color: D.purple },
-                      { icon: 'package-variant',   label: 'Products',  value: r.totalProducts,            color: D.amber  },
-                      { icon: 'cash-multiple',     label: 'Avg Bill',  value: `₹${r.avgBillValue.toFixed(0)}`, color: D.green  },
-                    ].map((stat, si) => (
-                      <View key={stat.label} style={[s.statBlock, si < 3 && { borderRightWidth: 1, borderRightColor: D.border }]}>
-                        <MaterialCommunityIcons name={stat.icon as any} size={13} color={stat.color} />
-                        <Text style={[s.statBlockValue, { color: stat.color }]}>{stat.value}</Text>
-                        <Text style={s.statBlockLabel}>{stat.label}</Text>
+                      <View style={s.reportNameRow}>
+                        <Text style={s.reportName}>{r.staffName}</Text>
+                        {emoji && <Text style={s.rankEmoji}>{emoji}</Text>}
                       </View>
-                    ))}
+                      <Text style={s.reportMeta}>
+                        {r.totalCustomers} customers · {r.uniqueCustomers.length} unique
+                      </Text>
+                    </View>
+                    <View style={s.reportRevCol}>
+                      <Text style={s.reportRevVal}>₹{r.totalRevenue.toFixed(0)}</Text>
+                      <Text style={s.reportRevLabel}>revenue</Text>
+                    </View>
+                  </View>
+
+                  {/* Progress bar */}
+                  <View style={s.barRow}>
+                    <View style={s.barBg}>
+                      <View style={[s.barFill, { width: `${pct}%` as any }]} />
+                    </View>
+                    <Text style={s.barPct}>{Math.round(pct)}%</Text>
+                  </View>
+
+                  {/* Mini stats */}
+                  <View style={s.miniStats}>
+                    <View style={s.miniStat}>
+                      <Text style={s.miniStatVal}>{r.totalServices}</Text>
+                      <Text style={s.miniStatLabel}>Services</Text>
+                    </View>
+                    <View style={s.miniStatDivider} />
+                    <View style={s.miniStat}>
+                      <Text style={s.miniStatVal}>{r.totalProducts}</Text>
+                      <Text style={s.miniStatLabel}>Products</Text>
+                    </View>
+                    <View style={s.miniStatDivider} />
+                    <View style={s.miniStat}>
+                      <Text style={s.miniStatVal}>₹{r.avgBillValue.toFixed(0)}</Text>
+                      <Text style={s.miniStatLabel}>Avg Bill</Text>
+                    </View>
+                    <View style={s.miniStatDivider} />
+                    <View style={s.miniStat}>
+                      <Text style={s.miniStatVal}>{r.uniqueCustomers.length}</Text>
+                      <Text style={s.miniStatLabel}>Unique</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            );
-          })
+              );
+            })}
+          </View>
         )}
 
       </ScrollView>
@@ -420,99 +404,135 @@ export const StaffReportScreen: React.FC<Props> = ({ navigation }) => {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: D.bg },
-  center: { alignItems: 'center', justifyContent: 'center' },
-  restrictedBox: { width: 72, height: 72, borderRadius: D.radius.xl, backgroundColor: D.surface, borderWidth: 1, borderColor: D.border, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-  restrictedTitle: { fontSize: 16, fontWeight: '700', color: D.text },
+  root:   { flex: 1, backgroundColor: D.bg },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
 
-  // Header
-  header: {
+  // Top bar
+  topBar: {
+    backgroundColor: D.surface, borderBottomWidth: 1, borderBottomColor: D.border,
+    paddingHorizontal: 16, paddingVertical: 14,
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: D.surface, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16,
-    borderBottomWidth: 1, borderBottomColor: D.border, overflow: 'hidden', position: 'relative',
+    ...Platform.select({ ios: { paddingTop: 56 }, android: { paddingTop: 14 } }),
   },
-  headerGlow: { position: 'absolute', top: -50, right: -50, width: 160, height: 160, borderRadius: 80, backgroundColor: D.greenMuted },
-  backBtn: { width: 40, height: 40, borderRadius: D.radius.md, backgroundColor: D.bg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: D.border },
-  headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerIconBox: { width: 44, height: 44, borderRadius: D.radius.md, backgroundColor: D.greenMuted, borderWidth: 1, borderColor: D.greenBorder, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: D.text, letterSpacing: -0.4 },
-  headerSub: { fontSize: 11, color: D.textMuted, marginTop: 1 },
-  headerRevBadge: { alignItems: 'flex-end', backgroundColor: D.greenMuted, borderRadius: D.radius.md, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: D.greenBorder },
-  headerRevLabel: { fontSize: 9, fontWeight: '700', color: D.green, letterSpacing: 1.5 },
-  headerRevValue: { fontSize: 16, fontWeight: '800', color: D.green, letterSpacing: -0.3 },
+  backBtn: {
+    width: 36, height: 36, borderRadius: D.radius.md,
+    backgroundColor: D.surfaceAlt, alignItems: 'center', justifyContent: 'center',
+  },
+  topBarTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: D.text, letterSpacing: -0.3 },
+  revBadge: {
+    backgroundColor: D.greenMuted, borderRadius: D.radius.pill,
+    paddingHorizontal: 12, paddingVertical: 5,
+    borderWidth: 1, borderColor: D.greenBorder, alignItems: 'center',
+  },
+  revBadgeLabel: { fontSize: 9, fontWeight: '700', color: D.green, textTransform: 'uppercase', letterSpacing: 1 },
+  revBadgeVal:   { fontSize: 13, fontWeight: '800', color: D.green },
+
+  // Summary strip
+  summaryStrip: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: D.surface, borderBottomWidth: 1, borderBottomColor: D.border,
+    paddingVertical: 12, paddingHorizontal: 16,
+  },
+  stripStat:    { flex: 1, alignItems: 'center', gap: 2 },
+  stripDivider: { width: 1, height: 28, backgroundColor: D.border },
+  stripVal:     { fontSize: 16, fontWeight: '800', color: D.text, letterSpacing: -0.5 },
+  stripLabel:   { fontSize: 10, color: D.textMuted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
 
   // Scroll
-  scroll: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 48 },
+  scrollContent: { padding: 16, paddingBottom: 52, gap: 12 },
 
-  // Section headers
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  sectionIconBox: { width: 24, height: 24, borderRadius: 12, backgroundColor: D.greenMuted, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: D.greenBorder },
-  sectionLabel: { fontSize: 10, fontWeight: '700', color: D.green, letterSpacing: 2.5 },
-  sectionLine: { flex: 1, height: 1, backgroundColor: D.border },
+  // Preset chips
+  presetsRow: { gap: 8 },
+  presetChip: {
+    paddingHorizontal: 14, paddingVertical: 8,
+    backgroundColor: D.surfaceAlt, borderRadius: D.radius.pill,
+    borderWidth: 1, borderColor: D.border,
+  },
+  presetChipActive:     { backgroundColor: D.greenMuted, borderColor: D.greenBorder },
+  presetChipText:       { fontSize: 12, fontWeight: '600', color: D.textSub },
+  presetChipTextActive: { color: D.green, fontWeight: '700' },
 
-  // Presets
-  presetsRow: { gap: 8, marginBottom: 12 },
-  presetChip: { paddingHorizontal: 14, paddingVertical: 8, backgroundColor: D.surface, borderRadius: D.radius.pill, borderWidth: 1, borderColor: D.border },
-  presetChipActive: { backgroundColor: D.greenMuted, borderColor: D.green },
-  presetChipText: { fontSize: 12, fontWeight: '600', color: D.textMuted },
-  presetChipTextActive: { color: D.green },
-
-  // Date pickers
+  // Date row
   dateRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   datePicker: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: D.surface, borderRadius: D.radius.md,
+    backgroundColor: D.surface, borderRadius: D.radius.lg,
     borderWidth: 1, borderColor: D.border, padding: 12,
   },
-  datePickerIcon: { width: 36, height: 36, borderRadius: D.radius.sm, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  datePickerLabel: { fontSize: 9, fontWeight: '700', color: D.textMuted, letterSpacing: 1, marginBottom: 2 },
+  datePickerLabel: { fontSize: 9, fontWeight: '700', color: D.textMuted, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 2 },
   datePickerValue: { fontSize: 13, fontWeight: '700', color: D.text },
 
-  // Staff chips
-  staffChips: { gap: 8, paddingBottom: 4 },
-  staffChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: D.surface, borderRadius: D.radius.pill, borderWidth: 1, borderColor: D.border },
-  staffChipActive: { backgroundColor: D.greenMuted, borderColor: D.greenBorder },
-  staffChipAvatar: { width: 22, height: 22, borderRadius: 5, alignItems: 'center', justifyContent: 'center' },
-  staffChipAvatarText: { color: '#FFF', fontSize: 9, fontWeight: '800' },
-  staffChipText: { fontSize: 12, fontWeight: '600', color: D.textMuted },
-  staffChipTextActive: { color: D.green },
+  // Staff chips — same as AppointmentsListScreen
+  staffRow: { gap: 8 },
+  staffChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingVertical: 5, paddingRight: 10, paddingLeft: 5,
+    backgroundColor: D.surfaceAlt, borderRadius: D.radius.pill,
+    borderWidth: 1, borderColor: D.border,
+  },
+  staffChipActive:    { backgroundColor: D.greenMuted, borderColor: D.greenBorder },
+  staffChipAllIcon: {
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: D.surface, alignItems: 'center', justifyContent: 'center',
+  },
+  staffAvatar: {
+    width: 22, height: 22, borderRadius: 11,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  staffAvatarActive:  { backgroundColor: D.green },
+  staffAvatarText:    { color: '#fff', fontSize: 8, fontWeight: '700' },
+  staffChipText:      { fontSize: 12, fontWeight: '600', color: D.textSub },
+  staffChipTextActive:{ color: D.green, fontWeight: '700' },
 
-  // Summary grid
-  summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  summaryCard: { width: '30.5%', alignItems: 'center', backgroundColor: D.surface, borderRadius: D.radius.lg, borderWidth: 1, padding: 12 },
-  summaryCardIcon: { width: 36, height: 36, borderRadius: D.radius.sm, alignItems: 'center', justifyContent: 'center', marginBottom: 7 },
-  summaryCardValue: { fontSize: 16, fontWeight: '800', letterSpacing: -0.3, marginBottom: 3, textAlign: 'center' },
-  summaryCardLabel: { fontSize: 9, color: D.textMuted, fontWeight: '600', letterSpacing: 0.3, textAlign: 'center' },
+  // Single white listCard — same pattern throughout
+  listCard: {
+    backgroundColor: D.surface, borderRadius: D.radius.xl,
+    borderWidth: 1, borderColor: D.border,
+  },
 
-  // Report cards
-  reportCard: { flexDirection: 'row', backgroundColor: D.surface, borderRadius: D.radius.xl, borderWidth: 1, borderColor: D.border, marginBottom: 10, overflow: 'hidden', shadowColor: D.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 4, elevation: 2 },
-  reportStripe: { width: 4 },
-  reportInner: { flex: 1, padding: 14 },
-  reportCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
-  reportAvatar: { width: 46, height: 46, borderRadius: D.radius.md, alignItems: 'center', justifyContent: 'center' },
-  reportAvatarText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
-  reportNameBlock: { flex: 1 },
-  reportName: { fontSize: 15, fontWeight: '800', color: D.text, letterSpacing: -0.2, marginBottom: 3 },
-  reportCustomerCount: { fontSize: 11, color: D.textMuted, fontWeight: '500' },
-  rankBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 9, paddingVertical: 5, borderRadius: D.radius.pill, borderWidth: 1 },
-  rankBadgeText: { fontSize: 11, fontWeight: '800' },
+  // Report rows inside the card
+  reportRow: {
+    paddingVertical: 14, paddingHorizontal: 14,
+    borderBottomWidth: 1, borderBottomColor: '#F0F2F4',
+    gap: 10,
+  },
+  reportRowLast: { borderBottomWidth: 0 },
 
-  // Revenue bar
-  revenueBarRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 },
-  revenueBarLabel: { fontSize: 13, fontWeight: '800', color: D.text },
-  revenueBarPct: { fontSize: 11, fontWeight: '700', color: D.textMuted },
-  revenueBarBg: { height: 6, backgroundColor: D.border, borderRadius: 3, overflow: 'hidden', marginBottom: 12 },
-  revenueBarFill: { height: '100%', borderRadius: 3 },
+  reportTop:       { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  reportAvatar:    { width: 38, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  reportAvatarText:{ color: '#fff', fontSize: 13, fontWeight: '700' },
+  reportNameBlock: { flex: 1, minWidth: 0 },
+  reportNameRow:   { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  reportName:      { fontSize: 14, fontWeight: '700', color: D.text },
+  rankEmoji:       { fontSize: 14 },
+  reportMeta:      { fontSize: 11, color: D.textMuted, fontWeight: '500', marginTop: 1 },
+  reportRevCol:    { alignItems: 'flex-end', flexShrink: 0 },
+  reportRevVal:    { fontSize: 14, fontWeight: '800', color: D.green, letterSpacing: -0.3 },
+  reportRevLabel:  { fontSize: 10, color: D.textMuted, fontWeight: '600', marginTop: 1 },
 
-  // Stats row
-  statsRow: { flexDirection: 'row', backgroundColor: D.bg, borderRadius: D.radius.md, overflow: 'hidden', borderWidth: 1, borderColor: D.border },
-  statBlock: { flex: 1, alignItems: 'center', paddingVertical: 10, gap: 3 },
-  statBlockValue: { fontSize: 13, fontWeight: '800', letterSpacing: -0.2 },
-  statBlockLabel: { fontSize: 9, color: D.textMuted, fontWeight: '600', letterSpacing: 0.3 },
+  // Progress bar
+  barRow:  { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  barBg:   { flex: 1, height: 5, backgroundColor: D.surfaceAlt, borderRadius: 3, overflow: 'hidden' },
+  barFill: { height: '100%', borderRadius: 3, backgroundColor: D.green },
+  barPct:  { fontSize: 11, fontWeight: '700', color: D.textMuted, width: 32, textAlign: 'right' },
+
+  // Mini stats — same surfaceAlt bar as staff performance
+  miniStats: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: D.surfaceAlt, borderRadius: D.radius.md, paddingVertical: 9,
+  },
+  miniStat:        { flex: 1, alignItems: 'center', gap: 2 },
+  miniStatDivider: { width: 1, height: 24, backgroundColor: D.border },
+  miniStatVal:     { fontSize: 13, fontWeight: '800', color: D.text },
+  miniStatLabel:   { fontSize: 9, color: D.textMuted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3 },
 
   // Empty
-  emptyBlock: { alignItems: 'center', paddingVertical: 48 },
-  emptyIconBox: { width: 80, height: 80, borderRadius: D.radius.xl, backgroundColor: D.surface, borderWidth: 1, borderColor: D.border, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: D.text, marginBottom: 6 },
-  emptyHint: { fontSize: 13, color: D.textMuted, textAlign: 'center' },
+  emptyBlock: { alignItems: 'center', paddingVertical: 40 },
+  emptyIcon: {
+    width: 68, height: 68, borderRadius: D.radius.xl,
+    backgroundColor: D.surface, borderWidth: 1, borderColor: D.border,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 14,
+  },
+  emptyTitle: { fontSize: 15, fontWeight: '700', color: D.text, marginBottom: 6 },
+  emptyHint:  { fontSize: 13, color: D.textMuted, textAlign: 'center' },
 });

@@ -1,76 +1,103 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from "react";
 import {
-  View, Text, StyleSheet, FlatList, TextInput,
-  TouchableOpacity, ScrollView,
-} from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useData } from '../context/DataContext';
-import type { InventoryItem } from '../types';
-import { colors, theme, shadows } from '../theme';
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  Platform,
+} from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useData } from "../context/DataContext";
+import type { InventoryItem } from "../types";
 
-// ─── Design Tokens ────────────────────────────────────────────────────────────
+// ─── Design Tokens — shared with AdminDashboard / StaffDashboard ──────────────
 const D = {
-  bg: '#F7F5F2',
-  surface: '#FFFFFF',
-  border: '#E8E3DB',
+  bg: "#F7F9FB",
+  surface: "#FFFFFF",
+  surfaceAlt: "#F2F4F6",
 
-  green: '#2D9A5F',
-  greenMuted: '#2D9A5F15',
-  greenBorder: '#2D9A5F40',
+  green: "#166534",
+  greenMuted: "rgba(22,101,52,0.10)",
+  greenBorder: "rgba(22,101,52,0.25)",
 
-  gold: '#C9A84C',
-  goldMuted: '#C9A84C18',
-  goldBorder: '#C9A84C44',
+  border: "#E8EAEC",
 
-  text: '#1A1814',
-  textSub: '#6B6560',
-  textMuted: '#A09A8F',
+  text: "#191C1E",
+  textSub: "#707A6F",
+  textMuted: "#9AA09E",
 
-  blue: '#3A7EC8',
-  blueMuted: '#3A7EC815',
-  blueBorder: '#3A7EC833',
+  red: "#BA1A1A",
+  redMuted: "rgba(186,26,26,0.08)",
+  redBorder: "rgba(186,26,26,0.20)",
 
-  amber: '#D4872A',
-  amberMuted: '#D4872A15',
-  amberBorder: '#D4872A33',
+  amber: "#B8742A",
+  amberMuted: "rgba(184,116,42,0.10)",
+  amberBorder: "rgba(184,116,42,0.25)",
 
-  red: '#D94F4F',
-  redMuted: '#D94F4F15',
-  redBorder: '#D94F4F33',
+  blue: "#1B5FA6",
+  blueMuted: "rgba(27,95,166,0.10)",
+  blueBorder: "rgba(27,95,166,0.25)",
 
-  shadow: 'rgba(0,0,0,0.06)',
-  radius: { sm: 8, md: 12, lg: 16, xl: 20, pill: 999 },
+  radius: { sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, pill: 999 },
 };
 
 // ─── Stock config ─────────────────────────────────────────────────────────────
 const getStockCfg = (item: InventoryItem) => {
   if (item.quantity === 0)
-    return { label: 'Out of Stock', color: D.red,   bg: D.redMuted,   border: D.redBorder,   icon: 'package-variant-closed', barColor: D.red   };
+    return {
+      label: "Out of stock",
+      color: D.red,
+      bg: D.redMuted,
+      border: D.redBorder,
+      icon: "package-variant-closed",
+      barColor: D.red,
+    };
   if (item.quantity <= item.minThreshold)
-    return { label: 'Low Stock',    color: D.amber, bg: D.amberMuted, border: D.amberBorder, icon: 'alert-circle-outline',   barColor: D.amber };
-  return   { label: 'In Stock',     color: D.green, bg: D.greenMuted, border: D.greenBorder, icon: 'package-variant',        barColor: D.green };
+    return {
+      label: "Low stock",
+      color: D.amber,
+      bg: D.amberMuted,
+      border: D.amberBorder,
+      icon: "alert-circle-outline",
+      barColor: D.amber,
+    };
+  return {
+    label: "In stock",
+    color: D.green,
+    bg: D.greenMuted,
+    border: D.greenBorder,
+    icon: "package-variant",
+    barColor: D.green,
+  };
 };
 
 // ─── Filter tabs ──────────────────────────────────────────────────────────────
-type FilterTab = 'all' | 'in_stock' | 'low' | 'out';
+type FilterTab = "all" | "in_stock" | "low" | "out";
 const TABS: { key: FilterTab; label: string; icon: string }[] = [
-  { key: 'all',      label: 'All',       icon: 'view-grid-outline'         },
-  { key: 'in_stock', label: 'In Stock',  icon: 'package-variant'           },
-  { key: 'low',      label: 'Low Stock', icon: 'alert-circle-outline'      },
-  { key: 'out',      label: 'Out',       icon: 'package-variant-closed'    },
+  { key: "all", label: "All", icon: "view-grid-outline" },
+  { key: "in_stock", label: "In Stock", icon: "package-variant" },
+  { key: "low", label: "Low", icon: "alert-circle-outline" },
+  { key: "out", label: "Out", icon: "package-variant-closed" },
 ];
 
-interface Props { navigation: any; }
+interface Props {
+  navigation: any;
+}
 
 export const InventoryViewScreen: React.FC<Props> = ({ navigation }) => {
   const { inventory } = useData();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<FilterTab>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<FilterTab>("all");
 
   const summary = useMemo(() => {
-    const inStock = inventory.filter(i => i.quantity > i.minThreshold).length;
-    const low     = inventory.filter(i => i.quantity > 0 && i.quantity <= i.minThreshold).length;
-    const out     = inventory.filter(i => i.quantity === 0).length;
+    const inStock = inventory.filter((i) => i.quantity > i.minThreshold).length;
+    const low = inventory.filter(
+      (i) => i.quantity > 0 && i.quantity <= i.minThreshold,
+    ).length;
+    const out = inventory.filter((i) => i.quantity === 0).length;
     return { inStock, low, out };
   }, [inventory]);
 
@@ -78,74 +105,121 @@ export const InventoryViewScreen: React.FC<Props> = ({ navigation }) => {
     let list = [...inventory];
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      list = list.filter(i => i.name.toLowerCase().includes(q));
+      list = list.filter((i) => i.name.toLowerCase().includes(q));
     }
-    if (activeTab === 'in_stock') list = list.filter(i => i.quantity > i.minThreshold);
-    if (activeTab === 'low')      list = list.filter(i => i.quantity > 0 && i.quantity <= i.minThreshold);
-    if (activeTab === 'out')      list = list.filter(i => i.quantity === 0);
+    if (activeTab === "in_stock")
+      list = list.filter((i) => i.quantity > i.minThreshold);
+    if (activeTab === "low")
+      list = list.filter(
+        (i) => i.quantity > 0 && i.quantity <= i.minThreshold,
+      );
+    if (activeTab === "out") list = list.filter((i) => i.quantity === 0);
     return list;
   }, [inventory, searchQuery, activeTab]);
 
   const tabCount = (key: FilterTab) => {
-    if (key === 'all')      return inventory.length;
-    if (key === 'in_stock') return summary.inStock;
-    if (key === 'low')      return summary.low;
-    if (key === 'out')      return summary.out;
+    if (key === "all") return inventory.length;
+    if (key === "in_stock") return summary.inStock;
+    if (key === "low") return summary.low;
+    if (key === "out") return summary.out;
     return 0;
   };
 
   const tabColor = (key: FilterTab) => {
-    if (key === 'in_stock') return { color: D.green,  bg: D.greenMuted,  border: D.greenBorder  };
-    if (key === 'low')      return { color: D.amber,  bg: D.amberMuted,  border: D.amberBorder  };
-    if (key === 'out')      return { color: D.red,    bg: D.redMuted,    border: D.redBorder    };
-    return                         { color: D.blue,   bg: D.blueMuted,   border: D.blueBorder   };
+    if (key === "in_stock")
+      return { color: D.green, bg: D.greenMuted, border: D.greenBorder };
+    if (key === "low")
+      return { color: D.amber, bg: D.amberMuted, border: D.amberBorder };
+    if (key === "out")
+      return { color: D.red, bg: D.redMuted, border: D.redBorder };
+    return { color: D.blue, bg: D.blueMuted, border: D.blueBorder };
   };
 
-  const renderItem = ({ item }: { item: InventoryItem }) => {
+  // ── Render inventory row ──
+  const renderItem = ({
+    item,
+    index,
+  }: {
+    item: InventoryItem;
+    index: number;
+  }) => {
     const cfg = getStockCfg(item);
     const maxQty = Math.max(item.minThreshold * 3, item.quantity, 1);
     const pct = Math.min((item.quantity / maxQty) * 100, 100);
+    const isFirst = index === 0;
+    const isLast = index === filtered.length - 1;
 
     return (
-      <View style={s.card}>
-        {/* Left accent stripe */}
-        <View style={[s.cardStripe, { backgroundColor: cfg.barColor }]} />
+      <View style={[ir.row, isFirst && ir.rowFirst, isLast && ir.rowLast]}>
+        {/* Icon avatar — coloured by status */}
+        <View
+          style={[
+            ir.avatar,
+            { backgroundColor: cfg.bg, borderColor: cfg.border },
+          ]}
+        >
+          <MaterialCommunityIcons
+            name={cfg.icon as any}
+            size={18}
+            color={cfg.color}
+          />
+        </View>
 
-        <View style={s.cardInner}>
-          {/* Top row */}
-          <View style={s.cardTop}>
-            <View style={[s.cardIconBox, { backgroundColor: cfg.bg, borderColor: cfg.border }]}>
-              <MaterialCommunityIcons name={cfg.icon as any} size={22} color={cfg.color} />
-            </View>
-            <View style={s.cardMainInfo}>
-              <Text style={s.cardName} numberOfLines={1}>{item.name}</Text>
-            </View>
-            <View style={[s.statusPill, { backgroundColor: cfg.bg, borderColor: cfg.border }]}>
-              <View style={[s.statusDot, { backgroundColor: cfg.color }]} />
-              <Text style={[s.statusText, { color: cfg.color }]}>{cfg.label}</Text>
+        {/* Body */}
+        <View style={ir.body}>
+          <View style={ir.nameRow}>
+            <Text style={ir.name} numberOfLines={1}>
+              {item.name}
+            </Text>
+            <View
+              style={[
+                ir.statusPill,
+                { backgroundColor: cfg.bg, borderColor: cfg.border },
+              ]}
+            >
+              <View
+                style={[ir.statusDot, { backgroundColor: cfg.color }]}
+              />
+              <Text style={[ir.statusText, { color: cfg.color }]}>
+                {cfg.label}
+              </Text>
             </View>
           </View>
 
           {/* Stock bar */}
-          <View style={s.barSection}>
-            <View style={s.barBg}>
-              <View style={[s.barFill, { width: `${pct}%` as any, backgroundColor: cfg.barColor }]} />
-            </View>
-            <View style={s.barLabels}>
-              <View style={s.barQtyRow}>
-                <Text style={[s.barQtyBig, { color: cfg.color }]}>{item.quantity}</Text>
-                <Text style={s.barQtyOf}> units in stock</Text>
-              </View>
-              <Text style={s.barPct}>{Math.round(pct)}%</Text>
-            </View>
+          <View style={ir.barBg}>
+            <View
+              style={[
+                ir.barFill,
+                {
+                  width: `${pct}%` as any,
+                  backgroundColor: cfg.barColor,
+                },
+              ]}
+            />
           </View>
 
-          {/* Bottom chips */}
-          <View style={s.cardChips}>
-            <View style={s.chip}>
-              <MaterialCommunityIcons name="arrow-down-circle-outline" size={12} color={D.textMuted} />
-              <Text style={s.chipText}>Min threshold: <Text style={{ color: D.text, fontWeight: '700' }}>{item.minThreshold}</Text></Text>
+          {/* Meta row */}
+          <View style={ir.metaRow}>
+            <View style={ir.metaItem}>
+              <Text style={[ir.qtyVal, { color: cfg.color }]}>
+                {item.quantity}
+              </Text>
+              <Text style={ir.qtyUnit}>units</Text>
             </View>
+            <View style={ir.metaSep} />
+            <View style={ir.metaItem}>
+              <MaterialCommunityIcons
+                name="alert-outline"
+                size={11}
+                color={D.textMuted}
+              />
+              <Text style={ir.metaText}>
+                Min <Text style={ir.metaStrong}>{item.minThreshold}</Text>
+              </Text>
+            </View>
+            <View style={ir.metaSep} />
+            <Text style={ir.pctText}>{Math.round(pct)}%</Text>
           </View>
         </View>
       </View>
@@ -153,44 +227,55 @@ export const InventoryViewScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <View style={s.container}>
-
-      {/* ── Header ── */}
-      <View style={s.header}>
-        <View style={s.headerGlow} />
-        <View style={s.headerLeft}>
-          <View style={s.headerIconBox}>
-            <MaterialCommunityIcons name="package-variant" size={22} color={D.green} />
-          </View>
-          <View>
-            <Text style={s.headerTitle}>Inventory</Text>
-            <Text style={s.headerSub}>{inventory.length} products tracked</Text>
-          </View>
+    <View style={s.root}>
+      {/* ── Top Bar ── */}
+      <View style={s.topBar}>
+        <TouchableOpacity
+          style={s.backBtn}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <MaterialCommunityIcons
+            name="arrow-left"
+            size={20}
+            color={D.text}
+          />
+        </TouchableOpacity>
+        <Text style={s.topBarTitle}>Inventory</Text>
+        <View style={s.topBarCount}>
+          <Text style={s.topBarCountText}>{inventory.length}</Text>
         </View>
       </View>
 
-      {/* ── Summary band ── */}
-      <View style={s.summaryBand}>
-        {[
-          { label: 'In Stock',  value: summary.inStock, color: D.green,  bg: D.greenMuted, border: D.greenBorder, icon: 'package-variant'        },
-          { label: 'Low Stock', value: summary.low,     color: D.amber,  bg: D.amberMuted, border: D.amberBorder, icon: 'alert-circle-outline'   },
-          { label: 'Out',       value: summary.out,     color: D.red,    bg: D.redMuted,   border: D.redBorder,   icon: 'package-variant-closed' },
-        ].map(stat => (
-          <View key={stat.label} style={[s.summaryCard, { borderColor: stat.border }]}>
-            <View style={[s.summaryIcon, { backgroundColor: stat.bg }]}>
-              <MaterialCommunityIcons name={stat.icon as any} size={16} color={stat.color} />
-            </View>
-            <Text style={[s.summaryValue, { color: stat.color }]}>{stat.value}</Text>
-            <Text style={s.summaryLabel}>{stat.label}</Text>
-          </View>
-        ))}
+      {/* ── Stats Row ── */}
+      <View style={s.statsRow}>
+        <View style={s.statPill}>
+          <Text style={[s.statVal, { color: D.green }]}>
+            {summary.inStock}
+          </Text>
+          <Text style={s.statLabel}>In Stock</Text>
+        </View>
+        <View style={s.statDivider} />
+        <View style={s.statPill}>
+          <Text style={[s.statVal, { color: D.amber }]}>{summary.low}</Text>
+          <Text style={s.statLabel}>Low Stock</Text>
+        </View>
+        <View style={s.statDivider} />
+        <View style={s.statPill}>
+          <Text style={[s.statVal, { color: D.red }]}>{summary.out}</Text>
+          <Text style={s.statLabel}>Out</Text>
+        </View>
       </View>
 
-      {/* ── Search bar ── */}
+      {/* ── Search ── */}
       <View style={s.searchWrap}>
         <View style={s.searchBar}>
           <View style={s.searchBarIcon}>
-            <MaterialCommunityIcons name="magnify" size={18} color={D.textMuted} />
+            <MaterialCommunityIcons
+              name="magnify"
+              size={18}
+              color={D.textMuted}
+            />
           </View>
           <TextInput
             style={s.searchBarInput}
@@ -200,33 +285,70 @@ export const InventoryViewScreen: React.FC<Props> = ({ navigation }) => {
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity style={s.searchBarClear} onPress={() => setSearchQuery('')}>
-              <MaterialCommunityIcons name="close-circle" size={16} color={D.textMuted} />
+            <TouchableOpacity
+              style={s.searchBarClear}
+              onPress={() => setSearchQuery("")}
+            >
+              <MaterialCommunityIcons
+                name="close-circle"
+                size={16}
+                color={D.textMuted}
+              />
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      {/* ── Filter tabs ── */}
-      <View style={s.tabsContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabsRow}>
-          {TABS.map(tab => {
+      {/* ── Filter Tabs ── */}
+      <View style={s.tabsWrap}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={s.tabsRow}
+        >
+          {TABS.map((tab) => {
             const active = activeTab === tab.key;
             const tc = tabColor(tab.key);
             return (
               <TouchableOpacity
                 key={tab.key}
-                style={[s.tab, active && { backgroundColor: tc.bg, borderColor: tc.color }]}
+                style={[
+                  s.tab,
+                  active && {
+                    backgroundColor: tc.bg,
+                    borderColor: tc.border,
+                  },
+                ]}
                 onPress={() => setActiveTab(tab.key)}
                 activeOpacity={0.8}
               >
                 <MaterialCommunityIcons
-                  name={tab.icon as any} size={14}
+                  name={tab.icon as any}
+                  size={13}
                   color={active ? tc.color : D.textMuted}
                 />
-                <Text style={[s.tabText, active && { color: tc.color }]} numberOfLines={1}>{tab.label}</Text>
-                <View style={[s.tabBadge, active && { backgroundColor: tc.color }]}>
-                  <Text style={[s.tabBadgeText, active && { color: '#FFF' }]} numberOfLines={1}>{tabCount(tab.key)}</Text>
+                <Text
+                  style={[
+                    s.tabText,
+                    active && { color: tc.color, fontWeight: "700" },
+                  ]}
+                >
+                  {tab.label}
+                </Text>
+                <View
+                  style={[
+                    s.tabBadge,
+                    active && { backgroundColor: tc.color, borderColor: tc.color },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      s.tabBadgeText,
+                      active && { color: "#fff" },
+                    ]}
+                  >
+                    {tabCount(tab.key)}
+                  </Text>
                 </View>
               </TouchableOpacity>
             );
@@ -236,19 +358,27 @@ export const InventoryViewScreen: React.FC<Props> = ({ navigation }) => {
 
       {/* ── List ── */}
       {filtered.length === 0 ? (
-        <View style={s.emptyBlock}>
-          <View style={s.emptyIconBox}>
-            <MaterialCommunityIcons name="package-variant-closed" size={36} color={D.textMuted} />
+        <View style={s.emptyWrap}>
+          <View style={s.emptyIcon}>
+            <MaterialCommunityIcons
+              name="package-variant-closed"
+              size={32}
+              color={D.textMuted}
+            />
           </View>
           <Text style={s.emptyTitle}>
-            {searchQuery ? `No results for "${searchQuery}"` : 'No items in this category'}
+            {searchQuery
+              ? `No results for "${searchQuery}"`
+              : "No items in this category"}
           </Text>
-          <Text style={s.emptyHint}>Try a different filter or search term</Text>
+          <Text style={s.emptyHint}>
+            Try a different filter or search term
+          </Text>
         </View>
       ) : (
         <FlatList
           data={filtered}
-          keyExtractor={item => item.id}
+          keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={s.listContent}
           showsVerticalScrollIndicator={false}
@@ -258,127 +388,273 @@ export const InventoryViewScreen: React.FC<Props> = ({ navigation }) => {
   );
 };
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// ─── Inventory row styles (compact) ───────────────────────────────────────────
+const ir = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: D.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F2F4",
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: D.border,
+  },
+  rowFirst: {
+    borderTopWidth: 1,
+    borderTopLeftRadius: D.radius.xl,
+    borderTopRightRadius: D.radius.xl,
+  },
+  rowLast: {
+    borderBottomWidth: 1,
+    borderBottomColor: D.border,
+    borderBottomLeftRadius: D.radius.xl,
+    borderBottomRightRadius: D.radius.xl,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: D.radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    flexShrink: 0,
+  },
+  body: { flex: 1, minWidth: 0, gap: 6 },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  name: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: D.text,
+    flexShrink: 1,
+  },
+  statusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: D.radius.pill,
+    borderWidth: 1,
+    flexShrink: 0,
+  },
+  statusDot: { width: 5, height: 5, borderRadius: 3 },
+  statusText: { fontSize: 10, fontWeight: "700" },
+
+  // Bar
+  barBg: {
+    height: 5,
+    backgroundColor: D.surfaceAlt,
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  barFill: { height: "100%", borderRadius: 3 },
+
+  // Meta row
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  metaItem: { flexDirection: "row", alignItems: "baseline", gap: 3 },
+  qtyVal: {
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: -0.3,
+  },
+  qtyUnit: { fontSize: 11, color: D.textMuted, fontWeight: "500" },
+  metaText: { fontSize: 11, color: D.textMuted, fontWeight: "500" },
+  metaStrong: { color: D.text, fontWeight: "700" },
+  metaSep: {
+    width: 2,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: D.border,
+  },
+  pctText: {
+    fontSize: 11,
+    color: D.textMuted,
+    fontWeight: "700",
+  },
+});
+
+// ─── Main Styles ──────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: D.bg },
+  root: { flex: 1, backgroundColor: D.bg },
 
-  // Header
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: D.surface, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16,
-    borderBottomWidth: 1, borderBottomColor: D.border, overflow: 'hidden', position: 'relative',
+  // Top bar
+  topBar: {
+    backgroundColor: D.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: D.border,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    ...Platform.select({
+      ios: { paddingTop: 56 },
+      android: { paddingTop: 14 },
+    }),
   },
-  headerGlow: {
-    position: 'absolute', top: -50, right: -50,
-    width: 160, height: 160, borderRadius: 80, backgroundColor: D.greenMuted,
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: D.radius.md,
+    backgroundColor: D.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerIconBox: {
-    width: 44, height: 44, borderRadius: D.radius.md,
-    backgroundColor: D.greenMuted, borderWidth: 1, borderColor: D.greenBorder,
-    alignItems: 'center', justifyContent: 'center',
+  topBarTitle: {
+    flex: 1,
+    fontSize: 17,
+    fontWeight: "700",
+    color: D.text,
+    letterSpacing: -0.3,
   },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: D.text, letterSpacing: -0.4 },
-  headerSub: { fontSize: 12, color: D.textMuted, marginTop: 1 },
+  topBarCount: {
+    backgroundColor: D.greenMuted,
+    borderRadius: D.radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: D.greenBorder,
+  },
+  topBarCountText: { fontSize: 12, fontWeight: "700", color: D.green },
 
-  // Summary
-  summaryBand: {
-    flexDirection: 'row', gap: 10, paddingHorizontal: 20, paddingVertical: 14,
-    backgroundColor: D.surface, borderBottomWidth: 1, borderBottomColor: D.border,
+  // Stats row
+  statsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: D.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: D.border,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
   },
-  summaryCard: {
-    flex: 1, alignItems: 'center', backgroundColor: D.bg,
-    borderRadius: D.radius.lg, borderWidth: 1, padding: 12,
+  statPill: { flex: 1, alignItems: "center", gap: 2 },
+  statDivider: { width: 1, height: 28, backgroundColor: D.border },
+  statVal: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: D.text,
+    letterSpacing: -0.5,
   },
-  summaryIcon: { width: 34, height: 34, borderRadius: D.radius.sm, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
-  summaryValue: { fontSize: 20, fontWeight: '800', letterSpacing: -0.5, marginBottom: 2 },
-  summaryLabel: { fontSize: 10, color: D.textMuted, fontWeight: '600', letterSpacing: 0.3, textAlign: 'center' },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: D.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
 
   // Search
-  searchWrap: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 6 },
-  searchBar: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: D.surface, borderRadius: D.radius.md,
-    borderWidth: 1, borderColor: D.border, overflow: 'hidden',
+  searchWrap: {
+    backgroundColor: D.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: D.border,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
-  searchBarIcon: { width: 42, height: 44, alignItems: 'center', justifyContent: 'center', borderRightWidth: 1, borderRightColor: D.border },
-  searchBarInput: { flex: 1, paddingHorizontal: 12, paddingVertical: 12, fontSize: 14, color: D.text },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: D.surfaceAlt,
+    borderRadius: D.radius.lg,
+    borderWidth: 1,
+    borderColor: D.border,
+    overflow: "hidden",
+  },
+  searchBarIcon: {
+    width: 42,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRightWidth: 1,
+    borderRightColor: D.border,
+  },
+  searchBarInput: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: D.text,
+  },
   searchBarClear: { paddingHorizontal: 10 },
 
   // Tabs
-  tabsContainer: {
-    paddingHorizontal: 20, paddingTop: 10, paddingBottom: 10,
-    backgroundColor: D.surface, borderBottomWidth: 1, borderBottomColor: D.border,
+  tabsWrap: {
+    backgroundColor: D.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: D.border,
+    paddingVertical: 10,
   },
-  tabsRow: { gap: 8 },
+  tabsRow: { paddingHorizontal: 16, gap: 8 },
   tab: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 14, paddingVertical: 9,
-    backgroundColor: D.surface, borderRadius: D.radius.pill,
-    borderWidth: 1, borderColor: D.border,
-    height: 38,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: D.surfaceAlt,
+    borderRadius: D.radius.pill,
+    borderWidth: 1,
+    borderColor: D.border,
   },
-  tabText: { fontSize: 12, fontWeight: '700', color: D.text },
+  tabText: { fontSize: 12, fontWeight: "600", color: D.textMuted },
   tabBadge: {
-    minWidth: 22, height: 22,
-    backgroundColor: D.bg, borderRadius: D.radius.pill,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: D.border,
+    minWidth: 22,
+    height: 20,
+    backgroundColor: D.surface,
+    borderRadius: D.radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: D.border,
     paddingHorizontal: 6,
   },
-  tabBadgeText: { fontSize: 10, fontWeight: '800', color: D.text },
+  tabBadgeText: { fontSize: 10, fontWeight: "800", color: D.textMuted },
 
   // List
-  listContent: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 40 },
-
-  // Card
-  card: {
-    flexDirection: 'row', backgroundColor: D.surface, borderRadius: D.radius.xl,
-    borderWidth: 1, borderColor: D.border, marginBottom: 10, overflow: 'hidden',
-    shadowColor: D.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 4, elevation: 2,
-  },
-  cardStripe: { width: 4 },
-  cardInner: { flex: 1, padding: 14 },
-  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  cardIconBox: {
-    width: 42, height: 42, borderRadius: D.radius.md,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 1,
-  },
-  cardMainInfo: { flex: 1 },
-  cardName: { fontSize: 15, fontWeight: '700', color: D.text, marginBottom: 3 },
-  statusPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 9, paddingVertical: 5,
-    borderRadius: D.radius.pill, borderWidth: 1,
-  },
-  statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { fontSize: 11, fontWeight: '700' },
-
-  // Bar
-  barSection: { marginBottom: 12 },
-  barBg: { height: 7, backgroundColor: D.border, borderRadius: 4, overflow: 'hidden', marginBottom: 8 },
-  barFill: { height: '100%', borderRadius: 4 },
-  barLabels: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  barQtyRow: { flexDirection: 'row', alignItems: 'baseline' },
-  barQtyBig: { fontSize: 20, fontWeight: '800', letterSpacing: -0.5 },
-  barQtyOf: { fontSize: 12, color: D.textMuted, fontWeight: '500' },
-  barPct: { fontSize: 12, fontWeight: '700', color: D.textMuted },
-
-  // Chips
-  cardChips: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 8,
-    paddingTop: 10, borderTopWidth: 1, borderTopColor: D.border,
-  },
-  chip: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: D.bg, paddingHorizontal: 10, paddingVertical: 5,
-    borderRadius: D.radius.pill, borderWidth: 1, borderColor: D.border,
-  },
-  chipText: { fontSize: 11, color: D.textMuted, fontWeight: '500' },
+  listContent: { paddingHorizontal: 12, paddingTop: 8, paddingBottom: 40 },
 
   // Empty
-  emptyBlock: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
-  emptyIconBox: { width: 80, height: 80, borderRadius: D.radius.xl, backgroundColor: D.surface, borderWidth: 1, borderColor: D.border, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: D.text, marginBottom: 6 },
-  emptyHint: { fontSize: 13, color: D.textMuted },
+  emptyWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 40,
+  },
+  emptyIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: D.radius.xl,
+    backgroundColor: D.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: D.border,
+    marginBottom: 14,
+  },
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: D.text,
+    marginBottom: 6,
+  },
+  emptyHint: {
+    fontSize: 13,
+    color: D.textMuted,
+    textAlign: "center",
+    lineHeight: 20,
+  },
 });
