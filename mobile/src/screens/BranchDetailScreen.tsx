@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,29 +6,342 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-} from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useAuth } from '../context/AuthContext';
-import { useData } from '../context/DataContext';
-import { BarChartCard } from '../components/BarChartCard';
-import { colors, theme, shadows } from '../theme';
-import { RevenueBarChart } from '../components/RevenueBarChart';
-import { StatCard } from '../components/ui/StatCard';
-import { Badge } from '../components/ui/Badge';
-import type { ProductSale } from '../types';
+  Platform,
+  Dimensions,
+} from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useAuth } from "../context/AuthContext";
+import { useData } from "../context/DataContext";
+import type { ProductSale } from "../types";
 
-const DEFAULT_BRANCH_ID = '00000000-0000-0000-0000-000000000001';
+// ─── Design Tokens — shared system ───────────────────────────────────────────
+const D = {
+  bg: "#F7F9FB",
+  surface: "#FFFFFF",
+  surfaceAlt: "#F2F4F6",
+
+  green: "#166534",
+  greenMuted: "rgba(22,101,52,0.10)",
+  greenBorder: "rgba(22,101,52,0.25)",
+
+  border: "#E8EAEC",
+
+  text: "#191C1E",
+  textSub: "#707A6F",
+  textMuted: "#9AA09E",
+
+  red: "#BA1A1A",
+  redMuted: "rgba(186,26,26,0.08)",
+  redBorder: "rgba(186,26,26,0.20)",
+
+  amber: "#B8742A",
+  amberMuted: "rgba(184,116,42,0.10)",
+  amberBorder: "rgba(184,116,42,0.25)",
+
+  blue: "#1B5FA6",
+  blueMuted: "rgba(27,95,166,0.10)",
+  blueBorder: "rgba(27,95,166,0.25)",
+
+  purple: "#7C3AED",
+  purpleMuted: "rgba(124,58,237,0.10)",
+
+  radius: { sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, pill: 999 },
+};
+
+const { width: W } = Dimensions.get("window");
+const DEFAULT_BRANCH_ID = "00000000-0000-0000-0000-000000000001";
 
 interface Props {
   navigation?: any;
   route?: { params?: { branchId?: string; branchName?: string } };
 }
 
+// ─── SectionLabel ─────────────────────────────────────────────────────────────
+const SectionLabel = ({ children }: { children: string }) => (
+  <View style={sl.row}>
+    <View style={sl.line} />
+    <Text style={sl.text}>{children}</Text>
+    <View style={sl.line} />
+  </View>
+);
+
+const sl = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 12,
+  },
+  line: { flex: 1, height: 1, backgroundColor: D.border },
+  text: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: D.textSub,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
+});
+
+// ─── Avatar helpers ───────────────────────────────────────────────────────────
+const AVATAR_COLORS = ["#1E3A5F", "#0D9488", "#059669", "#2563EB", "#7C3AED"];
+const avatarColor = (name: string) => {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+};
+const initials = (name: string) =>
+  name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
+// ─── BarRow component ─────────────────────────────────────────────────────────
+const BarRow = ({
+  label,
+  value,
+  max,
+}: {
+  label: string;
+  value: number;
+  max: number;
+}) => (
+  <View style={br.row}>
+    <Text style={br.label} numberOfLines={1}>
+      {label}
+    </Text>
+    <View style={br.track}>
+      <View
+        style={[
+          br.fill,
+          {
+            width: `${max > 0 ? Math.min(100, (value / max) * 100) : 0}%` as any,
+          },
+        ]}
+      />
+    </View>
+    <Text style={br.val}>₹{value.toFixed(0)}</Text>
+  </View>
+);
+
+const br = StyleSheet.create({
+  row: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 },
+  label: {
+    fontSize: 12,
+    color: D.textSub,
+    fontWeight: "600",
+    width: 64,
+    textAlign: "right",
+  },
+  track: {
+    flex: 1,
+    height: 6,
+    backgroundColor: D.surfaceAlt,
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  fill: { height: "100%", borderRadius: 3, backgroundColor: D.green },
+  val: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: D.text,
+    width: 56,
+    textAlign: "right",
+  },
+});
+
+// ─── ActivityRow component ────────────────────────────────────────────────────
+const ActivityRow = ({
+  title,
+  meta,
+  amount,
+  isLast = false,
+}: {
+  title: string;
+  meta: string;
+  amount: string;
+  isLast?: boolean;
+}) => (
+  <View style={[ar.row, isLast && ar.rowLast]}>
+    <View style={ar.dot} />
+    <View style={ar.content}>
+      <Text style={ar.title} numberOfLines={1}>
+        {title}
+      </Text>
+      <Text style={ar.meta} numberOfLines={1}>
+        {meta}
+      </Text>
+    </View>
+    <Text style={ar.amount}>{amount}</Text>
+  </View>
+);
+
+const ar = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 11,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F2F4",
+  },
+  rowLast: { borderBottomWidth: 0 },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: D.green,
+    flexShrink: 0,
+  },
+  content: { flex: 1, minWidth: 0 },
+  title: { fontSize: 14, fontWeight: "600", color: D.text },
+  meta: { fontSize: 11, color: D.textMuted, marginTop: 1 },
+  amount: { fontSize: 14, fontWeight: "700", color: D.green, flexShrink: 0 },
+});
+
+// ─── Simple Donut Chart Component (without external SVG deps) ─────────────────
+const SimpleDonutChart = ({ data, total }: { data: any[]; total: number }) => {
+  const size = 180;
+  const strokeWidth = 25;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  
+  let currentOffset = 0;
+  const segments = data.map((item) => {
+    const percentage = item.value / total;
+    const strokeDasharray = circumference * percentage;
+    const strokeDashoffset = circumference - currentOffset;
+    currentOffset += strokeDasharray;
+    return {
+      ...item,
+      strokeDasharray,
+      strokeDashoffset,
+      percentage: percentage * 100,
+    };
+  });
+
+  return (
+    <View style={donut.container}>
+      <View style={donut.chartWrapper}>
+        <View style={donut.chartContainer}>
+          {segments.map((segment, index) => (
+            <View
+              key={segment.key}
+              style={[
+                donut.segment,
+                {
+                  width: size,
+                  height: size,
+                  borderRadius: size / 2,
+                  borderWidth: strokeWidth,
+                  borderColor: segment.svg.fill,
+                  transform: [{ rotate: `${segment.strokeDashoffset}deg` }],
+                },
+              ]}
+            />
+          ))}
+          <View style={donut.center}>
+            <Text style={donut.centerTotal}>₹{total.toFixed(0)}</Text>
+            <Text style={donut.centerLabel}>Total</Text>
+          </View>
+        </View>
+      </View>
+      <View style={donut.legendRow}>
+        {segments.map((item) => (
+          <View key={item.key} style={donut.legendItem}>
+            <View style={[donut.legendColor, { backgroundColor: item.svg.fill }]} />
+            <Text style={donut.legendLabel}>{item.label}</Text>
+            <Text style={donut.legendValue}>
+              ₹{item.value.toFixed(0)} ({item.percentage.toFixed(0)}%)
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+};
+
+const donut = StyleSheet.create({
+  container: {
+    alignItems: "center",
+    width: "100%",
+  },
+  chartWrapper: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  chartContainer: {
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  segment: {
+    position: "absolute",
+    borderStyle: "solid",
+  },
+  center: {
+    position: "absolute",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    backgroundColor: D.surface,
+  },
+  centerTotal: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: D.text,
+    letterSpacing: -0.5,
+  },
+  centerLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: D.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginTop: 2,
+  },
+  legendRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 10,
+    marginTop: 8,
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: D.surfaceAlt,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: D.radius.pill,
+  },
+  legendColor: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  legendLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: D.textSub,
+  },
+  legendValue: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: D.text,
+  },
+});
+
 export const BranchDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   const { user } = useAuth();
   const { inventory, getBranchSummary, getProductSales } = useData();
-  const branchId = route?.params?.branchId ?? '';
-  const branchName = route?.params?.branchName ?? '';
+  const branchId = route?.params?.branchId ?? "";
+  const branchName = route?.params?.branchName ?? "";
 
   const [productSales, setProductSales] = useState<ProductSale[]>([]);
   const [salesLoading, setSalesLoading] = useState(true);
@@ -47,15 +360,53 @@ export const BranchDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     };
   }, [branchId, getProductSales]);
 
-  if (!user || user.role !== 'admin') {
+  if (!user || user.role !== "admin") {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>Admin access required.</Text>
+      <View style={s.center}>
+        <View style={s.restrictedIcon}>
+          <MaterialCommunityIcons name="shield-alert-outline" size={28} color={D.textMuted} />
+        </View>
+        <Text style={s.restrictedTitle}>Admin Access Required</Text>
+        <Text style={s.restrictedText}>You need admin privileges to access this page.</Text>
       </View>
     );
   }
 
   const summary = useMemo(() => getBranchSummary(branchId), [getBranchSummary, branchId]);
+
+  // Prepare donut chart data
+  const pieData = useMemo(() => {
+    const { cash = 0, upi = 0, card = 0, udhaar = 0 } = summary.paymentBreakdown || {};
+    const total = cash + upi + card + udhaar;
+    if (total === 0) return [];
+    
+    return [
+      {
+        key: "cash",
+        value: cash,
+        svg: { fill: D.green },
+        label: "Cash",
+      },
+      {
+        key: "upi",
+        value: upi,
+        svg: { fill: D.blue },
+        label: "UPI",
+      },
+      {
+        key: "card",
+        value: card,
+        svg: { fill: D.purple },
+        label: "Card",
+      },
+      {
+        key: "udhaar",
+        value: udhaar,
+        svg: { fill: D.amber },
+        label: "Udhaar",
+      },
+    ].filter((item) => item.value > 0);
+  }, [summary.paymentBreakdown]);
 
   const lowStockItems = useMemo(
     () =>
@@ -64,389 +415,390 @@ export const BranchDetailScreen: React.FC<Props> = ({ navigation, route }) => {
           (item.branchId ?? DEFAULT_BRANCH_ID) === branchId &&
           item.quantity <= item.minThreshold,
       ),
-    [inventory, branchId],
+    [inventory, branchId]
   );
 
   const recentSales = useMemo(() => productSales.slice(0, 4), [productSales]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
+    return date.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
     });
   };
 
+  const maxStaff = Math.max(...summary.byStaffToday.map((s: any) => s.total), 1);
+  const paymentTotal = Object.values(summary.paymentBreakdown || {}).reduce((a: number, b: number) => a + b, 0);
+
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header */}
-      <View style={styles.headerRow}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.primary} />
+    <View style={s.root}>
+      <ScrollView
+        style={s.scroll}
+        contentContainerStyle={s.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ── Top Bar ── */}
+        <View style={s.topBar}>
+          <TouchableOpacity
+            style={s.backBtn}
+            onPress={() => navigation?.goBack()}
+            activeOpacity={0.7}
+          >
+            <MaterialCommunityIcons name="arrow-left" size={20} color={D.text} />
           </TouchableOpacity>
-          <View style={styles.headerContent}>
-            <Text style={[theme.typography.bodySmall, { color: colors.textMuted }]}>Branch</Text>
-            <Text style={theme.typography.h2}>{branchName}</Text>
+          <View style={s.topBarIcon}>
+            <MaterialCommunityIcons name="office-building-outline" size={18} color={D.green} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.topBarTitle}>{branchName}</Text>
+            <Text style={s.topBarSub}>Branch Details</Text>
           </View>
         </View>
-      </View>
 
-      {/* Stats Row */}
-      <View style={styles.statsRow}>
-        <View style={styles.statCardWrapper}>
-          <StatCard
-            title="Today's Revenue"
-            value={`₹${summary.todayTotal.toFixed(0)}`}
-            icon="cash-multiple"
-            iconColor={colors.primary}
-            iconBgColor={colors.primaryContainer}
-          />
-        </View>
-        <View style={styles.statCardWrapper}>
-          <StatCard
-            title="Monthly Revenue"
-            value={`₹${summary.monthlyTotal.toFixed(0)}`}
-            icon="calendar-month"
-            iconColor={colors.accent}
-            iconBgColor={colors.accentMuted}
-          />
-        </View>
-        <View style={styles.statCardWrapper}>
-          <StatCard
-            title="Yearly Revenue"
-            value={`₹${summary.yearlyTotal.toFixed(0)}`}
-            icon="chart-line"
-            iconColor={colors.success}
-            iconBgColor={colors.successMuted}
-          />
-        </View>
-      </View>
-
-      <RevenueBarChart
-        today={summary.todayTotal}
-        monthly={summary.monthlyTotal}
-        yearly={summary.yearlyTotal}
-      />
-
-      <BarChartCard
-        title="Today's Payment Breakdown"
-        items={[
-          { label: 'Cash', value: summary.paymentBreakdown.cash || 0, color: colors.chartGreen },
-          { label: 'UPI', value: summary.paymentBreakdown.upi || 0, color: colors.chartBlue },
-          { label: 'Card', value: summary.paymentBreakdown.card || 0, color: colors.chartAmber },
-          { label: 'Udhaar', value: summary.paymentBreakdown.udhaar || 0, color: colors.chartRed },
-        ]}
-        formatValue={(v) => `₹${v.toFixed(0)}`}
-      />
-
-      {/* Staff Revenue Section */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionTitleRow}>
-            <MaterialCommunityIcons name="account-group" size={18} color={colors.primary} />
-            <Text style={[theme.typography.h4, { marginLeft: theme.spacing.sm }]}>
-              Today's Revenue by Staff
-            </Text>
+        {/* ── Hero Revenue Card (Unified like AdminDashboard) ── */}
+        <View style={s.heroCard}>
+          <View style={s.heroTop}>
+            <View>
+              <Text style={s.heroEyebrow}>TODAY'S REVENUE</Text>
+              <Text style={s.heroAmount}>₹{summary.todayTotal.toFixed(0)}</Text>
+            </View>
+            <View style={s.heroIcon}>
+              <MaterialCommunityIcons name="trending-up" size={20} color="#fff" />
+            </View>
+          </View>
+          <View style={s.heroDivider} />
+          <View style={s.heroSub}>
+            <View style={s.heroSubCol}>
+              <Text style={s.heroSubLabel}>THIS MONTH</Text>
+              <Text style={s.heroSubVal}>₹{summary.monthlyTotal.toFixed(0)}</Text>
+            </View>
+            <View style={s.heroSubSep} />
+            <View style={s.heroSubCol}>
+              <Text style={s.heroSubLabel}>THIS YEAR</Text>
+              <Text style={s.heroSubVal}>₹{summary.yearlyTotal.toFixed(0)}</Text>
+            </View>
           </View>
         </View>
-        {summary.byStaffToday.filter((s) => s.total > 0).length === 0 ? (
-          <View style={styles.emptyCard}>
-            <MaterialCommunityIcons name="account-off" size={32} color={colors.border} />
-            <Text style={styles.emptyCardText}>No staff revenue today</Text>
+
+        {/* ── Payment Breakdown with Donut Chart ── */}
+        <SectionLabel>PAYMENT BREAKDOWN</SectionLabel>
+        <View style={s.pieCard}>
+          {pieData.length === 0 ? (
+            <View style={s.emptyInline}>
+              <MaterialCommunityIcons
+                name="chart-pie"
+                size={24}
+                color={D.textMuted}
+              />
+              <Text style={s.emptyInlineText}>No payment data available</Text>
+            </View>
+          ) : (
+            <SimpleDonutChart data={pieData} total={paymentTotal} />
+          )}
+        </View>
+
+        {/* ── Staff Revenue Today ── */}
+        <SectionLabel>STAFF REVENUE TODAY</SectionLabel>
+        <View style={s.card}>
+          {summary.byStaffToday.filter((s: any) => s.total > 0).length === 0 ? (
+            <View style={s.emptyInline}>
+              <MaterialCommunityIcons
+                name="account-group-outline"
+                size={24}
+                color={D.textMuted}
+              />
+              <Text style={s.emptyInlineText}>No staff revenue today</Text>
+            </View>
+          ) : (
+            summary.byStaffToday.map((st: any) => (
+              <BarRow
+                key={st.staffId}
+                label={st.staffName}
+                value={st.total}
+                max={maxStaff}
+              />
+            ))
+          )}
+        </View>
+
+        {/* ── Low Stock Items ── */}
+        <SectionLabel>LOW STOCK ITEMS</SectionLabel>
+        {lowStockItems.length === 0 ? (
+          <View style={s.emptyBlock}>
+            <MaterialCommunityIcons
+              name="check-circle-outline"
+              size={26}
+              color={D.textMuted}
+            />
+            <Text style={s.emptyText}>All items well stocked</Text>
           </View>
         ) : (
-          <View style={styles.staffList}>
-            {summary.byStaffToday
-              .filter((s) => s.total > 0)
-              .map((staff, index) => (
-                <View key={staff.staffId} style={[styles.staffCard, shadows.sm]}>
-                  <View style={[styles.staffRank, { backgroundColor: index < 3 ? colors.accentAmber : colors.background }]}>
-                    <Text style={[styles.staffRankText, { color: index < 3 ? colors.chartAmber : colors.textMuted }]}>
-                      #{index + 1}
+          <View style={s.listCard}>
+            {lowStockItems.map((item, i) => {
+              const out = item.quantity === 0;
+              return (
+                <View
+                  key={item.id}
+                  style={[s.stockRow, i === lowStockItems.length - 1 && s.stockRowLast]}
+                >
+                  <View style={s.stockDot} />
+                  <Text style={s.stockName}>{item.name}</Text>
+                  <View style={[s.stockTag, out && s.stockTagOut]}>
+                    <Text style={[s.stockTagText, out && s.stockTagTextOut]}>
+                      {out ? "Out of stock" : `${item.quantity} left`}
                     </Text>
                   </View>
-                  <View style={styles.staffInfo}>
-                    <Text style={styles.staffName}>{staff.staffName}</Text>
-                  </View>
-                  <Text style={styles.staffAmount}>₹{staff.total.toFixed(0)}</Text>
                 </View>
-              ))}
+              );
+            })}
           </View>
         )}
-      </View>
 
-      {/* Low Stock Section */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionTitleRow}>
-            <MaterialCommunityIcons name="alert-circle" size={18} color={colors.warning} />
-            <Text style={[theme.typography.h4, { marginLeft: theme.spacing.sm }]}>Low Stock Items</Text>
-            {lowStockItems.length > 0 && (
-              <Badge text={`${lowStockItems.length}`} variant="warning" size="sm" style={{ marginLeft: theme.spacing.sm }} />
-            )}
-          </View>
-          <TouchableOpacity onPress={() => navigation.navigate('AdminInventory')}>
-            <Text style={[theme.typography.bodySmall, { color: colors.primary }]}>Manage</Text>
-          </TouchableOpacity>
-        </View>
-        {lowStockItems.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <MaterialCommunityIcons name="check-circle" size={32} color={colors.success} />
-            <Text style={styles.emptyCardText}>All items well stocked</Text>
-          </View>
-        ) : (
-          lowStockItems.map((item) => (
-            <View key={item.id} style={[styles.lowStockItem, shadows.sm]}>
-              <View style={styles.lowStockInfo}>
-                <MaterialCommunityIcons name="package-variant" size={18} color={colors.textSecondary} />
-                <Text style={[theme.typography.bodySmall, { marginLeft: theme.spacing.sm }]}>{item.name}</Text>
-              </View>
-              <Badge 
-                text={`${item.quantity} left`} 
-                variant={item.quantity === 0 ? 'error' : 'warning'} 
-                size="sm" 
-              />
-            </View>
-          ))
-        )}
-      </View>
-
-      {/* Recent Sales Section */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionTitleRow}>
-            <MaterialCommunityIcons name="cart-outline" size={18} color={colors.success} />
-            <Text style={[theme.typography.h4, { marginLeft: theme.spacing.sm }]}>Recent Product Sales</Text>
-          </View>
-        </View>
+        {/* ── Recent Product Sales ── */}
+        <SectionLabel>RECENT PRODUCT SALES</SectionLabel>
         {salesLoading ? (
-          <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 12 }} />
+          <View style={s.centerInline}>
+            <ActivityIndicator size="small" color={D.green} />
+          </View>
         ) : recentSales.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <MaterialCommunityIcons name="package-variant" size={32} color={colors.border} />
-            <Text style={styles.emptyCardText}>No product sales yet</Text>
+          <View style={s.emptyBlock}>
+            <MaterialCommunityIcons
+              name="shopping-outline"
+              size={26}
+              color={D.textMuted}
+            />
+            <Text style={s.emptyText}>No product sales yet</Text>
           </View>
         ) : (
-          <View style={styles.salesList}>
-            {recentSales.map((sale) => (
-              <View key={sale.id} style={[styles.saleCard, shadows.sm]}>
-                <View style={[styles.saleIcon, { backgroundColor: colors.accentGreen }]}>
-                  <MaterialCommunityIcons name="package-variant" size={20} color={colors.success} />
-                </View>
-                <View style={styles.saleContent}>
-                  <View style={styles.saleHeader}>
-                    <Text style={styles.saleProduct} numberOfLines={1}>{sale.productName}</Text>
-                    <Text style={styles.saleAmount}>₹{sale.totalPrice.toFixed(0)}</Text>
-                  </View>
-                  <View style={styles.saleMeta}>
-                    <Text style={styles.saleMetaText}>{sale.quantity} × ₹{sale.unitPrice}</Text>
-                    <Text style={styles.saleMetaDot}>•</Text>
-                    <Text style={styles.saleMetaText}>{sale.staffName}</Text>
-                    <Text style={styles.saleMetaDot}>•</Text>
-                    <Text style={styles.saleMetaText}>{formatDate(sale.date)}</Text>
-                  </View>
-                </View>
-              </View>
+          <View style={s.listCard}>
+            {recentSales.map((item: ProductSale, i: number) => (
+              <ActivityRow
+                key={item.id || i}
+                title={item.productName}
+                meta={`${item.quantity} × ₹${item.unitPrice} · ${item.staffName} · ${formatDate(item.date)}`}
+                amount={`₹${item.totalPrice.toFixed(0)}`}
+                isLast={i === recentSales.length - 1}
+              />
             ))}
           </View>
         )}
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    paddingTop: 16,
-    paddingHorizontal: theme.spacing.lg,
-  },
+// ─── Styles ───────────────────────────────────────────────────────────────────
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: D.bg },
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: 48 },
+
+  // Center / Restricted
   center: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: D.bg,
+    paddingHorizontal: 40,
   },
-  errorText: {
-    color: colors.error,
-    fontSize: 16,
-  },
-  // Header Styles
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.xl,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: theme.radius.md,
-    backgroundColor: colors.primaryContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: theme.spacing.md,
-  },
-  headerContent: {
-    flex: 1,
-  },
-  // Stats Row
-  statsRow: {
-    flexDirection: 'row',
-    marginBottom: theme.spacing.xl,
-    gap: theme.spacing.md,
-  },
-  statCardWrapper: {
-    flex: 1,
-  },
-  // Section Styles
-  section: {
-    marginBottom: theme.spacing.xl,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
-  },
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  // Staff List Styles
-  staffList: {
-    gap: theme.spacing.sm,
-  },
-  staffCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: theme.radius.lg,
-    padding: theme.spacing.md,
+  restrictedIcon: {
+    width: 68,
+    height: 68,
+    borderRadius: D.radius.xl,
+    backgroundColor: D.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: D.border,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
   },
-  staffRank: {
-    width: 32,
-    height: 32,
-    borderRadius: theme.radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: theme.spacing.md,
+  restrictedTitle: { fontSize: 17, fontWeight: "700", color: D.text, marginBottom: 8 },
+  restrictedText: { fontSize: 13, color: D.textMuted, textAlign: "center", lineHeight: 20 },
+  centerInline: { alignItems: "center", paddingVertical: 20 },
+
+  // Top Bar
+  topBar: {
+    backgroundColor: D.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: D.border,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    ...Platform.select({
+      ios: { paddingTop: 56 },
+      android: { paddingTop: 14 },
+    }),
   },
-  staffRankText: {
-    fontSize: 12,
-    fontWeight: '700',
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: D.radius.md,
+    backgroundColor: D.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  staffInfo: {
-    flex: 1,
-  },
-  staffName: {
-    fontSize: 14,
-    color: colors.text,
-    fontWeight: '500',
-  },
-  staffAmount: {
-    fontSize: 14,
-    color: colors.success,
-    fontWeight: '600',
-  },
-  // Low Stock Styles
-  lowStockItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: theme.spacing.lg,
-    backgroundColor: colors.surface,
-    borderRadius: theme.radius.md,
-    marginBottom: 8,
+  topBarIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: D.radius.md,
+    backgroundColor: D.greenMuted,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: D.greenBorder,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  lowStockInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  topBarTitle: { fontSize: 16, fontWeight: "700", color: D.text, letterSpacing: -0.3 },
+  topBarSub: { fontSize: 11, color: D.textMuted, marginTop: 1 },
+
+  // Hero Card (Unified Revenue Card)
+  heroCard: {
+    backgroundColor: D.green,
+    borderRadius: D.radius.xxl,
+    padding: 20,
+    margin: 16,
   },
-  // Sales List Styles
-  salesList: {
-    gap: theme.spacing.sm,
+  heroTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 18,
   },
-  saleCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: theme.radius.lg,
-    padding: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  saleIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: theme.radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: theme.spacing.md,
-  },
-  saleContent: {
-    flex: 1,
-  },
-  saleHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  heroEyebrow: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.60)",
+    letterSpacing: 1.8,
+    textTransform: "uppercase",
     marginBottom: 4,
   },
-  saleProduct: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-    flex: 1,
-    marginRight: theme.spacing.sm,
+  heroAmount: {
+    fontSize: 38,
+    fontWeight: "800",
+    color: "#fff",
+    letterSpacing: -1.5,
   },
-  saleAmount: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.success,
+  heroIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: D.radius.md,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  saleMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
+  heroDivider: {
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    marginBottom: 16,
   },
-  saleMetaText: {
-    fontSize: 12,
-    color: colors.textSecondary,
+  heroSub: { flexDirection: "row" },
+  heroSubCol: { flex: 1 },
+  heroSubSep: {
+    width: 1,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    marginHorizontal: 16,
   },
-  saleMetaDot: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginHorizontal: 6,
+  heroSubLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.60)",
+    textTransform: "uppercase",
+    letterSpacing: 1.5,
+    marginBottom: 3,
   },
-  // Empty State Styles
-  emptyCard: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: theme.spacing.xl,
-    backgroundColor: colors.surface,
-    borderRadius: theme.radius.lg,
+  heroSubVal: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#fff",
+    letterSpacing: -0.5,
+  },
+
+  // Pie Chart Card
+  pieCard: {
+    backgroundColor: D.surface,
+    borderRadius: D.radius.xl,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: D.border,
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    alignItems: "center",
   },
-  emptyCardText: {
-    fontSize: 14,
-    color: colors.textMuted,
-    marginTop: theme.spacing.sm,
+
+  // Card
+  card: {
+    backgroundColor: D.surface,
+    borderRadius: D.radius.xl,
+    borderWidth: 1,
+    borderColor: D.border,
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 16,
   },
-  emptyText: {
-    color: colors.textMuted,
-    fontSize: 14,
-    fontStyle: 'italic',
+
+  // List Card
+  listCard: {
+    backgroundColor: D.surface,
+    borderRadius: D.radius.xl,
+    borderWidth: 1,
+    borderColor: D.border,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    marginHorizontal: 16,
+    marginBottom: 16,
   },
+
+  // Empty states
+  emptyBlock: {
+    backgroundColor: D.surface,
+    borderRadius: D.radius.lg,
+    borderWidth: 1,
+    borderColor: D.border,
+    paddingVertical: 32,
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: 16,
+    marginBottom: 16,
+  },
+  emptyText: { fontSize: 13, color: D.textMuted, fontWeight: "600" },
+  emptyInline: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 24,
+  },
+  emptyInlineText: { fontSize: 13, color: D.textMuted },
+
+  // Stock rows
+  stockRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 11,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F2F4",
+  },
+  stockRowLast: { borderBottomWidth: 0 },
+  stockDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: D.amber,
+    flexShrink: 0,
+  },
+  stockName: { flex: 1, fontSize: 14, fontWeight: "600", color: D.text },
+  stockTag: {
+    backgroundColor: D.amberMuted,
+    borderRadius: D.radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: D.amberBorder,
+  },
+  stockTagText: { fontSize: 11, fontWeight: "700", color: D.amber },
+  stockTagOut: { backgroundColor: D.redMuted, borderColor: D.redBorder },
+  stockTagTextOut: { color: D.red },
 });
