@@ -68,18 +68,6 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
       >
         {/* ── Top illustration panel ── */}
         <View style={s.illustrationPanel}>
-          {/* Decorative blobs */}
-          <View style={s.blobTopRight} />
-          <View style={s.blobBottomLeft} />
-
-          {/* Brand mark */}
-          <View style={s.brandRow}>
-            <View style={s.brandIconBox}>
-              <MaterialCommunityIcons name="content-cut" size={16} color={D.green} />
-            </View>
-            <Text style={s.brandName}>SalonOS</Text>
-          </View>
-
           {/* Illustration */}
           <Image
             source={require('../../assets/salon-illustration.png')}
@@ -178,18 +166,6 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
               </>
             )}
           </TouchableOpacity>
-
-          {/* Hint pills */}
-          <View style={s.hintRow}>
-            <View style={s.hintPill}>
-              <MaterialCommunityIcons name="tablet" size={12} color={D.textMuted} />
-              <Text style={s.hintText}>Shared tablet: <Text style={{ fontWeight: '700' }}>salon / salon123</Text></Text>
-            </View>
-            <View style={s.hintPill}>
-              <MaterialCommunityIcons name="shield-account-outline" size={12} color={D.textMuted} />
-              <Text style={s.hintText}>Admin: use your credentials</Text>
-            </View>
-          </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -202,7 +178,7 @@ const s = StyleSheet.create({
 
   // Illustration panel
   illustrationPanel: {
-    height: H * 0.44,
+    height: H * 0.50,
     backgroundColor: D.bg,
     borderBottomLeftRadius: 36,
     borderBottomRightRadius: 36,
@@ -213,16 +189,7 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: D.border,
   },
-  blobTopRight: {
-    position: 'absolute', top: -60, right: -60,
-    width: 200, height: 200, borderRadius: 100,
-    backgroundColor: D.greenMuted,
-  },
-  blobBottomLeft: {
-    position: 'absolute', bottom: -40, left: -40,
-    width: 140, height: 140, borderRadius: 70,
-    backgroundColor: '#C9A84C18',
-  },
+  
   brandRow: {
     position: 'absolute', top: 18, left: 24,
     flexDirection: 'row', alignItems: 'center', gap: 8, zIndex: 2,
@@ -237,7 +204,7 @@ const s = StyleSheet.create({
   illustration: {
     width: W * 1,
     height: H * 0.40,
-    marginTop: 20,
+    marginTop: -40,
   },
   illustrationFooter: {
     position: 'absolute', bottom: 22, left: 28,
