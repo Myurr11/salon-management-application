@@ -20,22 +20,22 @@ import * as supabaseService from '../services/supabaseService';
 
 // ─── Design Tokens (Light / White mode — matches Dashboard redesign) ──────────
 const D = {
-  bg: '#F7F5F2',
+  bg: '#F7F9FB',
   surface: '#FFFFFF',
-  surfaceWarm: '#FFFDF9',
-  border: '#E8E3DB',
-  borderFocus: '#C9A84C',
-  gold: '#C9A84C',
-  goldLight: '#E8C96A',
-  goldMuted: '#C9A84C18',
-  goldBorder: '#C9A84C44',
-  text: '#1A1814',
-  textSub: '#6B6560',
-  textMuted: '#A09A8F',
-  green: '#2D9A5F',
-  greenMuted: '#2D9A5F12',
-  red: '#D94F4F',
-  redMuted: '#D94F4F12',
+  surfaceWarm: '#F2F4F6',
+  border: '#E8EAEC',
+  borderFocus: '#166534',
+  gold: '#166534',
+  goldLight: '#1E7A42',
+  goldMuted: 'rgba(22,101,52,0.10)',
+  goldBorder: 'rgba(22,101,52,0.25)',
+  text: '#191C1E',
+  textSub: '#707A6F',
+  textMuted: '#9AA09E',
+  green: '#166534',
+  greenMuted: 'rgba(22,101,52,0.10)',
+  red: '#BA1A1A',
+  redMuted: 'rgba(186,26,26,0.08)',
   shadow: 'rgba(0,0,0,0.06)',
   radius: { sm: 8, md: 12, lg: 16, xl: 20, pill: 999 },
 };
@@ -392,7 +392,7 @@ export const AdminAddStaffScreen: React.FC<{ navigation: any }> = ({ navigation 
             ) : (
               <>
                 <View style={styles.submitIconBox}>
-                  <MaterialCommunityIcons name="account-plus" size={20} color={D.gold} />
+                  <MaterialCommunityIcons name="account-plus" size={20} color="#FFF" />
                 </View>
                 <Text style={styles.submitBtnText}>Add Staff Member</Text>
                 <MaterialCommunityIcons name="arrow-right" size={18} color="rgba(255,255,255,0.6)" />
@@ -474,8 +474,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderWidth: 1,
   },
-  matchOk: { backgroundColor: D.greenMuted, borderColor: '#2D9A5F33' },
-  matchErr: { backgroundColor: D.redMuted, borderColor: '#D94F4F33' },
+  matchOk: { backgroundColor: D.greenMuted, borderColor: 'rgba(22,101,52,0.25)' },
+  matchErr: { backgroundColor: D.redMuted, borderColor: 'rgba(186,26,26,0.20)' },
   matchText: { fontSize: 13, fontWeight: '600' },
 
   // Branch grid
@@ -523,12 +523,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: D.text,
+    backgroundColor: D.green,
     paddingVertical: 18,
     paddingHorizontal: 24,
     borderRadius: D.radius.xl,
     gap: 10,
-    shadowColor: D.text,
+    shadowColor: D.green,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
@@ -539,11 +539,11 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: D.radius.sm,
-    backgroundColor: D.goldMuted,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: D.goldBorder,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   submitBtnText: {
     color: '#FFF',

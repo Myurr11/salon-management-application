@@ -10,38 +10,33 @@ import { colors, theme } from '../theme';
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 const D = {
-  bg: '#F7F5F2',
+  bg: '#F7F9FB',
   surface: '#FFFFFF',
-  border: '#E8E3DB',
-  borderLight: '#F0EDE8',
+  border: '#E8EAEC',
+  borderLight: '#EEF1F3',
 
-  green: '#2D9A5F',
-  greenMuted: '#2D9A5F15',
-  greenBorder: '#2D9A5F40',
-  greenDeep: '#1E7A48',
+  green: '#166534',
+  greenMuted: 'rgba(22,101,52,0.10)',
+  greenBorder: 'rgba(22,101,52,0.25)',
 
-  gold: '#C9A84C',
-  goldMuted: '#C9A84C18',
-  goldBorder: '#C9A84C44',
+  text: '#191C1E',
+  textSub: '#707A6F',
+  textMuted: '#9AA09E',
 
-  text: '#1A1814',
-  textSub: '#6B6560',
-  textMuted: '#A09A8F',
-
-  blue: '#3A7EC8',
-  blueMuted: '#3A7EC815',
-  blueBorder: '#3A7EC833',
+  blue: '#1B5FA6',
+  blueMuted: 'rgba(27,95,166,0.10)',
+  blueBorder: 'rgba(27,95,166,0.25)',
 
   purple: '#7C5CBF',
-  purpleMuted: '#7C5CBF15',
-  purpleBorder: '#7C5CBF33',
+  purpleMuted: 'rgba(124,92,191,0.10)',
+  purpleBorder: 'rgba(124,92,191,0.20)',
 
-  amber: '#D4872A',
-  amberMuted: '#D4872A15',
-  amberBorder: '#D4872A33',
+  amber: '#B8742A',
+  amberMuted: 'rgba(184,116,42,0.10)',
+  amberBorder: 'rgba(184,116,42,0.25)',
 
-  red: '#D94F4F',
-  redMuted: '#D94F4F15',
+  red: '#BA1A1A',
+  redMuted: 'rgba(186,26,26,0.08)',
 
   shadow: 'rgba(0,0,0,0.06)',
   radius: { sm: 8, md: 12, lg: 16, xl: 20, pill: 999 },

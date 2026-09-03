@@ -1,67 +1,67 @@
 /**
- * Professional Corporate Color Palette
- * Clean, modern, business-focused design system
+ * Salon Design System
+ * Matches the green/gray palette used across the redesigned screens
  */
 export const colors = {
   // Backgrounds
-  background: '#f8fafc',
-  backgroundSecondary: '#f1f5f9',
+  background: '#F7F9FB',
+  backgroundSecondary: '#F2F4F6',
   surface: '#ffffff',
   surfaceElevated: '#ffffff',
 
   // Text
-  text: '#0f172a',
-  textSecondary: '#475569',
-  textMuted: '#64748b',
+  text: '#191C1E',
+  textSecondary: '#707A6F',
+  textMuted: '#9AA09E',
   textInverse: '#ffffff',
 
   // Borders
-  border: '#e2e8f0',
-  borderLight: '#f1f5f9',
+  border: '#E8EAEC',
+  borderLight: '#EEF1F3',
 
-  // Primary - Deep Navy Blue
-  primary: '#1e3a5f',
-  primaryLight: '#2d4a6f',
-  primaryMuted: '#e2e8f0',
-  primaryContainer: '#dbeafe',
+  // Primary - Deep Green
+  primary: '#166534',
+  primaryLight: '#1E7A42',
+  primaryMuted: 'rgba(22,101,52,0.10)',
+  primaryContainer: 'rgba(22,101,52,0.12)',
 
-  // Secondary - Slate Gray
-  secondary: '#64748b',
-  secondaryLight: '#94a3b8',
-  secondaryMuted: '#f1f5f9',
+  // Secondary - Neutral Gray
+  secondary: '#707A6F',
+  secondaryLight: '#9AA09E',
+  secondaryMuted: '#F2F4F6',
 
-  // Accent - Corporate Teal
+  // Accent - Teal (kept distinct from primary green)
   accent: '#0d9488',
   accentLight: '#14b8a6',
   accentMuted: '#ccfbf1',
 
   // Accent variations for cards (solid colors for backgrounds)
-  accentBlue: '#3b82f6',
-  accentGreen: '#10b981',
-  accentAmber: '#f59e0b',
-  accentRose: '#f43f5e',
-  accentPurple: '#8b5cf6',
+  accentBlue: '#1B5FA6',
+  accentGreen: '#166534',
+  accentAmber: '#B8742A',
+  accentRose: '#BA1A1A',
+  accentPurple: '#7C5CBF',
 
   // Status
-  success: '#059669',
-  successMuted: '#d1fae5',
-  successLight: '#ecfdf5',
-  error: '#dc2626',
-  errorMuted: '#fee2e2',
-  errorLight: '#fef2f2',
-  warning: '#d97706',
-  warningMuted: '#fef3c7',
-  warningLight: '#fffbeb',
-  info: '#2563eb',
-  infoMuted: '#dbeafe',
-  infoLight: '#eff6ff',
+  success: '#166534',
+  successMuted: 'rgba(22,101,52,0.10)',
+  successLight: 'rgba(22,101,52,0.06)',
+  error: '#BA1A1A',
+  errorMuted: 'rgba(186,26,26,0.08)',
+  errorLight: 'rgba(186,26,26,0.05)',
+  warning: '#B8742A',
+  warningMuted: 'rgba(184,116,42,0.10)',
+  warningLight: 'rgba(184,116,42,0.06)',
+  info: '#1B5FA6',
+  infoMuted: 'rgba(27,95,166,0.10)',
+  infoLight: 'rgba(27,95,166,0.06)',
 
   // Chart accents
-  chartGreen: '#059669',
-  chartBlue: '#2563eb',
-  chartAmber: '#d97706',
-  chartRed: '#dc2626',
-  chartPurple: '#7c3aed',
+  chartGreen: '#166534',
+  chartBlue: '#1B5FA6',
+  chartAmber: '#B8742A',
+  chartRed: '#BA1A1A',
+  chartPurple: '#7C5CBF',
   chartTeal: '#0d9488',
   chartNavy: '#1e3a5f',
 } as const;
