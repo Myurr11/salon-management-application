@@ -4,131 +4,150 @@ A comprehensive salon management application built with React Native and Supabas
 
 ## 📸 Screenshots
 
+<table>
+<tr>
+<td align="center"><img src="screenshots/login-screen.PNG" width="240"/><br/><sub><b>Login</b></sub></td>
+<td align="center"><img src="screenshots/admin-dashboard.PNG" width="240"/><br/><sub><b>Admin Dashboard</b></sub></td>
+<td align="center"><img src="screenshots/staff-performance.PNG" width="240"/><br/><sub><b>Staff Performance</b></sub></td>
+</tr>
+<tr>
+<td align="center"><img src="screenshots/manage-staff.PNG" width="240"/><br/><sub><b>Manage Staff</b></sub></td>
+<td align="center"><img src="screenshots/add-staff.PNG" width="240"/><br/><sub><b>Add Staff</b></sub></td>
+<td align="center"><img src="screenshots/mark-attendance.PNG" width="240"/><br/><sub><b>Mark Attendance</b></sub></td>
+</tr>
+<tr>
+<td align="center"><img src="screenshots/attendance-admin-photo.PNG" width="240"/><br/><sub><b>Attendance (Admin)</b></sub></td>
+<td align="center"><img src="screenshots/manage-services.PNG" width="240"/><br/><sub><b>Manage Services</b></sub></td>
+<td align="center"><img src="screenshots/add-services.PNG" width="240"/><br/><sub><b>Add Services</b></sub></td>
+</tr>
+<tr>
+<td align="center"><img src="screenshots/manage-inventory.PNG" width="240"/><br/><sub><b>Manage Inventory</b></sub></td>
+<td align="center"><img src="screenshots/add-inventory-items.PNG" width="240"/><br/><sub><b>Add Inventory Items</b></sub></td>
+<td align="center"><img src="screenshots/appointments-list.PNG" width="240"/><br/><sub><b>Appointments List</b></sub></td>
+</tr>
+<tr>
+<td align="center"><img src="screenshots/book-appointment.PNG" width="240"/><br/><sub><b>Book Appointment</b></sub></td>
+<td align="center"><img src="screenshots/special-offers.PNG" width="240"/><br/><sub><b>Special Offers</b></sub></td>
+<td align="center"><img src="screenshots/create-new-offer.PNG" width="240"/><br/><sub><b>Create New Offer</b></sub></td>
+</tr>
+<tr>
+<td align="center"><img src="screenshots/product-sales.PNG" width="240"/><br/><sub><b>Product Sales</b></sub></td>
+<td align="center"><img src="screenshots/staff-report.PNG" width="240"/><br/><sub><b>Staff Report</b></sub></td>
+<td align="center"><img src="screenshots/staff-dashboard.PNG" width="240"/><br/><sub><b>Staff Dashboard</b></sub></td>
+</tr>
+<tr>
+<td align="center"><img src="screenshots/create-visit-1.PNG" width="240"/><br/><sub><b>New Visit — Step 1</b></sub></td>
+<td align="center"><img src="screenshots/create-visit-2.PNG" width="240"/><br/><sub><b>New Visit — Step 2</b></sub></td>
+<td align="center"><img src="screenshots/customer-list.PNG" width="240"/><br/><sub><b>Customer List</b></sub></td>
+</tr>
+<tr>
+<td align="center"><img src="screenshots/customer-details.PNG" width="240"/><br/><sub><b>Customer Details</b></sub></td>
+<td align="center"><img src="screenshots/bill.PNG" width="240"/><br/><sub><b>Bill Receipt</b></sub></td>
+<td></td>
+</tr>
+</table>
+
+
 ### Authentication
-#### Login Screen
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/login-screen.PNG" alt="Login Screen" width="45%" />
-</div>
+<table>
+<tr>
+<td align="center"><img src="screenshots/login-screen.PNG" width="260"/><br/><sub><b>Login Screen</b></sub></td>
+</tr>
+</table>
 
 ### Admin Dashboard
-#### Main Dashboard
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/admin-dashboard.PNG" alt="Admin Dashboard" width="45%" />
-</div>
-
-#### Staff Performance
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/staff-performance.PNG" alt="Staff Performance" width="45%" />
-</div>
+<table>
+<tr>
+<td align="center"><img src="screenshots/admin-dashboard.PNG" width="260"/><br/><sub><b>Main Dashboard</b></sub></td>
+<td align="center"><img src="screenshots/staff-performance.PNG" width="260"/><br/><sub><b>Staff Performance</b></sub></td>
+</tr>
+</table>
 
 ### Staff Management (Admin)
-#### Manage Staff
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/manage-staff.PNG" alt="Manage Staff" width="45%" />
-</div>
-
-#### Add Staff
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/add-staff.PNG" alt="Add Staff" width="45%" />
-</div>
+<table>
+<tr>
+<td align="center"><img src="screenshots/manage-staff.PNG" width="260"/><br/><sub><b>Manage Staff</b></sub></td>
+<td align="center"><img src="screenshots/add-staff.PNG" width="260"/><br/><sub><b>Add Staff</b></sub></td>
+</tr>
+</table>
 
 ### Attendance System
-#### Mark Attendance (Staff Dashboard)
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/mark-attendance.PNG" alt="Mark Attendance Before" width="45%" />
-</div>
-
-#### Attendance View (Admin Dashboard with Photo)
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/attendance-admin-photo.PNG" alt="Attendance with Photo" width="45%" />
-</div>
+<table>
+<tr>
+<td align="center"><img src="screenshots/mark-attendance.PNG" width="260"/><br/><sub><b>Mark Attendance (Staff Dashboard)</b></sub></td>
+<td align="center"><img src="screenshots/attendance-admin-photo.PNG" width="260"/><br/><sub><b>Attendance View (Admin, with Photo)</b></sub></td>
+</tr>
+</table>
 
 ### Services Management (Admin)
-#### Manage Services
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/manage-services.PNG" alt="Manage Services" width="45%" />
-</div>
-
-#### Add Services
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/add-services.PNG" alt="Add Services" width="45%" />
-</div>
+<table>
+<tr>
+<td align="center"><img src="screenshots/manage-services.PNG" width="260"/><br/><sub><b>Manage Services</b></sub></td>
+<td align="center"><img src="screenshots/add-services.PNG" width="260"/><br/><sub><b>Add Services</b></sub></td>
+</tr>
+</table>
 
 ### Inventory Management (Admin)
-#### Manage Inventory
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/manage-inventory.PNG" alt="Manage Inventory" width="45%" />
-</div>
-
-#### Add Inventory Items
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/add-inventory-items.PNG" alt="Add Inventory Items" width="45%" />
-</div>
+<table>
+<tr>
+<td align="center"><img src="screenshots/manage-inventory.PNG" width="260"/><br/><sub><b>Manage Inventory</b></sub></td>
+<td align="center"><img src="screenshots/add-inventory-items.PNG" width="260"/><br/><sub><b>Add Inventory Items</b></sub></td>
+</tr>
+</table>
 
 ### Appointments
-#### Appointments List
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/appointments-list.PNG" alt="Appointments List" width="45%" />
-</div>
-
-#### Book Appointment
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/book-appointment.PNG" alt="Book Appointment" width="45%" />
-</div>
+<table>
+<tr>
+<td align="center"><img src="screenshots/appointments-list.PNG" width="260"/><br/><sub><b>Appointments List</b></sub></td>
+<td align="center"><img src="screenshots/book-appointment.PNG" width="260"/><br/><sub><b>Book Appointment</b></sub></td>
+</tr>
+</table>
 
 ### Special Offers (Admin)
-#### Special Offers List
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/special-offers.PNG" alt="Special Offers" width="45%" />
-</div>
-
-#### Create New Offer
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/create-new-offer.PNG" alt="Create New Offer" width="45%" />
-</div>
+<table>
+<tr>
+<td align="center"><img src="screenshots/special-offers.PNG" width="260"/><br/><sub><b>Special Offers List</b></sub></td>
+<td align="center"><img src="screenshots/create-new-offer.PNG" width="260"/><br/><sub><b>Create New Offer</b></sub></td>
+</tr>
+</table>
 
 ### Reports
-#### Product Sales (Admin)
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/product-sales.PNG" alt="Product Sales" width="45%" />
-</div>
-
-#### Staff Report
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/staff-report.PNG" alt="Staff Report" width="45%" />
-</div>
+<table>
+<tr>
+<td align="center"><img src="screenshots/product-sales.PNG" width="260"/><br/><sub><b>Product Sales (Admin)</b></sub></td>
+<td align="center"><img src="screenshots/staff-report.PNG" width="260"/><br/><sub><b>Staff Report</b></sub></td>
+</tr>
+</table>
 
 ### Staff Dashboard
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/staff-dashboard.PNG" alt="Staff Dashboard" width="45%" />
-</div>
+<table>
+<tr>
+<td align="center"><img src="screenshots/staff-dashboard.PNG" width="260"/><br/><sub><b>Staff Dashboard</b></sub></td>
+</tr>
+</table>
 
 ### Customer Visits
-#### Create New Visit - Screenshot 1
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/create-visit-1.PNG" alt="Create New Visit 1" width="45%" />
-</div>
-
-#### Create New Visit - Screenshot 2
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/create-visit-2.PNG" alt="Create New Visit 2" width="45%" />
-</div>
+<table>
+<tr>
+<td align="center"><img src="screenshots/create-visit-1.PNG" width="260"/><br/><sub><b>Create New Visit — Step 1</b></sub></td>
+<td align="center"><img src="screenshots/create-visit-2.PNG" width="260"/><br/><sub><b>Create New Visit — Step 2</b></sub></td>
+</tr>
+</table>
 
 ### Customer Management
-#### Customer List
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/customer-list.PNG" alt="Customer List" width="45%" />
-</div>
-
-#### Customer Details
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/customer-details.PNG" alt="Customer Details" width="45%" />
-</div>
+<table>
+<tr>
+<td align="center"><img src="screenshots/customer-list.PNG" width="260"/><br/><sub><b>Customer List</b></sub></td>
+<td align="center"><img src="screenshots/customer-details.PNG" width="260"/><br/><sub><b>Customer Details</b></sub></td>
+</tr>
+</table>
 
 ### Billing
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-  <img src="screenshots/bill.PNG" alt="Bill" width="45%" />
-</div>
+<table>
+<tr>
+<td align="center"><img src="screenshots/bill.PNG" width="260"/><br/><sub><b>Bill Receipt</b></sub></td>
+</tr>
+</table>
 
 
 ## 📱 Features
